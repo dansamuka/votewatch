@@ -552,6 +552,7 @@ function rKPIs(r,mc_,dr,f,i25){
     <div class="kpi-v ${n.i>0.50?'vgr':n.i>0.45?'vg':'vr'}">${pct(n.i,1)}</div>
     <div class="kpi-d">${n.i>0.50?'<span class="b b-gr">Above 50%</span>':'<span class="b b-r">Below 50%</span>'} · likely range ${pct(mc_.iLo,1)}–${pct(mc_.iHi,1)}</div>
     <div class="kpi-d">Chance of winning outright: <strong>${pct(mc_.iW,0)}</strong></div>
+    <div class="kpi-d"><strong>${fmtVotes(n.i*n.v)}</strong> of ${N.format(Math.round(n.v))} votes cast</div>
   </div>
   <div class="kpi">
     <div class="kpi-l">Chance of a run-off</div>
@@ -745,6 +746,9 @@ function rTipping(r,f,i25){
   </tr>`).join('')}</tbody>`;
 }
 
+// Vote counts: 6,123,456 → "6.12M"; under a million → "845K"
+function fmtVotes(v){v=Math.round(v||0);return v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?Math.round(v/1e3)+'K':String(v);}
+const REG_TOTAL=CO.reduce((s,c)=>s+(c.projectedVoters2027||0),0);
 function rScen(){
   // Each preset: one deterministic run plus a seeded 200-draw Monte Carlo, so the
   // cards are stable between renders (previously 60 unseeded draws).
@@ -787,8 +791,9 @@ function rScen(){
     <div class="sq-d">${mapEsc(sc.d)}</div>
     <div class="sq-bars" aria-label="First-round shares">
       ${[[sc.cfg.teams[0],sc.n.i,'var(--blbr)'],[sc.cfg.teams[1],sc.n.o,'var(--red2)'],['Others',sc.n.t,'var(--amb2)']].map(([l,v,col])=>`
-      <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b></div>`).join('')}
+      <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b><em>${fmtVotes(v*sc.n.v)}</em></div>`).join('')}
     </div>
+    <p class="sq-total">Total votes cast <b>${N.format(Math.round(sc.n.v))}</b> · turnout ${pct(sc.n.v/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} projected voters</p>
     <div class="sq-foot">
       <span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span>
       <span>Run-off ${pct(sc.ro,0)} · Ruto 25%+ in ${sc.i25}/47</span>
@@ -796,12 +801,13 @@ function rScen(){
     </div>
   </div>`).join('');
 
-  $('#sqTbl').innerHTML=`<thead><tr><th>Scenario</th><th>Team A</th><th>Team B</th><th>Others</th><th>A 25%+ counties</th><th>Run-off chance</th><th>Most likely</th></tr></thead>
+  $('#sqTbl').innerHTML=`<thead><tr><th>Scenario</th><th>Team A</th><th>Team B</th><th>Others</th><th>Total votes</th><th>A 25%+ counties</th><th>Run-off chance</th><th>Most likely</th></tr></thead>
   <tbody>${results.map(sc=>`<tr>
     <td style="font-weight:600;color:${sc.c}">${sc.tier}</td>
-    <td style="color:var(--blbr)">${pct(sc.n.i)}</td>
-    <td style="color:var(--red2)">${pct(sc.n.o)}</td>
-    <td style="color:var(--amb2)">${pct(sc.n.t)}</td>
+    <td style="color:var(--blbr)">${pct(sc.n.i)} <span class="hint">${fmtVotes(sc.n.i*sc.n.v)}</span></td>
+    <td style="color:var(--red2)">${pct(sc.n.o)} <span class="hint">${fmtVotes(sc.n.o*sc.n.v)}</span></td>
+    <td style="color:var(--amb2)">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.v)}</span></td>
+    <td>${N.format(Math.round(sc.n.v))}</td>
     <td>${sc.i25}/47</td>
     <td>${pct(sc.ro,0)}</td>
     <td><span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span></td>

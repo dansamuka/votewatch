@@ -37,7 +37,7 @@ function build(){
   <defs><pattern id="vmHalf" width="5" height="5" patternUnits="userSpaceOnUse"><circle style="fill:var(--landdot)" cx="1.5" cy="1.5" r=".75"/></pattern><clipPath id="vmK"><path d="${G.kenya}"/></clipPath></defs>
   <rect class="frame" x="-36" y="-32" width="544" height="620" rx="2"/>
   <path style="fill:var(--land)" d="${G.kenya}"/>
-  <g id="vmCty">${G.counties.map(c=>{const n=GEO_NAME[c.n]||c.n;return `<path class="vm-c" data-county="${esc(n)}" d="${c.d}" tabindex="0" role="button" aria-label="${esc(n)}"><title>${esc(n)}</title></path>`;}).join('')}</g>
+  <g id="vmCty">${G.counties.map(c=>{const n=GEO_NAME[c.n]||c.n;return `<path class="vm-c" data-county="${esc(n)}" d="${c.d}" tabindex="0" role="button" aria-label="${esc(n)}"></path>`;}).join('')}</g>
   <rect x="-36" y="-32" width="544" height="620" clip-path="url(#vmK)" style="fill:url(#vmHalf);pointer-events:none;opacity:.35"/>
   ${Object.values(G.lakes).map(d=>`<path style="fill:var(--water);stroke:var(--waterline);stroke-width:.7;vector-effect:non-scaling-stroke;pointer-events:none" d="${d}"/>`).join('')}
   <path style="fill:none;stroke:var(--ink-2);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:none" d="${G.kenya}"/>`;
@@ -49,6 +49,20 @@ function build(){
   svg.innerHTML=h;
   const pick=e=>{const p=e.target.closest('.vm-c');if(!p)return;if(e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();window.selCounty(p.dataset.county);};
   svg.addEventListener('click',pick);svg.addEventListener('keydown',pick);
+  // Hover label: county name plus its top three results and votes cast
+  const fig=svg.closest('figure');
+  const tip=document.createElement('div');tip.className='vm-tip';tip.hidden=true;tip.setAttribute('role','tooltip');fig.appendChild(tip);
+  const show=p=>{
+    const c=S.res&&S.res.ctyRes.find(x=>x.name===p.dataset.county);if(!c){tip.hidden=true;return;}
+    const cs=contestants(c,S.res.nat).slice(0,3);
+    tip.innerHTML=`<b>${esc(c.name)}</b>${cs.map(x=>`<span>${esc(x.name)}<i>${p1(x.v)}</i></span>`).join('')}<span>Votes cast<i>${Math.round(c.tv).toLocaleString('en-KE')}</i></span>`;
+    tip.hidden=false;
+  };
+  const place=(x,y)=>{const r=fig.getBoundingClientRect();tip.style.left=(x-r.left)+'px';tip.style.top=(y-r.top)+'px';};
+  svg.addEventListener('mousemove',e=>{const p=e.target.closest('.vm-c');if(!p){tip.hidden=true;return;}if(tip.dataset.c!==p.dataset.county){tip.dataset.c=p.dataset.county;show(p);}place(e.clientX,e.clientY);});
+  svg.addEventListener('mouseleave',()=>{tip.hidden=true;tip.dataset.c='';});
+  svg.addEventListener('focusin',e=>{const p=e.target.closest('.vm-c');if(!p)return;tip.dataset.c=p.dataset.county;show(p);const b=p.getBoundingClientRect();place(b.left+b.width/2,b.top);});
+  svg.addEventListener('focusout',()=>{tip.hidden=true;});
   const sel=$('#vmSel');
   if(sel){
     sel.innerHTML='<option value="">Choose a county…</option>'+[...CO].map(c=>c.name).sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -98,7 +112,8 @@ function card(nat){
     <div class="cty-stats">
       <span>Leader <b>${esc(lead.name)}</b> by ${p1(lead.v-(second?second.v:0))}</span>
       <span>Turnout <b>${p1(c.to)}</b></span>
-      <span>Voters <b>${(co.projectedVoters2027||0).toLocaleString('en-KE')}</b></span>
+      <span>Registered <b>${(co.projectedVoters2027||0).toLocaleString('en-KE')}</b></span>
+      <span>Votes cast <b>${Math.round(c.tv).toLocaleString('en-KE')}</b></span>
       <span>${esc(S.cfg.teams[0])} 25%+ <b>${c.i>=0.25?'Yes':'No'}</b></span>
     </div>`;
   if(wards){wards.hidden=false;const t=$('#vmWardsT');if(t)t.textContent=`Wards in ${name}`;}
@@ -112,7 +127,6 @@ function render(){
   document.querySelectorAll('#vmMap .vm-c').forEach(p=>{
     const c=byName.get(p.dataset.county);if(!c)return;
     p.style.fill=fillFor(c,nat);
-    const t=p.querySelector('title');if(t){const cs=contestants(c,nat);t.textContent=`${c.name}: ${cs.slice(0,3).map(x=>`${x.name} ${p1(x.v)}`).join(' · ')}`;}
   });
   legend(nat);card(nat);
 }
