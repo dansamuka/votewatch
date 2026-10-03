@@ -1,0 +1,113 @@
+/* Kenya Projects Atlas look: colours, surfaces and map styles copied from
+   Kenya_projects_report. Loaded last; overrides earlier tokens for both themes. */
+
+/* ── dark (Atlas dark) ── */
+:root{
+  --canvas:#0C0E11;--subtle:#14171C;--raised:#1A1E24;--overlay:#20252C;
+  --text:#ECEEF1;--text-2:#AEB4BE;--text-3:#8E95A0;
+  --hairline:rgb(255 255 255 / .09);--hairline-strong:rgb(255 255 255 / .17);
+  --c-gold:#8AB6FF;--c-blue:#8AB6FF;--c-red:#F87171;--c-green:#4ADE80;--c-amber:#F0A93B;
+  --team-a:#8AB6FF;--team-b:#F87171;--team-c:#3CC9A8;--team-d:#F0A93B;
+  /* map + Atlas aliases */
+  --surface:#14171C;--surface-raised:#1A1E24;--canvas-sunken:#08090B;
+  --ink:#ECEEF1;--ink-2:#C9CED6;--ink-muted:#AEB4BE;--ink-subtle:#8E95A0;
+  --line:rgb(255 255 255 / .09);--line-2:rgb(255 255 255 / .17);--line-strong:#6B7380;
+  --accent:#8AB6FF;--accent-ink:#0C0E11;
+  --land:#181C22;--landdot:rgb(255 255 255 / .16);--water:#12263B;--waterline:#2E4D6E;
+  /* legacy names used by app.js inline styles */
+  --bg:var(--canvas);--s1:var(--subtle);--s2:var(--raised);--s3:var(--overlay);
+  --txt:var(--text);--muted:var(--text-3);--dim:#8E95A0;
+  --gold:#8AB6FF;--gold2:#B3CEFF;--blbr:var(--team-a);--red2:var(--team-b);--gbr:var(--c-green);--amb2:var(--c-amber);
+  --shadow-1:0 0 0 1px var(--line);
+  --shadow-2:0 0 0 1px rgb(255 255 255 / .12),0 8px 24px -8px rgb(0 0 0 / .5);
+  --hi:inset 0 1px 0 rgb(255 255 255 / .06);
+  --r-lg:20px;
+}
+/* ── light (Atlas light, the default) ── */
+body.light-mode{
+  --canvas:#F7F6F2;--subtle:#FFFEFB;--raised:#FFFFFF;--overlay:#FFFFFF;
+  --text:#14161A;--text-2:#4B4F57;--text-3:#686C74;
+  --hairline:rgb(20 22 26 / .12);--hairline-strong:rgb(20 22 26 / .2);
+  --c-gold:#1558C4;--c-blue:#1558C4;--c-red:#B42318;--c-green:#15803D;--c-amber:#B45309;
+  --team-a:#1558C4;--team-b:#B42318;--team-c:#0E7C66;--team-d:#B45309;
+  --surface:#FFFEFB;--surface-raised:#FFFFFF;--canvas-sunken:#EFEDE6;
+  --ink:#14161A;--ink-2:#30343B;--ink-muted:#4B4F57;--ink-subtle:#686C74;
+  --line:rgb(20 22 26 / .12);--line-2:rgb(20 22 26 / .2);--line-strong:#8A8D93;
+  --accent:#1558C4;--accent-ink:#FFFFFF;
+  --land:#EEEBE3;--landdot:rgb(20 22 26 / .2);--water:#D3E2F1;--waterline:#9DBAD6;
+  --bg:var(--canvas);--s1:var(--subtle);--s2:var(--canvas-sunken);--s3:#E6E3DA;
+  --bdr:rgb(20 22 26 / .12);--bdr2:rgb(20 22 26 / .2);--bdr3:#8A8D93;
+  --txt:var(--text);--muted:var(--text-3);--dim:#686C74;
+  --gold:#1558C4;--gold2:#0F4AA8;--gdim:rgb(21 88 196 / .35);
+  --blbr:var(--team-a);--red2:var(--team-b);--gbr:var(--c-green);--amb2:var(--c-amber);
+  --red:#B42318;--rdim:#FBE9E7;--grn:#15803D;--gdark:#E7F4EC;--amb:#B45309;--ambd:#FDF0E1;--blu:#1558C4;--bld:#E8EFFB;
+  --shadow-1:0 0 0 1px var(--line),0 1px 1px rgb(20 22 26 / .03),0 2px 4px -2px rgb(20 22 26 / .06);
+  --shadow-2:0 0 0 1px var(--line),0 1px 2px rgb(20 22 26 / .04),0 6px 12px -4px rgb(20 22 26 / .08),0 16px 32px -12px rgb(20 22 26 / .12);
+  --hi:inset 0 1px 0 rgb(255 255 255 / .7);
+  color-scheme:light;
+}
+body,body.light-mode{background:var(--canvas)}
+body.light-mode::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+body.light-mode:after{display:none}
+.logo span{color:var(--accent)}
+.hdr{background:color-mix(in oklab,var(--canvas) 82%,transparent)}
+.tbtn.act,.tbtn[aria-selected=true]{color:var(--accent);background:color-mix(in oklab,var(--accent) 9%,transparent);box-shadow:inset 0 -2px 0 var(--accent)}
+.pan,.kpi,.impl-box,.side-box,.sqc,.ro-card,.ro-pair{background:var(--surface);border-radius:16px;box-shadow:var(--shadow-1),var(--hi)}
+.kpi:hover{box-shadow:var(--shadow-2),var(--hi)}
+.guide{background:color-mix(in oklab,var(--accent) 6%,var(--surface));box-shadow:0 0 0 1px color-mix(in oklab,var(--accent) 20%,transparent)}
+.guide b{background:var(--accent);color:var(--accent-ink)}
+input[type=range]{accent-color:var(--accent)}
+.switch[aria-checked=true] .switch-track{background:var(--accent)}
+:focus-visible{outline-color:var(--accent)}
+.sl-top output{color:var(--accent)}
+
+/* ── map (Atlas .plate / .msvg / .vtoggle / county card) ── */
+.plate{position:relative;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-1),var(--hi);padding:var(--sp-4);margin:0}
+.mapsec{display:grid;gap:var(--sp-4);grid-template-columns:minmax(0,1fr)}
+@container (min-width:860px){.mapsec{grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);align-items:start}.cty-card{position:sticky;top:120px}}
+.mphead{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-2);padding:0 2px var(--sp-3)}
+.mphead b{font-size:15px;font-weight:650;letter-spacing:-.012em;color:var(--ink)}
+.vtoggle{display:inline-flex;flex-wrap:wrap;background:var(--canvas-sunken);border-radius:8px;padding:2px;box-shadow:inset 0 0 0 1px var(--line)}
+.vtoggle button{border:0;background:transparent;min-height:28px;padding:0 12px;border-radius:6px;font:550 12px/1 var(--font-sans);cursor:pointer;color:var(--ink-muted)}
+.vtoggle button[aria-pressed="true"]{background:var(--surface-raised);color:var(--ink);box-shadow:var(--shadow-1)}
+.sel{appearance:none;border:0;min-height:32px;max-width:200px;padding:0 28px 0 12px;border-radius:8px;font:400 13px/1.2 var(--font-sans);color:var(--ink);
+  background:var(--surface-raised) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23686C74' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;box-shadow:0 0 0 1px var(--line-2);cursor:pointer}
+.msvg{width:100%;height:auto;display:block;overflow:hidden;border-radius:6px}
+.msvg text{font-family:var(--font-sans);fill:var(--ink-2)}
+.msvg .m{font-family:var(--font-mono);font-size:11px;fill:var(--ink-subtle)}
+.msvg .lk{font-style:italic;font-size:12px;fill:var(--ink-subtle);pointer-events:none}
+.msvg .frame{fill:none;stroke:var(--line-2)}
+.msvg .tick{stroke:var(--ink-2);stroke-width:1}
+.msvg .equator{stroke:var(--accent);stroke-width:1;stroke-dasharray:2 5;opacity:.6}
+.msvg .north path{fill:var(--ink-2)}
+.vm-c{stroke:var(--surface);stroke-width:1.1;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill var(--dur-2) var(--ease),opacity var(--dur-1) var(--ease)}
+.vm-c:hover{opacity:.82}
+.vm-c:focus-visible{outline:none;stroke:var(--ink);stroke-width:2.5}
+.vm-c.on{stroke:var(--ink);stroke-width:2.5}
+.mbar{display:flex;flex-direction:column;gap:var(--sp-2);margin-top:var(--sp-3);padding-top:var(--sp-3);box-shadow:0 -1px 0 var(--line)}
+.mbar-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3)}
+.mbar-note{margin:0;font-size:12px;line-height:16px;color:var(--ink-muted)}
+.lg-i{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted)}
+.lg-i i{width:10px;height:10px;border-radius:3px}
+.lg-ramp{display:inline-block;width:96px;height:8px;border-radius:2px;background:linear-gradient(90deg,color-mix(in oklab,var(--c) 8%,var(--surface)),var(--c))}
+.cty-card .mphead .sel{max-width:190px}
+.cty-map{display:block;width:100%;max-height:200px;height:auto;border-radius:6px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-2)}
+.cty-map .cty-out{fill:color-mix(in oklab,var(--accent) 7%,transparent);stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+.cty-res{display:grid;gap:6px;margin-top:var(--sp-3)}
+.cty-bar{display:grid;grid-template-columns:minmax(0,120px) 1fr 48px;gap:var(--sp-2);align-items:center;font-size:13px}
+.cty-bar .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.cty-bar .tr{height:8px;border-radius:4px;background:var(--canvas-sunken);overflow:hidden}
+.cty-bar .tr i{display:block;height:100%;border-radius:4px}
+.cty-bar b{font:600 12px var(--font-mono);text-align:right;color:var(--ink)}
+.cty-stats{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-3);margin-top:var(--sp-3);font-size:12px;line-height:16px;color:var(--ink-muted)}
+.cty-stats b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+.cty-empty{font-size:13px;line-height:20px;color:var(--ink-muted);margin:0}
+.cty-wards{max-height:320px}
+.cty-card .srch{max-width:160px;height:32px}
+@media (prefers-reduced-motion:reduce){.vm-c{transition:none}}
+
+/* header: keep the verdict readable */
+@media(max-width:1360px){.brand-sub{display:none}.live-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@media(max-width:1500px){.v-sep,.v-detail{display:none}}
+.v-title{overflow:hidden;text-overflow:ellipsis}

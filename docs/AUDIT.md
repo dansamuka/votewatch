@@ -1,4 +1,4 @@
-# Engine and data audit (v5.0–6.0, October 2026)
+# Engine and data audit (v5.0–7.0, October 2026)
 
 Scope: the scenario engine in `js/app.js` (`sim`, `mc`, `r2sim`, `disRisk`,
 `tipPts`, shocks), the rendering that reports its numbers, and the data files.
@@ -59,7 +59,36 @@ These change outputs on purpose.
    counties. The Run-off tab now shows how many counties each side leads,
    instead of the 25% count.
 
-## 2027 alliance layer (v6.0)
+## Teams model (v7.0) — replaces the v6 alliance layer below
+
+**Candidate field.** 14 candidates with their average across all published
+national polls (engine repo `polling_average_all.json`, 1 Oct 2026; Ruto 33.7,
+Kalonzo 15.1, Sifuna 13.8, Matiang'i 11.1 …), normalised to decided voters.
+Each candidate's share in every ward is fitted by iterative proportional fitting:
+the starting pattern is a regional profile × home-county boost (×1.6) × the
+square root of the ward's 2022 lean, and the fit makes every ward sum to 100% and
+every candidate's national share match their polling average. The profiles are
+assumptions; Ruto's uses TIFA Jul 2026 regional ratios (Nyanza and the Rift above
+his national share).
+
+**Teams.** Team A is Ruto's side (Ruto is fixed there), team B the main
+challenger slot, up to two more teams, and Solo. Teams with two or more members
+keep the follow-through share (default 85%) of their members' support; the rest
+scatters across the field. The run-off pairs the top two contestants (any team or
+solo candidate). Everyone else's voters split 70/30 toward the finalist they lean
+to, or 50/50. The old regional transfer table (`R2T`) is removed: its
+"lean to the opposition" still sent 78% of Mt Kenya votes to Ruto.
+
+**Removed with v7:** the Mt Kenya / ODM / Sifuna realignment rules, poll anchor,
+leakage rule and background third-force table (polls now set national levels
+directly); the Leaflet map and the 1 MB boundary file (9 of 47 counties were
+proxies). These are replaced by the 47 geoBoundaries outlines (32 KB) from the
+Kenya Projects Atlas.
+
+**Default (Ruto vs the top four):** team A 38.2%, team B 46.7%, others 15.0%;
+run-off in ~91% of simulations, which team B wins.
+
+## 2027 alliance layer (v6.0, superseded)
 
 The v5 options described a 2025 world: "Gachagua runs" as a Mt Kenya third
 force, an "ODM–Linda Ground" coast deal, and a sentiment item about Raila

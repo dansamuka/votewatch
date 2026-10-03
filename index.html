@@ -6,16 +6,15 @@
 <meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VoteWatch 2027</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/tokens.css?v=6.1">
-<link rel="stylesheet" href="css/styles.css?v=6.1">
-<link rel="stylesheet" href="css/enhance.css?v=6.1">
-<link rel="stylesheet" href="css/layout.css?v=6.1">
+<link rel="stylesheet" href="css/tokens.css?v=7.0">
+<link rel="stylesheet" href="css/styles.css?v=7.0">
+<link rel="stylesheet" href="css/enhance.css?v=7.0">
+<link rel="stylesheet" href="css/layout.css?v=7.0">
+<link rel="stylesheet" href="css/atlas.css?v=7.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -28,7 +27,9 @@
     </div>
     <div class="verdict" id="verdict" role="status" aria-live="polite"><span class="v-title">Running the model…</span></div>
     <div class="hdr-actions">
-      <button type="button" class="hbtn" id="liveBtn" aria-pressed="false" onclick="setLive(!S.live)" title="Inject a random synthetic event every 30 seconds"><span class="live-dot" aria-hidden="true"></span><span class="live-txt">Live events off</span><span class="live-timer" id="hTimer">paused</span></button>
+      <button type="button" class="hbtn" id="viewBtn" onclick="setViewMode(S.viewMode==='public'?'internal':'public')" title="Switch between public and analyst wording">Public view</button>
+      <button type="button" class="hbtn hbtn-icon" id="themeBtn" onclick="setTheme(S.theme==='light'?'dark':'light')" aria-label="Switch to dark theme">☾</button>
+      <button type="button" class="hbtn" id="liveBtn" aria-pressed="false" onclick="setLive(!S.live)" title="Inject a random synthetic event every 30 seconds"><span class="live-dot" aria-hidden="true"></span><span class="live-txt">Live</span><span class="live-timer" id="hTimer">paused</span></button>
       <details class="menu">
         <summary class="hbtn"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 13.5h11"/></svg>Export</summary>
         <div class="menu-pop" role="menu">
@@ -52,7 +53,6 @@
   <button class="tbtn" data-t="con" role="tab" id="tab-con" aria-controls="t-con" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3H2zM3.5 6v6M8 6v6M12.5 6v6M2 14h12"/></svg>Article 138</button>
   <button class="tbtn" data-t="map" role="tab" id="tab-map" aria-controls="t-map" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v9l-4 1.5-5-2-4 1.5zM5.5 2v9.5M10.5 4v9.5"/></svg>Map</button>
   <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Dispute risk</button>
-  <button class="tbtn" data-t="cty" role="tab" id="tab-cty" aria-controls="t-cty" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h12"/></svg>County data</button>
   <button class="tbtn" data-t="int" role="tab" id="tab-int" aria-controls="t-int" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>Signals</button>
   <button class="tbtn" data-t="report" role="tab" id="tab-report" aria-controls="t-report" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3M5.5 8h5M5.5 11h5"/></svg>Report</button>
 </div></nav>
@@ -60,81 +60,41 @@
 <div class="shell">
 <aside class="side" aria-labelledby="sideT">
   <details class="side-box" id="sideBox" open>
-    <summary class="side-sum"><span id="sideT">Scenario settings</span><span class="side-sum-hint">Change these and every tab updates</span></summary>
+    <summary class="side-sum"><span id="sideT">Scenario settings</span><span class="side-sum-hint">Every tab updates as you change these</span></summary>
     <div class="side-body">
-    <section class="side-sec" aria-labelledby="secStart">
-      <label class="side-h" id="secStart" for="presetSelect">Start from a scenario</label>
-      <select class="gov-select w100" id="presetSelect" onchange="if(this.value)applyScenario(this.value)"></select>
-      <p class="hint">Real 2027 alliance paths as of October 2026. Pick one, then fine-tune below.</p>
-    </section>
-    <section class="side-sec" aria-labelledby="secCtx">
-      <h3 class="side-h" id="secCtx">Political context</h3>
-      <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="gach" aria-describedby="h-gach" onclick="regime('gach',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Gachagua runs separately</span></button>
-        <p class="hint" id="h-gach">Off: he backs one United Opposition candidate. On: he runs on DCP and takes most of the Mt Kenya vote himself.</p>
-      </div>
-      <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="odm" aria-describedby="h-odm" onclick="regime('odm',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">ODM (Oburu) backs Ruto</span></button>
-        <p class="hint" id="h-odm">The broad-based pact holds into 2027 and part of ODM's Nyanza and Coast vote follows it.</p>
-      </div>
-      <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="sifuna" aria-describedby="h-sifuna" onclick="regime('sifuna',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Sifuna runs on his own ticket</span></button>
-        <p class="hint" id="h-sifuna">Linda Mwananchi candidate, strongest in Western, Nairobi and the Coast. Off: he joins the United Opposition.</p>
-      </div>
-      <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="uda" aria-describedby="h-uda" onclick="regime('uda',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Ruto holds the Rift Valley</span></button>
-        <p class="hint" id="h-uda">Off: Ruto loses about 3 points across the Kalenjin belt.</p>
-      </div>
-      <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="poll" aria-describedby="h-poll" onclick="regime('poll',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Anchor to latest polls</span></button>
-        <p class="hint" id="h-poll">Pulls national shares 40% of the way to these poll shares (decided voters, %). Defaults: average of the two latest model-eligible polls.</p>
-      </div>
-      <div class="poll-fields" id="pollFields" data-off>
-        <div class="poll-f"><label for="pi">Ruto</label><input id="pi" type="number" min="20" max="70" value="43.5" step="0.5" inputmode="decimal"></div>
-        <div class="poll-f"><label for="po">Opposition</label><input id="po" type="number" min="15" max="65" value="39" step="0.5" inputmode="decimal"></div>
-        <div class="poll-f"><label for="pt">Sifuna &amp; others</label><input id="pt" type="number" min="2" max="35" value="17" step="0.5" inputmode="decimal"></div>
-        <span class="b b-m" id="pollStat">Off</span>
+    <section class="side-sec" aria-labelledby="secTeams">
+      <h3 class="side-h" id="secTeams">Teams</h3>
+      <div class="tm-chips" id="teamChips"></div>
+      <p class="side-h tm-sub">Who joins which team</p>
+      <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
+      <div class="sl">
+        <label class="sl-top" for="sl-follow"><span>Supporters who follow into a team</span><output id="lv-follow">85%</output></label>
+        <input type="range" id="sl-follow" min="50" max="100" step="5" value="85">
+        <p class="hint">Real coalitions leak; 80–90% is typical.</p>
       </div>
     </section>
     <section class="side-sec" aria-labelledby="secAss">
-      <h3 class="side-h" id="secAss">Assumptions</h3>
+      <h3 class="side-h" id="secAss">Adjust</h3>
       <div class="sl">
-        <label class="sl-top" for="sl-mk"><span>Mt Kenya shift away from Ruto</span><output id="lv-mk">55%</output></label>
-        <input type="range" id="sl-mk" min="0" max="90" step="5" value="55" aria-describedby="h-sl-mk">
-        <div class="sl-scale" aria-hidden="true"><span>0%</span><span>90%</span></div>
-        <p class="hint" id="h-sl-mk">Share of Ruto's 2022 Mt Kenya vote that has left him. Planning range 40–80%.</p>
+        <label class="sl-top" for="sl-si"><span>Swing to team A</span><output id="lv-si">±0pp</output></label>
+        <input type="range" id="sl-si" min="-12" max="12" step="0.5" value="0">
       </div>
       <div class="sl">
-        <label class="sl-top" for="sl-si"><span>Swing to Ruto</span><output id="lv-si">±0pp</output></label>
-        <input type="range" id="sl-si" min="-12" max="12" step="0.5" value="0" aria-describedby="h-sl-si">
-        <div class="sl-scale" aria-hidden="true"><span>−12</span><span>+12</span></div>
-        <p class="hint" id="h-sl-si">Shift in Ruto's support everywhere.</p>
-      </div>
-      <div class="sl">
-        <label class="sl-top" for="sl-so"><span>Swing to opposition</span><output id="lv-so">±0pp</output></label>
-        <input type="range" id="sl-so" min="-12" max="12" step="0.5" value="0" aria-describedby="h-sl-so">
-        <div class="sl-scale" aria-hidden="true"><span>−12</span><span>+12</span></div>
-        <p class="hint" id="h-sl-so">Shift in United Opposition support, set separately.</p>
+        <label class="sl-top" for="sl-so"><span>Swing to team B</span><output id="lv-so">±0pp</output></label>
+        <input type="range" id="sl-so" min="-12" max="12" step="0.5" value="0">
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-ys"><span>Youth turnout</span><output id="lv-ys">+0pp</output></label>
-        <input type="range" id="sl-ys" min="-5" max="18" step="1" value="0" aria-describedby="h-sl-ys">
-        <div class="sl-scale" aria-hidden="true"><span>−5</span><span>+18</span></div>
-        <p class="hint" id="h-sl-ys">Change in turnout driven by ~5.7M expected new, mostly young voters.</p>
+        <input type="range" id="sl-ys" min="-5" max="18" step="1" value="0">
       </div>
       <div class="sl">
-        <label class="sl-top" for="sl-tf"><span>Other candidates and protest vote</span><output id="lv-tf">2pp</output></label>
-        <input type="range" id="sl-tf" min="0" max="20" step="0.5" value="2" aria-describedby="h-sl-tf">
-        <div class="sl-scale" aria-hidden="true"><span>0</span><span>+20pp</span></div>
-        <p class="hint" id="h-sl-tf">Extra national share for minor candidates, on top of Sifuna/Gachagua.</p>
+        <label class="sl-top" for="sl-tf"><span>Protest vote</span><output id="lv-tf">0pp</output></label>
+        <input type="range" id="sl-tf" min="0" max="20" step="0.5" value="0">
       </div>
-      <div class="sl">
-        <label class="sl-top" for="sl-cc"><span>Ally delivery</span><output id="lv-cc">90%</output></label>
-        <input type="range" id="sl-cc" min="55" max="100" step="1" value="90" aria-describedby="h-sl-cc">
-        <div class="sl-scale" aria-hidden="true"><span>55%</span><span>100%</span></div>
-        <p class="hint" id="h-sl-cc">How fully Ruto's allies (Ford-K in Western, ODM at the Coast) deliver their vote.</p>
+      <div class="reg-row">
+        <button type="button" class="switch" role="switch" aria-checked="true" data-reg="uda" onclick="regime('uda',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Ruto holds the Rift Valley</span></button>
       </div>
-      <button type="button" class="btn btn-ghost w100" id="bReset">↺ Reset to current trajectory</button>
+      <button type="button" class="btn btn-ghost w100" id="bReset">↺ Reset</button>
     </section>
     <details class="side-adv">
       <summary>Advanced</summary>
@@ -149,16 +109,6 @@
         <label class="sl-top" for="seedInput"><span>Random seed</span><output id="seedLabel">2027-baseline-001</output></label>
         <input class="srch w100" id="seedInput" value="2027-baseline-001" spellcheck="false">
         <p class="hint">Research mode with the same seed gives the same result every time.</p>
-        <label class="sl-top" for="viewModeSelect"><span id="vwViewModeLabel">Wording</span></label>
-        <select class="gov-select w100" id="viewModeSelect">
-          <option value="internal">Analyst (named actors)</option>
-          <option value="public">Public (neutral wording)</option>
-        </select>
-        <label class="sl-top" for="themeSelect"><span>Theme</span></label>
-        <select class="gov-select w100" id="themeSelect">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
       </div>
     </details>
     </div>
@@ -171,27 +121,29 @@
 <div class="tpane act" id="t-cmd" role="tabpanel" aria-labelledby="tab-cmd">
   <h2 class="sr-only">Overview</h2>
   <ol class="guide" id="guide">
-    <li><b>1</b> Set the political context and assumptions in <em>Scenario settings</em>.</li>
-    <li><b>2</b> Read the verdict at the top and the numbers below.</li>
-    <li><b>3</b> Open a tab to see why: run-off, swing counties, map.</li>
-    <li><b>4</b> Export a report when you're done.</li>
+    <li><b>1</b> Put candidates on teams.</li>
+    <li><b>2</b> Read the result at the top.</li>
+    <li><b>3</b> Open a tab to see why.</li>
+    <li><b>4</b> Export a report.</li>
     <button type="button" class="guide-x" onclick="this.closest('.guide').hidden=true;try{localStorage.setItem('vw-guide','0')}catch(e){}" aria-label="Dismiss guide">×</button>
   </ol>
   <div class="g5 mb12" id="kpiRow"></div>
-  <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">Every county at a glance <span class="pan-s">incumbent first-round share, grouped by region · click a county for detail</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel" style="height:220px"></div></div></section>
+  <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">Every county <span class="pan-s">team A share by region · click one for detail</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel" style="height:220px"></div></div></section>
   <div class="impl-box mb12" id="implBox"><div class="impl-hdr">What this means</div><div class="loading" style="height:80px;"></div></div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">National result <span class="pan-s">by region</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">National result by region</span></div>
       <div id="natBd"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">What moves the result most <span class="pan-s">incumbent share if one assumption changes</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">What moves the result <span class="pan-s">team A share if one thing changes</span></span></div>
       <div id="tornado"></div>
       <p class="hint mt8" id="torNote"></p>
     </div>
   </div>
-  <div class="g2 mb12">
+  <details class="pan fold tech">
+    <summary class="pan-t">Technical detail</summary>
+  <div class="g2 mb12 mt12">
     <div class="pan"><div class="pan-hdr"><span class="pan-t">Assumption check <span class="pan-s">effect of nudging each input</span></span></div><div id="assumptionSensitivity"></div></div>
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Event log <span class="pan-s">synthetic shocks</span></span><span class="fc g8"><span class="b b-m" id="shBadge">paused</span><button type="button" class="btn" id="bRefresh">+ Add random event</button></span></div>
@@ -199,8 +151,6 @@
       <span id="timerDisp" hidden>paused</span>
     </div>
   </div>
-  <details class="pan fold">
-    <summary class="pan-t">Method notes and responsible use</summary>
     <div class="g2 mt12">
       <div id="methNotes" class="note"></div>
       <div id="responsibleUsePanel"></div>
@@ -211,21 +161,21 @@
 <!-- ═══ TAB: RUN-OFF ═══ -->
 <div class="tpane" id="t-ro" role="tabpanel" aria-labelledby="tab-ro">
   <h2 class="sr-only">Run-off</h2>
-  <p class="pane-intro"><strong>If nobody wins outright, the top two go to a second round.</strong> The pairing is whoever actually finishes first and second in round one; this tab shows who wins depending on where the third-placed candidate's voters go.</p>
+  <p class="pane-intro"><strong>If nobody wins outright, the top two meet again.</strong> Who wins depends on where everyone else's voters go.</p>
   <div class="g3 mb12" id="roKpis"></div>
   <div class="g3 mb12" id="roScens"></div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">How the third-placed bloc's voters move <span class="pan-s">share going to the finalist they lean toward, by region</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Where third-place voters go <span class="pan-s">by region</span></span></div>
       <div id="roTrans"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Closest counties in the run-off <span class="pan-s">within 10 points of 50/50 · even split</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Closest counties in a run-off</span></div>
       <div class="tscroll"><table class="tbl" id="roCtbl"></table></div>
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">Forcing Function Summary</span></div>
+    <div class="pan-hdr"><span class="pan-t">Is a run-off forced?</span></div>
     <div id="ffDetail"></div>
   </div>
 </div>
@@ -233,25 +183,25 @@
 <!-- ═══ TAB: TIPPING ═══ -->
 <div class="tpane" id="t-tip" role="tabpanel" aria-labelledby="tab-tip">
   <h2 class="sr-only">Swing counties</h2>
-  <p class="pane-intro"><strong>Counties close to the 25% line.</strong> The incumbent is within 8 points of 25% here, so each one can decide the county-spread test.</p>
+  <p class="pane-intro"><strong>Counties near the 25% line.</strong> Team A needs 25% in 24 counties; these could go either way.</p>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Run-off Forcing Function <span class="pan-s">Additional TF share needed to deny each candidate 50%+1</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Vote needed to force a run-off</span></div>
       <div class="flex g12 mt8" id="ffBoxes"></div>
       <div class="divider"></div>
       <div id="ffNarr" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Path-to-24 Summary</span></div>
+      <div class="pan-hdr"><span class="pan-t">The 24-county test</span></div>
       <div id="p24"></div>
     </div>
   </div>
   <div class="pan mb12">
-    <div class="pan-hdr"><span class="pan-t">Tipping Counties <span class="pan-s">Incumbent share within ±8pp of 25% threshold · closest first</span></span></div>
+    <div class="pan-hdr"><span class="pan-t">Counties near the 25% line <span class="pan-s">closest first</span></span></div>
     <div class="tscroll"><table class="tbl" id="tipTbl"></table></div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">Full Article 138 Table</span></div>
+    <div class="pan-hdr"><span class="pan-t">All counties: the 25% test</span></div>
     <div class="tscroll"><table class="tbl" id="a138Tbl"></table></div>
   </div>
 </div>
@@ -259,10 +209,10 @@
 <!-- ═══ TAB: SCENARIOS ═══ -->
 <div class="tpane" id="t-mat" role="tabpanel" aria-labelledby="tab-mat">
   <h2 class="sr-only">Scenarios</h2>
-  <p class="pane-intro"><strong>Four real paths to 2027.</strong> Built from the open questions as of October 2026: does the United Opposition field one candidate, does Sifuna run alone, and does the Ruto–ODM pact survive. Each card runs its own settings; press <em>Use these settings</em> to load one into the sidebar.</p>
+  <p class="pane-intro"><strong>Four ready-made line-ups.</strong> Press <em>Use this line-up</em> to load one.</p>
   <div class="sqg mb12" id="sqMat"></div>
   <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">Scenario Comparison</span></div>
+    <div class="pan-hdr"><span class="pan-t">Compare scenarios</span></div>
     <div class="tscroll"><table class="tbl" id="sqTbl"></table></div>
   </div>
 </div>
@@ -270,30 +220,30 @@
 <!-- ═══ TAB: CONSTITUTIONAL ═══ -->
 <div class="tpane" id="t-con" role="tabpanel" aria-labelledby="tab-con">
   <h2 class="sr-only">Article 138</h2>
-  <p class="pane-intro"><strong>The constitutional test.</strong> To win outright, a candidate needs 50%+1 of votes nationally and at least 25% in 24 of the 47 counties.</p>
+  <p class="pane-intro"><strong>The winning rule.</strong> Over 50% of votes, and 25% in at least 24 of 47 counties.</p>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Joint Probability Surface <span class="pan-s">P(nat >50%) AND P(counties ≥24) simultaneously</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Chance of passing both tests</span></div>
       <div id="jpBoxes"></div>
       <div class="note mt8" style="margin-top:8px;font-size:12px;">These conditions are correlated but not identical. A candidate can win nationally while failing the county test if their vote concentrates in 2–3 large counties without breadth. The joint probability models their simultaneous requirement.</div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Cluster Exposure <span class="pan-s">Counties above/below 25% by cluster</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">The 25% test by region</span></div>
       <div id="clExp"></div>
     </div>
   </div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Coalition Cohesion</span></div>
+      <div class="pan-hdr"><span class="pan-t">Western and Coast counties</span></div>
       <div id="coalDisp"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Historical Baseline <span class="pan-s">2013 / 2017 / 2022 inc share by cluster</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Past results <span class="pan-s">incumbent side, 2013–2022</span></span></div>
       <div id="histCtx"></div>
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">Ward Sensitivity — Top Influence Wards</span></div>
+    <div class="pan-hdr"><span class="pan-t">Most influential wards</span></div>
     <div class="tscroll"><table class="tbl" id="sensTbl"></table></div>
   </div>
 </div>
@@ -302,142 +252,39 @@
 <!-- ═══ TAB: MAP ═══ -->
 <div class="tpane" id="t-map" role="tabpanel" aria-labelledby="tab-map">
   <h2 class="sr-only">Map</h2>
-  <p class="pane-intro"><strong>Every county on the map.</strong> Pick what to colour by, then click a county for its profile.</p>
-
-  <div class="vw-map-grid mb12">
-    <aside class="pan vw-map-controls">
-      <div class="pan-hdr"><span class="pan-t">Map Controls</span></div>
-      <div class="map-field">
-        <label for="vwMapIndicator">Indicator</label>
-        <select id="vwMapIndicator"></select>
+  <p class="pane-intro"><strong>Every county.</strong> Click a county or pick one from the list to see its result.</p>
+  <div class="mapsec">
+    <figure class="plate mapmain">
+      <figcaption class="mphead"><b>Kenya</b>
+        <span class="vtoggle" role="group" aria-label="Colour the map by">
+          <button type="button" data-vm="lead" aria-pressed="true">Who leads</button>
+          <button type="button" data-vm="a" aria-pressed="false">Team A</button>
+          <button type="button" data-vm="b" aria-pressed="false">Team B</button>
+          <button type="button" data-vm="turnout" aria-pressed="false">Turnout</button>
+        </span>
+      </figcaption>
+      <svg id="vmMap" class="msvg" viewBox="-44 -40 560 636" role="img" aria-label="Map of Kenya's counties"></svg>
+      <div class="mbar" id="vmLegend"></div>
+    </figure>
+    <section class="plate cty-card" aria-labelledby="vmCtyH">
+      <div class="mphead"><b id="vmCtyH">County</b><label class="sr-only" for="vmSel">Choose a county</label><select class="sel" id="vmSel"></select></div>
+      <div id="vmBody" aria-live="polite"></div>
+      <div id="vmWards" hidden>
+        <div class="mphead mt12"><b id="vmWardsT">Wards</b><input class="srch" id="wardSrch" placeholder="Search wards…" aria-label="Search wards"></div>
+        <div class="tscroll cty-wards"><table class="tbl" id="wardTbl"></table></div>
       </div>
-      <div class="map-field">
-        <label for="vwMapClass">Classification</label>
-        <select id="vwMapClass">
-          <option value="continuous">Continuous</option>
-          <option value="quantiles">Quantiles</option>
-          <option value="equal">Equal intervals</option>
-          <option value="policy">Policy bands</option>
-        </select>
-      </div>
-      <div class="map-field">
-        <label for="vwMapFocus">Focus overlay</label>
-        <select id="vwMapFocus">
-          <option value="none">None</option>
-          <option value="threshold">Article 138 threshold-sensitive</option>
-          <option value="dispute">Elevated dispute-risk</option>
-          <option value="dataQuality">Low / medium data quality</option>
-          <option value="cluster">Selected county cluster</option>
-        </select>
-      </div>
-      <div class="map-field">
-        <label for="vwMapLabels">Labels</label>
-        <select id="vwMapLabels">
-          <option value="tooltip">Tooltip on hover</option>
-          <option value="permanent">Permanent labels</option>
-          <option value="hidden">Hidden</option>
-        </select>
-      </div>
-      <div class="map-field">
-        <label for="vwMapSearch">Search county</label>
-        <input class="srch" id="vwMapSearch" placeholder="e.g. Nairobi, Muranga, Tharaka" autocomplete="off">
-      </div>
-      <div class="btn-grp">
-        <button class="btn btn-p" id="vwMapSearchBtn" type="button">Find</button>
-        <button class="btn" id="vwMapResetBtn" type="button">Reset</button>
-        <button class="btn" id="vwMapDrillBtn" type="button">Open Drilldown</button>
-      </div>
-      <div class="divider"></div>
-      <div class="btn-grp">
-        <button class="btn" onclick="dlVWMapCSV('indicator')" type="button">↓ Indicator CSV</button>
-        <button class="btn" onclick="dlVWMapCSV('ranking')" type="button">↓ Ranking CSV</button>
-        <button class="btn" onclick="dlVWMapDatasetJSON()" type="button">↓ Dataset JSON</button>
-        <button class="btn" onclick="dlVWMapDiagnostics()" type="button">↓ Diagnostics JSON</button>
-        <button class="btn" onclick="dlVWMapMetadata()" type="button">↓ Metadata JSON</button>
-        <button class="btn" onclick="dlVWMapPNG()" type="button">↓ Map PNG</button>
-      </div>
-      <div class="note mt12" style="font-size:12px;line-height:1.7;">
-        <strong>Boundary note:</strong> this is a real interactive web map with an embedded Kenya county boundary layer joined to VOTEWATCH model outputs. OpenStreetMap tiles require internet, but county polygons and scenario data are now embedded/fallback-ready. Scenario values are model outputs, not official results.
-      </div>
-    </aside>
-
-    <section class="pan vw-map-panel">
-      <div class="pan-hdr">
-        <span class="pan-t">Kenya County Intelligence Map <span class="pan-s" id="vwMapSub">Boundary choropleth</span></span>
-        <span class="b b-m" id="vwMapQualityBadge">QA —</span>
-      </div>
-      <div class="vw-map-shell" id="vwMapReportArea">
-        <div id="vwLeafletMap" role="region" aria-label="Kenya county boundary choropleth map"></div>
-        <div class="vw-map-toast" id="vwMapToast">Loading county boundary map…</div>
-        <div class="vw-map-legend" id="vwMapLegend"></div>
-      </div>
-      <div id="vwMapMethod" class="note mt8" style="font-size:12px;line-height:1.7;"></div>
     </section>
-
-    <aside class="pan vw-map-right">
-      <div class="vw-map-tabs" role="tablist" aria-label="Map intelligence panels">
-        <button class="vw-map-tab active" data-map-tab="summary" type="button">Summary</button>
-        <button class="vw-map-tab" data-map-tab="profile" type="button">Profile</button>
-        <button class="vw-map-tab" data-map-tab="ranking" type="button">Ranking</button>
-        <button class="vw-map-tab" data-map-tab="quality" type="button">Quality</button>
-        <button class="vw-map-tab" data-map-tab="metadata" type="button">Metadata</button>
-      </div>
-      <div id="vwPanelSummary" class="vw-detail-panel active"></div>
-      <div id="vwPanelProfile" class="vw-detail-panel"></div>
-      <div id="vwPanelRanking" class="vw-detail-panel"></div>
-      <div id="vwPanelQuality" class="vw-detail-panel vw-map-details"></div>
-      <div id="vwPanelMetadata" class="vw-detail-panel vw-map-details"></div>
-    </aside>
-  </div>
-
-  <div class="g2 mb12">
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Map QA Dashboard <span class="pan-s">coverage / boundary matching / range checks</span></span></div>
-      <div id="vwMapDiagnostics"></div>
-    </div>
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Indicator Metadata <span class="pan-s">formula / source / caveat</span></span></div>
-      <div id="vwMapIndicatorMeta"></div>
-    </div>
-  </div>
-
-
-  <div class="g2 mb12">
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Boundary Source & Geometry Confidence</span></div>
-      <div id="vwMapBoundarySourcePanel"></div>
-    </div>
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Largest Movement from Baseline</span></div>
-      <div id="vwMapMovementPanel"></div>
-    </div>
-  </div>
-  <div class="g2 mb12">
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Validation & Backtesting Status</span></div>
-      <div id="validationPanel"></div>
-    </div>
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Model Risk Register</span></div>
-      <div id="modelRiskRegister"></div>
-    </div>
-  </div>
-
-  <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">All Counties — Map Dataset</span></div>
-    <div class="tscroll"><table class="tbl" id="mapTbl"></table></div>
   </div>
 </div>
-
 
 <!-- ═══ TAB: DISPUTE ═══ -->
 <div class="tpane" id="t-dis" role="tabpanel" aria-labelledby="tab-dis">
   <h2 class="sr-only">Dispute risk</h2>
-  <p class="pane-intro"><strong>How exposed the result is to a court petition.</strong> It combines close margins, weak data and how concentrated the close counties are.</p>
+  <p class="pane-intro"><strong>Could the result end up in court?</strong> Based on close margins and where they cluster.</p>
   <div class="g3 mb12" id="disKpis"></div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Risk Meter</span></div>
+      <div class="pan-hdr"><span class="pan-t">Dispute risk</span></div>
       <div class="rmeter mt8" style="margin-top:8px;"><div class="rpin" id="rpin"></div></div>
       <div class="fb" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">
         <span>LOW</span><span>MEDIUM</span><span>HIGH</span>
@@ -446,12 +293,12 @@
       <div id="disNarr" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Close Counties by Cluster</span></div>
+      <div class="pan-hdr"><span class="pan-t">Close counties by region</span></div>
       <div id="disClust"></div>
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">County Dispute Vulnerability Table</span></div>
+    <div class="pan-hdr"><span class="pan-t">All counties: dispute risk</span></div>
     <div class="tscroll"><table class="tbl" id="disTbl"></table></div>
   </div>
 </div>
@@ -459,21 +306,21 @@
 <!-- ═══ TAB: INTEL ═══ -->
 <div class="tpane" id="t-int" role="tabpanel" aria-labelledby="tab-int">
   <h2 class="sr-only">Signals</h2>
-  <p class="pane-intro"><strong>Where the race stands and what to watch.</strong> Latest national polls, the alliance facts behind the options, and what each development would do to the model.</p>
+  <p class="pane-intro"><strong>Where the race stands.</strong> Latest polls, key facts and what to watch.</p>
   <div class="polls-grid mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Latest national polls <span class="pan-s">decided voters, grouped into the model's blocs</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Latest national polls <span class="pan-s">decided voters, grouped by your teams</span></span></div>
       <div class="tscroll"><table class="tbl" id="pollsTbl"></table></div>
-      <p class="hint mt8">*Opposition = Kalonzo, Matiang'i, Gachagua, Karua. "Held out" polls haven't disclosed or verified methodology and aren't used in the anchor default. Source: kenya-election-intelligence-engine.</p>
+      <p class="hint mt8">"Held out" polls haven't published their method.</p>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Alliance facts behind the options <span class="pan-s">as of 3 Oct 2026</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Key facts <span class="pan-s">as of 3 Oct 2026</span></span></div>
       <ul class="ctx-list" id="ctxFacts"></ul>
     </div>
   </div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Developments that would move the model</span></div>
+      <div class="pan-hdr"><span class="pan-t">What could change the race</span></div>
       <div id="levList"></div>
     </div>
     <div class="pan">
@@ -481,6 +328,7 @@
       <div id="sentList"></div>
     </div>
   </div>
+  <details class="pan fold tech"><summary class="pan-t">Technical detail</summary><div class="mt12">
   <div class="g3 mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">By-election checks <span class="pan-s">2023–2024</span></span></div>
@@ -516,16 +364,17 @@
       <div id="marketRiskPanel"></div>
     </div>
   </div>
+  </div></details>
 </div>
 
 
 <!-- ═══ TAB: REPORT ═══ -->
 <div class="tpane" id="t-report" role="tabpanel" aria-labelledby="tab-report">
   <h2 class="sr-only">Report</h2>
-  <p class="pane-intro"><strong>A one-page briefing of the current scenario.</strong> Print it or save it as PDF from the Export menu.</p>
+  <p class="pane-intro"><strong>A one-page summary.</strong> Print it or save it as PDF from Export.</p>
   <div class="report-toolbar no-print fb mb12">
     <div>
-      <div class="pan-t">Executive Print Report</div>
+      <div class="pan-t">Printable report</div>
       <div class="pan-s">One-page briefing pack generated from the current VOTEWATCH scenario state.</div>
     </div>
     <div class="btn-grp" style="margin-top:0">
@@ -537,30 +386,16 @@
   <section id="printReport" class="print-report pan"></section>
 </div>
 
-<!-- ═══ TAB: DRILL-DOWN ═══ -->
-<div class="tpane" id="t-cty" role="tabpanel" aria-labelledby="tab-cty">
-  <h2 class="sr-only">County data</h2>
-  <p class="pane-intro"><strong>Every county and ward.</strong> Search for a county, then click it to list its wards.</p>
-  <div class="fb mb12">
-    <input class="srch" id="ctySrch" placeholder="Filter by county or cluster…" style="max-width:280px;">
-    <span class="b b-m" id="ctyCount">47 counties</span>
-  </div>
-  <div class="cg mb12" id="ctyGrid"></div>
-  <div class="pan">
-    <div class="pan-hdr"><span class="pan-t" id="drillT">Ward Drilldown</span></div>
-    <input class="srch mb12" id="wardSrch" placeholder="Search ward or constituency…" style="margin-bottom:8px;">
-    <div class="tscroll"><table class="tbl" id="wardTbl"></table></div>
-  </div>
-</div>
-
 </main>
 </div>
 
-<script defer src="data/wards.js?v=6.1"></script>
-<script defer src="data/counties.js?v=6.1"></script>
-<script defer src="data/transport.js?v=6.1"></script>
-<script defer src="data/context.js?v=6.1"></script>
-<script defer src="js/app.js?v=6.1"></script>
-<script defer src="js/enhance.js?v=6.1"></script>
+<script defer src="data/wards.js?v=7.0"></script>
+<script defer src="data/counties.js?v=7.0"></script>
+<script defer src="data/transport.js?v=7.0"></script>
+<script defer src="data/context.js?v=7.0"></script>
+<script defer src="data/kenya-geo.js?v=7.0"></script>
+<script defer src="js/app.js?v=7.0"></script>
+<script defer src="js/enhance.js?v=7.0"></script>
+<script defer src="js/map.js?v=7.0"></script>
 </body>
 </html>

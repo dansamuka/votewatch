@@ -7,17 +7,6 @@
 
 const CTX_AS_OF='2026-10-03';
 
-// How named candidates map onto the model's three blocs.
-//   inc = William Ruto (Kenya Kwanza + ODM–Oburu wing while the pact holds)
-//   opp = United Opposition principals (Kalonzo, Gachagua, Matiang'i, Karua)
-//   tf  = everyone else, chiefly Edwin Sifuna (Linda Mwananchi)
-const BLOC_OF={
-  'William Ruto':'inc',
-  'Kalonzo Musyoka':'opp',"Fred Matiang'i":'opp','Rigathi Gachagua':'opp','Martha Karua':'opp',
-  'Edwin Sifuna':'tf','Ndindi Nyoro':'tf','David Maraga':'tf','Babu Owino':'tf','George Wajackoyah':'tf',
-  'James Orengo':'tf','Jimi Wanjigi':'tf','Oburu Odinga':'tf','Okiya Omtata':'tf'
-};
-
 const POLLS=[
   {date:'2026-10-01',field:'15–25 Sep 2026',pollster:'Politrack Africa',n:20419,eligible:false,
    url:'https://capitalfm.africa/ruto-leads-2027-presidential-race-with-45-1-politrack-africa-poll/',
@@ -45,20 +34,14 @@ const POLLS=[
    r:{'William Ruto':25,'Kalonzo Musyoka':18,"Fred Matiang'i":16,'Edwin Sifuna':10,'Rigathi Gachagua':8}},
 ];
 
-// Bloc shares of the decided vote (named candidates only, undecided dropped).
-function pollBlocs(p){
-  const b={inc:0,opp:0,tf:0};
-  for(const [name,v] of Object.entries(p.r))b[BLOC_OF[name]||'tf']+=v;
+// A poll regrouped by the current teams (decided voters, undecided dropped):
+// team A, team B, and everyone else. Uses the live team assignment S.cfg.
+function pollTeams(p){
+  const b={inc:0,opp:0,tf:0},asg=(typeof S!=="undefined"&&S.cfg&&S.cfg.assign)||{};
+  for(const [name,v] of Object.entries(p.r)){const t=asg[name];b[t===0?"inc":t===1?"opp":"tf"]+=v;}
   const t=b.inc+b.opp+b.tf||1;
   return {inc:b.inc/t*100,opp:b.opp/t*100,tf:b.tf/t*100};
 }
-// Average of the two most recent model-eligible national polls: the default
-// for "Anchor to latest polls". Rounded to the input step (0.5).
-const POLL_ANCHOR_DEFAULT=(()=>{
-  const el=POLLS.filter(p=>p.eligible).slice(0,2).map(pollBlocs);
-  const avg=k=>Math.round(el.reduce((a,b)=>a+b[k],0)/el.length*2)/2;
-  return {inc:avg('inc'),opp:avg('opp'),tf:avg('tf'),from:POLLS.filter(p=>p.eligible).slice(0,2).map(p=>p.pollster+' '+p.date)};
-})();
 
 // Dated, sourced facts behind the political-context options.
 const CONTEXT_FACTS=[
@@ -76,4 +59,32 @@ const CONTEXT_FACTS=[
    url:'https://peopledaily.digital/inside-politics/gachagua-kalonzo-sifuna-and-matiangi-task-gatanga-mp-edward-muriu-to-draft-2027-coalition-formula'},
   {date:'2027-08-10',t:'General election (second Tuesday of August). Outright win needs 50%+1 and 25% in 24 counties; a run-off is decided by most votes (Art. 138).',
    url:'https://www.electionguide.org/elections/id/2614/'},
+];
+
+// ═══ CANDIDATE FIELD ═══
+// avg: polling average across all published national polls (incl. held-out ones),
+// from kenya-election-intelligence-engine data/model/polling_average_all.json
+// (as of 2026-10-01). These are the numbers shown in the Teams panel.
+// prof: relative strength by model region, in CLUSTER order
+//   [Western & Nairobi (Western+Nairobi), Mt Kenya (Mt Kenya), Coast,
+//    Eastern, Rift & North, Nyanza]
+// home: strongholds (x1.6). lean: which 2022 vote a candidate draws from
+// within a region ('bi' = 2022 Ruto voters, 'bo' = 2022 Raila voters).
+// Profiles are assumptions informed by TIFA Jul 2026 regional cuts (e.g. Ruto ~1.6x his
+// national share in Nyanza and ~1.9x in the Rift) and home regions.
+const CANDIDATES=[
+  {name:'William Ruto',      avg:33.69,polls:10,lean:'bi',prof:[0.95,0.7,0.9,0.6,1.8,2.0],home:[]},
+  {name:'Kalonzo Musyoka',   avg:15.12,polls:10,lean:'bo',prof:[0.7,0.6,1.0,3.5,0.3,0.5],home:['Machakos','Makueni','Kitui']},
+  {name:'Edwin Sifuna',      avg:13.79,polls:10,lean:'bo',prof:[2.2,0.3,1.6,0.5,0.3,1.0],home:['Bungoma','Kakamega','Vihiga','Nairobi City']},
+  {name:"Fred Matiang'i",    avg:11.05,polls:10,lean:'bo',prof:[1.0,1.4,0.6,0.6,0.5,2.0],home:['Kisii','Nyamira']},
+  {name:'Babu Owino',        avg:7.0,  polls:1, lean:'bo',prof:[1.2,0.3,0.8,0.3,0.3,2.5],home:['Kisumu','Siaya','Homa Bay','Migori','Nairobi City']},
+  {name:'Rigathi Gachagua',  avg:5.24, polls:10,lean:'bi',prof:[0.6,3.5,0.2,0.3,0.5,0.1],home:['Nyeri',"Murang'A",'Kiambu','Kirinyaga','Nyandarua']},
+  {name:'Ndindi Nyoro',      avg:3.1,  polls:1, lean:'bi',prof:[0.6,2.5,0.6,0.6,0.6,0.6],home:["Murang'A",'Kiambu']},
+  {name:'George Wajackoyah', avg:1.1,  polls:1, lean:'bo',prof:[1.5,0.9,0.9,0.9,0.9,0.9],home:['Kakamega','Bungoma']},
+  {name:'Oburu Odinga',      avg:1.0,  polls:1, lean:'bo',prof:[0.3,0.3,0.3,0.3,0.3,3.5],home:['Siaya','Kisumu','Homa Bay','Migori']},
+  {name:'David Maraga',      avg:0.83, polls:5, lean:'bo',prof:[0.9,0.9,0.9,0.9,0.9,1.8],home:['Nyamira','Kisii']},
+  {name:'Martha Karua',      avg:0.83, polls:4, lean:'bi',prof:[0.8,2.0,0.8,0.8,0.8,0.8],home:['Kirinyaga']},
+  {name:'James Orengo',      avg:0.4,  polls:1, lean:'bo',prof:[0.3,0.3,0.3,0.3,0.3,3.5],home:['Siaya']},
+  {name:'Okiya Omtata',      avg:0.36, polls:1, lean:'bo',prof:[1.5,0.8,0.8,0.8,0.8,1.3],home:['Busia']},
+  {name:'Jimi Wanjigi',      avg:0.3,  polls:1, lean:'bi',prof:[0.9,1.5,0.9,0.9,0.9,0.9],home:['Nyeri','Kiambu']},
 ];

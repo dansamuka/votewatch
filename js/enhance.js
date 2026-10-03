@@ -43,34 +43,6 @@ function labelControls(root=document){
   });
 }
 
-/* ── Lazy county geometry (~1 MB): idle prefetch + on demand ── */
-let geoPromise=null;
-const geoReady=()=>typeof VW_EMBEDDED_COUNTY_GEOJSON!=='undefined';
-function loadGeometry(){
-  if(geoReady())return Promise.resolve();
-  return geoPromise||(geoPromise=new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src='data/county-geojson.js?v=6.1';s.onload=res;s.onerror=rej;
-    document.head.appendChild(s);
-  }));
-}
-function wrapGeometryUsers(){
-  const lazy=(name,needs)=>{
-    const orig=window[name]; if(typeof orig!=='function')return;
-    window[name]=function(...a){
-      if(geoReady()||!needs())return orig.apply(this,a);
-      loadGeometry().then(()=>orig.apply(this,a)).catch(()=>orig.apply(this,a));
-    };
-  };
-  lazy('rMap',()=>{const p=$('#t-map');return !!p&&p.classList.contains('act');});
-  lazy('renderExecutiveReport',()=>true);
-  const idle=window.requestIdleCallback||(f=>setTimeout(f,1500));
-  idle(()=>loadGeometry().then(()=>{
-    // refresh geometry-dependent diagnostics once boundaries arrive
-    if(typeof S!=="undefined"&&S.res&&typeof rMap==='function'){try{rMap(S.res.ctyRes);}catch(e){}}
-  }).catch(()=>{}),{timeout:4000});
-}
-
 /* ── Hero: cluster-grouped county cartogram ── */
 function shareColor(v){
   // below 50%: blue ramp from the raised surface; 50%+: gold. Mixed in oklab for even steps.
@@ -119,7 +91,7 @@ function renderHero(){
     if(e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return;
     e.preventDefault();
     if(typeof selCounty==='function')selCounty(g.dataset.c);
-    const b=$('.tbtn[data-t="cty"]'); if(b)b.click();
+    const b=$('.tbtn[data-t="map"]'); if(b)b.click();
   };
   body.onclick=act;body.onkeydown=act;
 }
@@ -175,7 +147,7 @@ function initShell(){
 }
 
 /* ── boot ── */
-wrapKPIs();wrapGeometryUsers();
+wrapKPIs();
 initTabs();initShell();labelControls();
 let lblQueued=false;
 new MutationObserver(()=>{if(lblQueued)return;lblQueued=true;requestAnimationFrame(()=>{lblQueued=false;labelControls();});})
