@@ -546,13 +546,23 @@ function renderAll(){
 
 function rKPIs(r,mc_,dr,f,i25){
   const n=r.nat;
+  const top3=[
+    {name:n.A?.name||S.cfg.teams[0]||'Team A',share:n.i,cls:'vg'},
+    ...(n.B&&n.B.members&&n.B.members.length?[{name:n.B.name||S.cfg.teams[1]||'Team B',share:n.o,cls:'vr'}]:[]),
+    ...((n.others||[]).map(x=>({name:x.name,share:x.share,cls:'va'})))
+  ].sort((a,b)=>b.share-a.share).slice(0,3);
   $('#kpiRow').innerHTML=`
   <div class="kpi">
-    <div class="kpi-l">${mapEsc(S.cfg.teams[0])} · first round</div>
-    <div class="kpi-v ${n.i>0.50?'vgr':n.i>0.45?'vg':'vr'}">${pct(n.i,1)}</div>
-    <div class="kpi-d">${n.i>0.50?'<span class="b b-gr">Above 50%</span>':'<span class="b b-r">Below 50%</span>'} · likely range ${pct(mc_.iLo,1)}–${pct(mc_.iHi,1)}</div>
-    <div class="kpi-d">Chance of winning outright: <strong>${pct(mc_.iW,0)}</strong></div>
-    <div class="kpi-d"><strong>${fmtVotes(n.i*n.v)}</strong> of ${N.format(Math.round(n.v))} votes cast</div>
+    <div class="kpi-l">First round · top 3</div>
+    ${top3.map((x,idx)=>`<div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:${idx===0?'10':'8'}px 0;${idx<top3.length-1?'border-bottom:1px solid var(--bdr);':''}">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${idx+1}</span>
+      <span style="min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${mapEsc(x.name)}</span>
+      <span class="${x.cls}" style="font-family:var(--disp);font-size:${idx===0?'28':'22'}px;">${pct(x.share,1)}</span>
+      <span></span>
+      <span class="kpi-d" style="margin:0;"><strong>${fmtVotes(x.share*n.v)}</strong> votes</span>
+      <span></span>
+    </div>`).join('')}
+    <div class="kpi-d" style="margin-top:8px;">${N.format(Math.round(n.v))} total votes cast</div>
   </div>
   <div class="kpi">
     <div class="kpi-l">Chance of a run-off</div>
