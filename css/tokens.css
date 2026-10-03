@@ -1,0 +1,39 @@
+/* Design tokens. Legacy short names (--bg, --s1, --txt …) are aliases kept so
+   existing rules and inline styles keep working. */
+:root{
+  color-scheme:dark;
+  /* surfaces */
+  --canvas:#07090F;--subtle:#0C1018;--raised:#121826;--overlay:#1A2236;
+  --hairline:#ffffff14;--hairline-strong:#ffffff26;
+  /* text */
+  --text:#E6ECF5;--text-2:#A3B1C6;--text-3:#7C8CA3;
+  /* accents (≥7:1 on canvas, except text-3 ≈5.4:1) */
+  --c-gold:#E3B341;--c-red:#FF7B7B;--c-green:#3DD68C;--c-amber:#F5A524;--c-blue:#5AA9F0;
+  /* spacing (4/8 grid) */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-6:24px;--sp-8:32px;--sp-12:48px;
+  /* radius */
+  --r-sm:6px;--r-md:12px;--r-lg:16px;
+  /* type */
+  --font-sans:"Inter",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --t-xs:12px;--t-sm:13px;--t-md:15px;--t-lg:18px;--t-xl:24px;--t-kpi:40px;
+  /* motion */
+  --ease:cubic-bezier(0.16,1,0.3,1);--dur-1:120ms;--dur-2:200ms;--dur-3:280ms;
+  /* depth */
+  --shadow-1:0 0 0 1px var(--hairline),inset 0 1px 0 #ffffff0a,0 1px 2px #0006;
+  --shadow-2:0 0 0 1px var(--hairline),inset 0 1px 0 #ffffff12,0 4px 8px -2px #0005,0 12px 24px -8px #0007;
+
+  /* legacy aliases */
+  --bg:var(--canvas);--s1:var(--subtle);--s2:var(--raised);--s3:var(--overlay);
+  --bdr:#1F2839;--bdr2:#2D3A52;--bdr3:#46587A;
+  --txt:var(--text);--muted:var(--text-3);--dim:#74849B;
+  --gold:var(--c-gold);--gold2:#F0C75E;--gdim:#6b570f;
+  --red:#C0392B;--red2:var(--c-red);--rdim:#3a1214;
+  --grn:#1b7a4a;--gbr:var(--c-green);--gdark:#0b3520;
+  --amb:#b86a10;--amb2:var(--c-amber);--ambd:#3d2008;
+  --blu:#1e5f8f;--blbr:var(--c-blue);--bld:#0a1e30;
+  --pur:#6c3483;--purbr:#b073d1;
+  --mono:var(--font-mono);--sans:var(--font-sans);
+  --disp:var(--font-sans);
+  --radius:var(--r-md);
+}

@@ -2,22 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="description" content="VOTEWATCH 2027: scenario intelligence for Kenya&#39;s 2027 election, with county-level run-off, tipping-point and dispute-risk analysis.">
+<meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VOTEWATCH 2027 — Think-Tank Grade Scenario Intelligence v4.6</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/enhance.css">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="hdr">
   <div class="hdr-in">
     <div class="logo-wrap">
-      <div class="logo">VOTEWATCH 2027</div>
+      <h1 class="logo">VOTEWATCH 2027</h1>
       <span class="logo-ver">v4.6-REPORT</span>
     </div>
-    <div class="hdr-stats">
+    <div class="hdr-stats" aria-label="Live status">
       <span class="hstat blink live" id="hLive">● LIVE</span>
       <span class="hstat warn" id="hTimer">30s</span>
       <span class="hstat" id="hR1">R1: —</span>
@@ -75,21 +83,24 @@
   </div>
 </div>
 
-<nav class="tabs">
-  <button class="tbtn act" data-t="cmd">⬡ Command</button>
-  <button class="tbtn" data-t="ro">⟳ Run-off</button>
-  <button class="tbtn" data-t="tip">◈ Tipping</button>
-  <button class="tbtn" data-t="mat">⊞ Scenarios</button>
-  <button class="tbtn" data-t="con">⊛ Constitutional</button>
-  <button class="tbtn" data-t="map">▣ Map</button>
-  <button class="tbtn" data-t="dis">⚠ Dispute</button>
-  <button class="tbtn" data-t="int">◉ Intel</button>
-  <button class="tbtn" data-t="report">▦ Report</button>
-  <button class="tbtn" data-t="cty">▤ Drill-Down</button>
-</nav>
+<nav class="tabs" aria-label="Sections"><div class="tablist" role="tablist">
+  <button class="tbtn act" data-t="cmd" role="tab" id="tab-cmd" aria-controls="t-cmd" aria-selected="true"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h12v10H2zM2 6.5h12M5 9.5h3"/></svg>Command</button>
+  <button class="tbtn" data-t="ro" role="tab" id="tab-ro" aria-controls="t-ro" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a5 5 0 0 1 9-3M13 8a5 5 0 0 1-9 3M12 2v3h-3M4 14v-3h3"/></svg>Run-off</button>
+  <button class="tbtn" data-t="tip" role="tab" id="tab-tip" aria-controls="t-tip" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12l4-5 3 3 5-7M10 3h4v4"/></svg>Tipping</button>
+  <button class="tbtn" data-t="mat" role="tab" id="tab-mat" aria-controls="t-mat" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>Scenarios</button>
+  <button class="tbtn" data-t="con" role="tab" id="tab-con" aria-controls="t-con" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3H2zM3.5 6v6M8 6v6M12.5 6v6M2 14h12"/></svg>Constitutional</button>
+  <button class="tbtn" data-t="map" role="tab" id="tab-map" aria-controls="t-map" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v9l-4 1.5-5-2-4 1.5zM5.5 2v9.5M10.5 4v9.5"/></svg>Map</button>
+  <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Dispute</button>
+  <button class="tbtn" data-t="int" role="tab" id="tab-int" aria-controls="t-int" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>Intel</button>
+  <button class="tbtn" data-t="report" role="tab" id="tab-report" aria-controls="t-report" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3M5.5 8h5M5.5 11h5"/></svg>Report</button>
+  <button class="tbtn" data-t="cty" role="tab" id="tab-cty" aria-controls="t-cty" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h12"/></svg>Drill-Down</button>
+</div></nav>
+
+<main id="main">
 
 <!-- ═══ TAB: COMMAND ═══ -->
-<div class="tpane act" id="t-cmd">
+<div class="tpane act" id="t-cmd" role="tabpanel" aria-labelledby="tab-cmd">
+  <h2 class="sr-only">Command</h2>
   <!-- Polling Anchor -->
   <div class="poll-panel" id="pollPanel">
     <div class="fb mb8">
@@ -160,6 +171,8 @@
     </div>
 
   </div>
+  <!-- Hero cartogram -->
+  <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">County cartogram <span class="pan-s">47 counties · incumbent first-round share</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel" style="height:220px"></div></div></section>
   <!-- KPIs -->
   <div class="g5 mb12" id="kpiRow"></div>
   <div class="g2 mb12">
@@ -193,7 +206,8 @@
 </div>
 
 <!-- ═══ TAB: RUN-OFF ═══ -->
-<div class="tpane" id="t-ro">
+<div class="tpane" id="t-ro" role="tabpanel" aria-labelledby="tab-ro">
+  <h2 class="sr-only">Run-off</h2>
   <div class="note-b mb12">
     <strong style="color:var(--blbr)">Run-off Module.</strong> Since run-off is the modal outcome under most scenarios, this is the primary analytical output. R2 transfer rates calibrated by cluster from 2017 NASA→Jubilee analogues. Three endorsement scenarios modelled in parallel. P(Inc wins R2) is the strategic anchor.
   </div>
@@ -216,7 +230,8 @@
 </div>
 
 <!-- ═══ TAB: TIPPING ═══ -->
-<div class="tpane" id="t-tip">
+<div class="tpane" id="t-tip" role="tabpanel" aria-labelledby="tab-tip">
+  <h2 class="sr-only">Tipping</h2>
   <div class="note mb12">
     <strong style="color:var(--gold)">Tipping Point Definition.</strong> Counties where incumbent share is within ±8pp of the Article 138(4)(b) 25% constitutional threshold. Only these counties appear in this table — counties far above 25% (e.g., Garissa at 72%) are excluded regardless of their vote size or influence score.
   </div>
@@ -243,7 +258,8 @@
 </div>
 
 <!-- ═══ TAB: SCENARIOS ═══ -->
-<div class="tpane" id="t-mat">
+<div class="tpane" id="t-mat" role="tabpanel" aria-labelledby="tab-mat">
+  <h2 class="sr-only">Scenarios</h2>
   <div class="note mb12">
     <strong style="color:var(--gold)">2×2 Scenario Matrix.</strong> Extreme parameter presets across the two highest-impact axes — Third Force strength and Mt Kenya bloc cohesion. Q1 uses TF +16pp / Inc -7pp; Q4 uses TF +1pp / Inc +6pp. A 15pp TF spread and 13pp swing spread is designed to produce qualitatively different outcomes in each cell.
   </div>
@@ -255,7 +271,8 @@
 </div>
 
 <!-- ═══ TAB: CONSTITUTIONAL ═══ -->
-<div class="tpane" id="t-con">
+<div class="tpane" id="t-con" role="tabpanel" aria-labelledby="tab-con">
+  <h2 class="sr-only">Constitutional</h2>
   <div class="g2 mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Joint Probability Surface <span class="pan-s">P(nat >50%) AND P(counties ≥24) simultaneously</span></span></div>
@@ -285,7 +302,8 @@
 
 
 <!-- ═══ TAB: MAP ═══ -->
-<div class="tpane" id="t-map">
+<div class="tpane" id="t-map" role="tabpanel" aria-labelledby="tab-map">
+  <h2 class="sr-only">Map</h2>
   <div class="note-b mb12">
     <strong style="color:var(--blbr)">Actual County Boundary Map.</strong>
     This Map tab now uses a Leaflet/OpenStreetMap canvas and Kenya county boundary GeoJSON sources, matching the standalone Kenya County Intelligence Map style while keeping VOTEWATCH as the source of scenario values. If boundary data cannot be reached, the tab keeps diagnostics visible and will show a loading/error note rather than breaking the rest of the dashboard.
@@ -418,7 +436,8 @@
 
 
 <!-- ═══ TAB: DISPUTE ═══ -->
-<div class="tpane" id="t-dis">
+<div class="tpane" id="t-dis" role="tabpanel" aria-labelledby="tab-dis">
+  <h2 class="sr-only">Dispute</h2>
   <div class="note mb12">
     <strong style="color:var(--gold)">Dispute Risk Model — Three Dimensions:</strong> (1) Result margins at county and national level. (2) Data quality gaps — low-quality counties with close results create evidentiary vulnerabilities. (3) Geographic cluster concentration — if &gt;60% of close counties are in one cluster, a petition narrative around regional data integrity is materially stronger.
   </div>
@@ -445,7 +464,8 @@
 </div>
 
 <!-- ═══ TAB: INTEL ═══ -->
-<div class="tpane" id="t-int">
+<div class="tpane" id="t-int" role="tabpanel" aria-labelledby="tab-int">
+  <h2 class="sr-only">Intel</h2>
   <div class="g2 mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Strategic Levers <span class="pan-s">Model-impact ranked</span></span></div>
@@ -495,7 +515,8 @@
 
 
 <!-- ═══ TAB: REPORT ═══ -->
-<div class="tpane" id="t-report">
+<div class="tpane" id="t-report" role="tabpanel" aria-labelledby="tab-report">
+  <h2 class="sr-only">Report</h2>
   <div class="report-toolbar no-print fb mb12">
     <div>
       <div class="pan-t">Executive Print Report</div>
@@ -511,7 +532,8 @@
 </div>
 
 <!-- ═══ TAB: DRILL-DOWN ═══ -->
-<div class="tpane" id="t-cty">
+<div class="tpane" id="t-cty" role="tabpanel" aria-labelledby="tab-cty">
+  <h2 class="sr-only">Drill-Down</h2>
   <div class="fb mb12">
     <input class="srch" id="ctySrch" placeholder="Filter by county or cluster…" style="max-width:280px;">
     <span class="b b-m" id="ctyCount">47 counties</span>
@@ -524,10 +546,12 @@
   </div>
 </div>
 
-<script src="data/wards.js"></script>
-<script src="data/counties.js"></script>
-<script src="data/transport.js"></script>
-<script src="data/county-geojson.js"></script>
-<script src="js/app.js"></script>
+</main>
+
+<script defer src="data/wards.js"></script>
+<script defer src="data/counties.js"></script>
+<script defer src="data/transport.js"></script>
+<script defer src="js/app.js"></script>
+<script defer src="js/enhance.js"></script>
 </body>
 </html>

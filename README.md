@@ -5,13 +5,16 @@ Scenario-intelligence dashboard for Kenya's 2027 election: ward-level voter data
 ## Structure
 
 ```
-index.html            page markup
-css/styles.css        styles (incl. print styles)
-js/app.js             application logic
-data/wards.js         ward-level dataset  (const WD)
-data/counties.js      county dataset      (const CO)
-data/transport.js     transfer/road data  (const TR)
-data/county-geojson.js embedded county boundaries
+index.html              page markup (landmarks, ARIA tabs)
+css/tokens.css          design tokens (surfaces, type, spacing, motion)
+css/styles.css          component and print styles
+css/enhance.css         depth, motion, container-query layout
+js/app.js               scenario engine and rendering (unchanged logic)
+js/enhance.js           a11y wiring, hero cartogram, KPI sparklines/gauge, lazy geometry
+data/wards.js           ward-level dataset  (const WD)
+data/counties.js        county dataset      (const CO)
+data/transport.js       transfer/road data  (const TR)
+data/county-geojson.js  embedded county boundaries (~1 MB, loaded lazily)
 ```
 
 ## Run
