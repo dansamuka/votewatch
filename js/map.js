@@ -94,6 +94,16 @@ function outlineSVG(name){
   return `<svg class="cty-map" viewBox="${(x0-pad).toFixed(1)} ${(y0-pad).toFixed(1)} ${(x1-x0+2*pad).toFixed(1)} ${(y1-y0+2*pad).toFixed(1)}" role="img" aria-label="Outline of ${esc(name)}"><path class="cty-out" d="${g.d}"/></svg>`;
 }
 
+// Why the county looks like this: regional poll evidence, home candidates, method
+function basis(name){
+  if(typeof GROUP_BASIS==='undefined')return '';
+  const g=GROUP_OF[name],home=(HOME_NOTE[name]||[]);
+  const lab=g&&GROUP_LABEL[g];
+  return `<div class="cty-basis"><b>Basis</b>
+    ${lab?`<p><span class="tag-g">${esc(lab)}</span> ${esc(GROUP_BASIS[g]||'')}</p>`:''}
+    ${home.length?`<p>Home county of ${esc(home.join(' and '))}.</p>`:''}
+    <p class="hint">Candidate levels come from the national polling average; differences between counties in the same region follow 2022 results. Change teams to see how this county moves.</p></div>`;
+}
 function card(nat){
   const body=$('#vmBody'),sel=$('#vmSel');if(!body||!S.res)return;
   const name=S.selCty,c=name&&S.res.ctyRes.find(x=>x.name===name);
@@ -115,7 +125,8 @@ function card(nat){
       <span>Registered <b>${(co.projectedVoters2027||0).toLocaleString('en-KE')}</b></span>
       <span>Votes cast <b>${Math.round(c.tv).toLocaleString('en-KE')}</b></span>
       <span>${esc(S.cfg.teams[0])} 25%+ <b>${c.i>=0.25?'Yes':'No'}</b></span>
-    </div>`;
+    </div>
+    ${basis(name)}`;
   if(wards){wards.hidden=false;const t=$('#vmWardsT');if(t)t.textContent=`Wards in ${name}`;}
 }
 

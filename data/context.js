@@ -65,26 +65,66 @@ const CONTEXT_FACTS=[
 // avg: polling average across all published national polls (incl. held-out ones),
 // from kenya-election-intelligence-engine data/model/polling_average_all.json
 // (as of 2026-10-01). These are the numbers shown in the Teams panel.
-// prof: relative strength by model region, in CLUSTER order
-//   [Western & Nairobi (Western+Nairobi), Mt Kenya (Mt Kenya), Coast,
-//    Eastern, Rift & North, Nyanza]
-// home: strongholds (x1.6). lean: which 2022 vote a candidate draws from
-// within a region ('bi' = 2022 Ruto voters, 'bo' = 2022 Raila voters).
-// Profiles are assumptions informed by TIFA Jul 2026 regional cuts (e.g. Ruto ~1.6x his
-// national share in Nyanza and ~1.9x in the Rift) and home regions.
+//
+// Where each candidate's support sits is set per COUNTY GROUP (g), as strength
+// relative to their national level, calibrated to the July 2026 regional cuts:
+//   TIFA (Jul 24): Ruto North 61, Central Rift 49, Nyanza 30, Coast 21,
+//     Lower Eastern 15, Western 14, Mt Kenya 8 (national 24); Kalonzo Lower
+//     Eastern 58; Matiang'i Nyanza 29, Mt Kenya 18; Sifuna Western 28, Coast 27,
+//     Nairobi 22; Gachagua Mt Kenya 19.
+//   Infotrak (Jul 13): Ruto North Eastern 59, Rift 46, Nyanza 40, Eastern 19;
+//     Kalonzo Eastern 40; Matiang'i leads Central at 19 (26% undecided).
+// home: home counties (x1.5). Groups not listed default to `rest`.
+const COUNTY_GROUP={
+  NE:['Garissa','Wajir','Mandera','Marsabit','Isiolo'],
+  KAL:['Baringo','Bomet','Elgeyo/Marakwet','Kericho','Nandi','Uasin Gishu','West Pokot'],
+  RIFT:['Nakuru','Narok','Kajiado','Trans Nzoia','Turkana','Samburu'],
+  LUO:['Siaya','Kisumu','Homa Bay','Migori'],
+  GUSII:['Kisii','Nyamira'],
+  WEST:['Kakamega','Vihiga','Bungoma','Busia'],
+  NBI:['Nairobi City'],
+  COAST:['Mombasa','Kilifi','Kwale','Lamu','Tana River','Taita Taveta'],
+  KAMBA:['Machakos','Makueni','Kitui'],
+  MTK:['Nyeri',"Murang'A",'Kiambu','Kirinyaga','Nyandarua','Laikipia'],
+  MERU:['Meru','Tharaka - Nithi','Embu']
+};
+const GROUP_LABEL={NE:'North',KAL:'Kalenjin Rift',RIFT:'Mixed Rift',LUO:'Luo Nyanza',GUSII:'Gusii',WEST:'Western',NBI:'Nairobi',COAST:'Coast',KAMBA:'Ukambani',MTK:'Mt Kenya',MERU:'Meru & Embu'};
 const CANDIDATES=[
-  {name:'William Ruto',      avg:33.69,polls:10,lean:'bi',prof:[0.95,0.7,0.9,0.6,1.8,2.0],home:[]},
-  {name:'Kalonzo Musyoka',   avg:15.12,polls:10,lean:'bo',prof:[0.7,0.6,1.0,3.5,0.3,0.5],home:['Machakos','Makueni','Kitui']},
-  {name:'Edwin Sifuna',      avg:13.79,polls:10,lean:'bo',prof:[2.2,0.3,1.6,0.5,0.3,1.0],home:['Bungoma','Kakamega','Vihiga','Nairobi City']},
-  {name:"Fred Matiang'i",    avg:11.05,polls:10,lean:'bo',prof:[1.0,1.4,0.6,0.6,0.5,2.0],home:['Kisii','Nyamira']},
-  {name:'Babu Owino',        avg:7.0,  polls:1, lean:'bo',prof:[1.2,0.3,0.8,0.3,0.3,2.5],home:['Kisumu','Siaya','Homa Bay','Migori','Nairobi City']},
-  {name:'Rigathi Gachagua',  avg:5.24, polls:10,lean:'bi',prof:[0.6,3.5,0.2,0.3,0.5,0.1],home:['Nyeri',"Murang'A",'Kiambu','Kirinyaga','Nyandarua']},
-  {name:'Ndindi Nyoro',      avg:3.1,  polls:1, lean:'bi',prof:[0.6,2.5,0.6,0.6,0.6,0.6],home:["Murang'A",'Kiambu']},
-  {name:'George Wajackoyah', avg:1.1,  polls:1, lean:'bo',prof:[1.5,0.9,0.9,0.9,0.9,0.9],home:['Kakamega','Bungoma']},
-  {name:'Oburu Odinga',      avg:1.0,  polls:1, lean:'bo',prof:[0.3,0.3,0.3,0.3,0.3,3.5],home:['Siaya','Kisumu','Homa Bay','Migori']},
-  {name:'David Maraga',      avg:0.83, polls:5, lean:'bo',prof:[0.9,0.9,0.9,0.9,0.9,1.8],home:['Nyamira','Kisii']},
-  {name:'Martha Karua',      avg:0.83, polls:4, lean:'bi',prof:[0.8,2.0,0.8,0.8,0.8,0.8],home:['Kirinyaga']},
-  {name:'James Orengo',      avg:0.4,  polls:1, lean:'bo',prof:[0.3,0.3,0.3,0.3,0.3,3.5],home:['Siaya']},
-  {name:'Okiya Omtata',      avg:0.36, polls:1, lean:'bo',prof:[1.5,0.8,0.8,0.8,0.8,1.3],home:['Busia']},
-  {name:'Jimi Wanjigi',      avg:0.3,  polls:1, lean:'bi',prof:[0.9,1.5,0.9,0.9,0.9,0.9],home:['Nyeri','Kiambu']},
+  {name:'William Ruto',      avg:33.69,polls:10,lean:'bi',g:{NE:2.3,KAL:2.5,RIFT:1.45,LUO:1.3,GUSII:0.65,WEST:0.55,NBI:0.75,COAST:0.85,KAMBA:0.55,MTK:0.3,MERU:0.55},home:[]},
+  {name:'Kalonzo Musyoka',   avg:15.12,polls:10,lean:'bo',g:{KAMBA:4.5,NBI:1.0,COAST:1.0,MTK:0.8,MERU:0.9,RIFT:0.7,WEST:0.55,LUO:0.45,GUSII:0.45,NE:0.5,KAL:0.2},home:['Kitui']},
+  {name:'Edwin Sifuna',      avg:13.79,polls:10,lean:'bo',g:{WEST:1.8,NBI:1.5,COAST:1.7,LUO:1.0,GUSII:0.5,RIFT:0.8,KAMBA:0.4,MTK:0.3,MERU:0.3,NE:0.4,KAL:0.3},home:['Bungoma']},
+  {name:"Fred Matiang'i",    avg:11.05,polls:10,lean:'bo',g:{GUSII:5.5,LUO:0.7,MTK:1.4,MERU:1.2,NBI:1.1,RIFT:0.9,WEST:0.5,COAST:0.5,KAMBA:0.5,NE:0.6,KAL:0.4},home:[]},
+  {name:'Babu Owino',        avg:7.0,  polls:1, lean:'bo',g:{LUO:3.6,NBI:1.6,WEST:0.8,COAST:0.7,GUSII:0.5,rest:0.3},home:[]},
+  {name:'Rigathi Gachagua',  avg:5.24, polls:10,lean:'bi',g:{MTK:4.5,MERU:2.0,NBI:2.0,RIFT:1.2,rest:0.2},home:['Nyeri']},
+  {name:'Ndindi Nyoro',      avg:3.1,  polls:1, lean:'bi',g:{MTK:3.0,MERU:1.0,NBI:1.0,RIFT:0.8,rest:0.3},home:["Murang'A"]},
+  {name:'George Wajackoyah', avg:1.1,  polls:1, lean:'bo',g:{WEST:2.0,rest:0.8},home:['Kakamega']},
+  {name:'Oburu Odinga',      avg:1.0,  polls:1, lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
+  {name:'David Maraga',      avg:0.83, polls:5, lean:'bo',g:{GUSII:4.0,rest:0.7},home:['Nyamira']},
+  {name:'Martha Karua',      avg:0.83, polls:4, lean:'bi',g:{MTK:2.5,MERU:1.2,rest:0.7},home:['Kirinyaga']},
+  {name:'James Orengo',      avg:0.4,  polls:1, lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
+  {name:'Okiya Omtata',      avg:0.36, polls:1, lean:'bo',g:{WEST:2.0,rest:0.8},home:['Busia']},
+  {name:'Jimi Wanjigi',      avg:0.3,  polls:1, lean:'bi',g:{MTK:2.0,rest:0.8},home:['Nyeri']},
 ];
+// county name → group key
+const GROUP_OF={};Object.entries(COUNTY_GROUP).forEach(([g,list])=>list.forEach(n=>GROUP_OF[n]=g));
+
+// Why each county looks the way it does: shown as "Basis" on the map's county card.
+const GROUP_BASIS={
+  NE:"Ruto polled 59–61% across the North and North Eastern in July 2026 (Infotrak, TIFA).",
+  KAL:"Ruto's home base: 46–49% across the Rift in July 2026 polls (Infotrak, TIFA), highest in Kalenjin counties.",
+  RIFT:"Ruto leads, but below his Kalenjin base; these counties have large Kikuyu, Luhya or pastoralist votes.",
+  LUO:"The ODM–Ruto pact lifted Ruto to 30–40% in Nyanza (TIFA, Infotrak, Jul 2026); Babu Owino and Sifuna split the rest.",
+  GUSII:"Matiang'i's home region; he leads Nyanza-wide at 29% (TIFA, Jul 2026).",
+  WEST:"Sifuna leads Western at 28%, Ruto 14% (TIFA, Jul 2026); Sifuna was endorsed as the Luhya flagbearer.",
+  NBI:"Sifuna 22% in Nairobi (TIFA, Jul 2026); a split field with Babu Owino, Kalonzo and Matiang'i.",
+  COAST:"Sifuna 27%, Ruto 21–33% at the Coast (TIFA, Infotrak, Jul 2026).",
+  KAMBA:"Kalonzo's home region: 58% in Lower Eastern, Ruto 15–19% (TIFA, Infotrak, Jul 2026).",
+  MTK:"Gachagua 19%, Matiang'i 18%, Ruto 8% in Mt Kenya (TIFA, Jul 2026).",
+  MERU:"Like Mt Kenya, but Ruto stronger with Deputy President Kindiki (from Tharaka-Nithi)."
+};
+// Home-county notes (candidates' own counties get a x1.5 boost in the model)
+const HOME_NOTE={};
+CANDIDATES.forEach(c=>c.home.forEach(n=>(HOME_NOTE[n]=HOME_NOTE[n]||[]).push(c.name)));
+// Notes only (no extra boost: already reflected in the regional strength)
+(HOME_NOTE['Kisii']=HOME_NOTE['Kisii']||[]).unshift("Fred Matiang'i");
+(HOME_NOTE['Tharaka - Nithi']=HOME_NOTE['Tharaka - Nithi']||[]).push('Deputy President Kithure Kindiki (Ruto\'s running mate)');

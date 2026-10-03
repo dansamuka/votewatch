@@ -118,18 +118,21 @@ const WK=WARDS.map(w=>({
 // 2022 lean (Ruto-leaning wards for 'bi' candidates, Raila-leaning for 'bo').
 const CAND=(()=>{
   const nW=WARDS.length,nC=CANDIDATES.length;
-  const clIdx=Object.fromEntries(CLUSTERS.map((c,i)=>[c,i]));
   const wt=WARDS.map(w=>w.voters*w.toBase);
+  // The level for each county group comes from the candidate's group strength
+  // (data/context.js); 2022 results, softened by a square root, spread it across
+  // the counties and wards inside the group.
   const mean={bi:{},bo:{}};
-  CLUSTERS.forEach(cl=>{let s=0,b=0,o=0;WARDS.forEach((w,i)=>{if(w.cl===cl){s+=wt[i];b+=wt[i]*w.bi;o+=wt[i]*w.bo;}});mean.bi[cl]=b/(s||1);mean.bo[cl]=o/(s||1);});
+  const sums={};WARDS.forEach((w,i)=>{const k=GROUP_OF[w.county]||w.county;const s=sums[k]||(sums[k]={s:0,b:0,o:0});s.s+=wt[i];s.b+=wt[i]*w.bi;s.o+=wt[i]*w.bo;});
+  Object.entries(sums).forEach(([k,s])=>{mean.bi[k]=s.b/(s.s||1);mean.bo[k]=s.o/(s.s||1);});
   const tot=CANDIDATES.reduce((a,c)=>a+c.avg,0);
   const target=CANDIDATES.map(c=>c.avg/tot);
   const M=CANDIDATES.map(c=>{
     const home=new Set(c.home);
     return Float64Array.from(WARDS,w=>{
-      // softened (square root) so 2022 patterns guide, but don't dominate, 2027 shares
-      const lean=Math.sqrt(Math.max(0.05,(w[c.lean]||0)/(mean[c.lean][w.cl]||1)));
-      return (c.avg/tot)*(c.prof[clIdx[w.cl]]??1)*lean*(home.has(w.county)?1.6:1);
+      const lean=Math.sqrt(Math.max(0.05,(w[c.lean]||0)/(mean[c.lean][GROUP_OF[w.county]||w.county]||1)));
+      const g=c.g[GROUP_OF[w.county]]??c.g.rest??0.5;
+      return (c.avg/tot)*g*lean*(home.has(w.county)?1.5:1);
     });
   });
   const W=wt.reduce((a,b)=>a+b,0);

@@ -59,6 +59,33 @@ These change outputs on purpose.
    counties. The Run-off tab now shows how many counties each side leads,
    instead of the 25% count.
 
+## County sense check (v7.3, 4 Oct 2026)
+
+Each county was checked against the July 2026 regional cuts (TIFA 24 Jul;
+Infotrak 13 Jul). Problems found under v7.0 and fixed:
+
+| County / region | v7.0 | Problem | v7.3 |
+|---|---|---|---|
+| Busia | Ruto 51% | Western/ODM county, not a Ruto stronghold | Ruto 20%, Sifuna 41% |
+| Kisii, Nyamira | Ruto 45%, Matiang'i 21% | Matiang'i's home; TIFA has him leading Nyanza at 29% | Matiang'i 54%, Ruto 20% |
+| Kajiado, Isiolo, Taita Taveta | Kalonzo 46–54% | Non-Kamba counties inherited Ukambani strength | Ruto 52% / 67% / 38% |
+| Ukambani | Ruto 7–9% | TIFA/Infotrak Ruto 15–19% | Ruto 12–18%, Kalonzo 64–74% |
+| Mt Kenya | Ruto 21–27% | TIFA Ruto 8% (≈11% of decided) | Ruto 12–14%; Gachagua 18–32%, Matiang'i 17–22% |
+| Western | Sifuna 44–48% | TIFA Sifuna 28% of all (≈35% decided) | Sifuna 38–47% (home Bungoma highest) |
+| Coast | Ruto 25–28% | TIFA 21%, Infotrak 33% | Ruto 27–30% (Lamu, Tana River higher) |
+| Nairobi | Sifuna 43%, Ruto 21% | TIFA Sifuna 22%; split field | Ruto 24, Sifuna 24, Owino 14, Kalonzo 15, Matiang'i 11, Gachagua 6 |
+| Luo Nyanza | Ruto 24–32% | ODM pact; Nyanza Ruto 30–40% | Ruto 30–39%, Owino 26–29% |
+
+**Method change.** Strength is now set per county group (North, Kalenjin Rift,
+Mixed Rift, Luo Nyanza, Gusii, Western, Nairobi, Coast, Ukambani, Mt Kenya,
+Meru & Embu), calibrated to those regional figures, with home counties ×1.5. 2022
+results (square-rooted) only spread support between counties and wards within a
+group. National averages are unchanged, so headline results barely move
+(default: team A 38.2%, team B 46.6%).
+
+Each county card on the Map tab now has a **Basis** note giving the regional poll
+evidence and any home-county effect behind its result.
+
 ## Teams model (v7.0) — replaces the v6 alliance layer below
 
 **Candidate field.** 14 candidates with their average across all published
