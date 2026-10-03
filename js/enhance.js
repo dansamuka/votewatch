@@ -45,10 +45,8 @@ function labelControls(root=document){
 
 /* ── Hero: cluster-grouped county cartogram ── */
 function shareColor(v){
-  // below 50%: blue ramp from the raised surface; 50%+: gold. Mixed in oklab for even steps.
-  if(v>=0.5)return`color-mix(in oklab,var(--c-gold) ${Math.min(100,60+Math.round((v-0.5)*200))}%,var(--raised))`;
-  const p=Math.round(Math.max(0,v)/0.5*90);
-  return`color-mix(in oklab,var(--c-blue) ${p}%,var(--raised))`;
+  // team A (Ruto's side) colour, stronger as its share rises (0–70%). Mixed in oklab for even steps.
+  return`color-mix(in oklab,var(--team-a) ${Math.round(Math.min(1,Math.max(0,v)/0.7)*90+5)}%,var(--raised))`;
 }
 function renderHero(){
   const body=$('#heroBody'); if(!body||typeof S==="undefined"||!S.res)return;

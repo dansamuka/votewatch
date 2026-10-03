@@ -191,7 +191,7 @@ body.light-mode .hex text{stroke:#fff8;fill:#0F172A}
 .ro-pair-e{flex-basis:100%;font-size:13px;line-height:20px;color:var(--text-2)}
 
 /* ── teams panel ── */
-:root{--team-a:#3B82C4;--team-b:#C0612B;--team-c:#2E9E6A;--team-d:#8B5CC4}
+:root{--team-a:#D97706;--team-b:#1558C4;--team-c:#0E7C66;--team-d:#7C3AED;--others:#6B7280}
 .tm-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
 .tm-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;border-radius:999px;background:var(--raised);box-shadow:0 0 0 1px var(--hairline-strong)}
 .tm-chip b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--tc);color:#fff;font-size:12px}

@@ -7,7 +7,7 @@
   --text:#ECEEF1;--text-2:#AEB4BE;--text-3:#8E95A0;
   --hairline:rgb(255 255 255 / .09);--hairline-strong:rgb(255 255 255 / .17);
   --c-gold:#8AB6FF;--c-blue:#8AB6FF;--c-red:#F87171;--c-green:#4ADE80;--c-amber:#F0A93B;
-  --team-a:#8AB6FF;--team-b:#F87171;--team-c:#3CC9A8;--team-d:#F0A93B;
+  --team-a:#F5A623;--team-b:#8AB6FF;--team-c:#3CC9A8;--team-d:#C4A7F5;--others:#9AA4B2;
   /* map + Atlas aliases */
   --surface:#14171C;--surface-raised:#1A1E24;--canvas-sunken:#08090B;
   --ink:#ECEEF1;--ink-2:#C9CED6;--ink-muted:#AEB4BE;--ink-subtle:#8E95A0;
@@ -29,7 +29,7 @@ body.light-mode{
   --text:#14161A;--text-2:#4B4F57;--text-3:#686C74;
   --hairline:rgb(20 22 26 / .12);--hairline-strong:rgb(20 22 26 / .2);
   --c-gold:#1558C4;--c-blue:#1558C4;--c-red:#B42318;--c-green:#15803D;--c-amber:#B45309;
-  --team-a:#1558C4;--team-b:#B42318;--team-c:#0E7C66;--team-d:#B45309;
+  --team-a:#D97706;--team-b:#1558C4;--team-c:#0E7C66;--team-d:#7C3AED;--others:#6B7280;
   --surface:#FFFEFB;--surface-raised:#FFFFFF;--canvas-sunken:#EFEDE6;
   --ink:#14161A;--ink-2:#30343B;--ink-muted:#4B4F57;--ink-subtle:#686C74;
   --line:rgb(20 22 26 / .12);--line-2:rgb(20 22 26 / .2);--line-strong:#8A8D93;
@@ -124,3 +124,4 @@ input[type=range]{accent-color:var(--accent)}
 .vm-tip b{display:block;font-size:13px;color:var(--ink);margin-bottom:2px}
 .vm-tip span{display:flex;justify-content:space-between;gap:12px}
 .vm-tip span i{font-style:normal;font-family:var(--font-mono);color:var(--ink)}
+.leg-bar{background:linear-gradient(90deg,color-mix(in oklab,var(--team-a) 5%,var(--raised)),var(--team-a))}

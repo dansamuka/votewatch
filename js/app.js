@@ -592,7 +592,7 @@ function rNat(r){
   const cls=Object.entries(cds).sort((a,b)=>b[1].tv-a[1].tv);
   $('#natBd').innerHTML=`
   <div class="flex g8 mb12" style="align-items:stretch;">
-  ${[['Incumbent',n.i,'blbr'],['Opposition',n.o,'red2'],['Third Force',n.t,'amb2']].map(([l,v,c])=>`
+  ${[['Incumbent',n.i,'blbr'],['Opposition',n.o,'red2'],['Third Force',n.t,'others']].map(([l,v,c])=>`
   <div style="flex:1;padding:10px;background:var(--s2);border:1px solid var(--bdr);">
     <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">${l}</div>
     <div style="font-family:var(--disp);font-size:28px;color:var(--${c})">${pct(v)}</div>
@@ -605,7 +605,7 @@ function rNat(r){
     <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${N.format(Math.round(d.tv))}</td>
     <td style="color:var(--blbr)">${pct(d.iv/d.tv)}</td>
     <td style="color:var(--red2)">${pct(d.ov/d.tv)}</td>
-    <td style="color:var(--amb2)">${pct(d.tfv/d.tv)}</td>
+    <td style="color:var(--others)">${pct(d.tfv/d.tv)}</td>
     <td style="min-width:90px"><div class="stk"><div class="si" style="flex:${d.iv/d.tv}"></div><div class="so" style="flex:${d.ov/d.tv}"></div><div class="st" style="flex:${d.tfv/d.tv}"></div></div></td>
   </tr>`).join('')}</tbody></table>`;
 }
@@ -651,7 +651,7 @@ function rRunoff(r,mc_){
 
   // Run-off pairing = actual top two in round one (Art. 138(5))
   const pr=r2pair(nat),A=blocName(pr.a),B=blocName(pr.b),E=blocName(pr.e);
-  const BC={inc:'var(--blbr)',opp:'var(--red2)',tf:'var(--amb2)'};
+  const BC={inc:'var(--blbr)',opp:'var(--red2)',tf:'var(--others)'};
   const sh={inc:nat.i,opp:nat.o,tf:nat.t};
   const dirs=[{k:'toA',l:`If the other candidates' voters lean to ${A}`,c:BC[pr.a]},{k:'toB',l:`If they lean to ${B}`,c:BC[pr.b]},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
   $('#roScens').innerHTML=`<div class="ro-pair" style="grid-column:1/-1"><span class="ro-pair-l">Run-off pairing</span>
@@ -729,7 +729,7 @@ function rTipping(r,f,i25){
     <td><span class="b ${gc}">${t.ig>0?'+':''}${pct(t.ig)}</span></td>
     <td style="font-family:var(--mono);font-size:12px">${t.vn>0?'+'+N.format(t.vn):'<span style="color:var(--gbr)">Above</span>'}</td>
     <td style="color:var(--red2)">${pct(t.o)}</td>
-    <td style="color:var(--amb2)">${pct(t.t)}</td>
+    <td style="color:var(--others)">${pct(t.t)}</td>
     <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${hist?pct(hist.hist17)+'→'+pct(hist.baseIncumbent2022):'—'}</td>
     <td><span class="b ${t.dq==='high'?'b-gr':t.dq==='medium'?'b-g':'b-r'}">${t.dq}</span></td></tr>`;
   }).join(''):`<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--muted);font-family:var(--mono);font-size:12px;">No counties within ±8pp of 25% threshold at current parameters.</td></tr>`}</tbody>`;
@@ -742,7 +742,7 @@ function rTipping(r,f,i25){
     <td>${c.ia?'<span class="b b-gr">✓</span>':'<span class="b b-r">✗</span>'}</td>
     <td style="color:var(--red2)">${pct(c.o)}</td>
     <td>${c.oa?'<span class="b b-gr">✓</span>':'<span class="b b-m">✗</span>'}</td>
-    <td style="color:var(--amb2)">${pct(c.t)}</td>
+    <td style="color:var(--others)">${pct(c.t)}</td>
   </tr>`).join('')}</tbody>`;
 }
 
@@ -790,7 +790,7 @@ function rScen(){
     <div class="sq-t" style="color:${sc.c}">${sc.t}</div>
     <div class="sq-d">${mapEsc(sc.d)}</div>
     <div class="sq-bars" aria-label="First-round shares">
-      ${[[sc.cfg.teams[0],sc.n.i,'var(--blbr)'],[sc.cfg.teams[1],sc.n.o,'var(--red2)'],['Others',sc.n.t,'var(--amb2)']].map(([l,v,col])=>`
+      ${[[sc.cfg.teams[0],sc.n.i,'var(--blbr)'],[sc.cfg.teams[1],sc.n.o,'var(--red2)'],['Others',sc.n.t,'var(--others)']].map(([l,v,col])=>`
       <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b><em>${fmtVotes(v*sc.n.v)}</em></div>`).join('')}
     </div>
     <p class="sq-total">Total votes cast <b>${N.format(Math.round(sc.n.v))}</b> · turnout ${pct(sc.n.v/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} projected voters</p>
@@ -806,7 +806,7 @@ function rScen(){
     <td style="font-weight:600;color:${sc.c}">${sc.tier}</td>
     <td style="color:var(--blbr)">${pct(sc.n.i)} <span class="hint">${fmtVotes(sc.n.i*sc.n.v)}</span></td>
     <td style="color:var(--red2)">${pct(sc.n.o)} <span class="hint">${fmtVotes(sc.n.o*sc.n.v)}</span></td>
-    <td style="color:var(--amb2)">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.v)}</span></td>
+    <td style="color:var(--others)">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.v)}</span></td>
     <td>${N.format(Math.round(sc.n.v))}</td>
     <td>${sc.i25}/47</td>
     <td>${pct(sc.ro,0)}</td>
@@ -1420,7 +1420,7 @@ function rCountyGrid(ctyRes){
       <div class="stk mb8"><div class="si" style="flex:${c.i}"></div><div class="so" style="flex:${c.o}"></div><div class="st" style="flex:${c.t}"></div></div>
       <div class="cc-r"><span>Team A</span><strong style="color:${iCol(c.i)}">${pct(c.i)} ${c.ia?'✓':''}</strong></div>
       <div class="cc-r"><span>Team B</span><strong style="color:var(--red2)">${pct(c.o)}</strong></div>
-      <div class="cc-r"><span>Others</span><strong style="color:var(--amb2)">${pct(c.t)}</strong></div>
+      <div class="cc-r"><span>Others</span><strong style="color:var(--others)">${pct(c.t)}</strong></div>
       <div class="cc-r"><span>Turnout</span><strong>${pct(c.to)}</strong></div>
       ${hist?`<div class="cc-r"><span>2017→2022</span><strong style="color:var(--muted)">${pct(hist.hist17)}→${pct(hist.baseIncumbent2022)}</strong></div>`:''}
       <div class="mt6"><span class="b b-m">${c.cluster}</span></div>
@@ -1447,7 +1447,7 @@ function rWardDrill(wardRes){
     <td>${pct(w.to)}</td>
     <td style="color:var(--blbr)">${pct(w.inc)}</td>
     <td style="color:var(--red2)">${pct(w.opp)}</td>
-    <td style="color:var(--amb2)">${pct(w.tf)}</td>
+    <td style="color:var(--others)">${pct(w.tf)}</td>
   </tr>`).join('')}</tbody>`;
 }
 
@@ -1500,7 +1500,7 @@ function rIntel(){
 
   const pt=$('#pollsTbl');
   if(pt)pt.innerHTML=`<thead><tr><th>Released</th><th>Pollster</th><th>${mapEsc(S.cfg.teams[0])}</th><th>${mapEsc(S.cfg.teams[1]||'Team B')}</th><th>Others</th><th>Top names</th></tr></thead><tbody>${POLLS.map(p=>{const b=pollTeams(p);const top=Object.entries(p.r).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,v])=>`${mapEsc(n.split(' ').pop())} ${v}`).join(' · ');
-    return `<tr><td>${p.date}</td><td><a href="${p.url}" target="_blank" rel="noopener">${mapEsc(p.pollster)}</a>${p.eligible?'':' <span class="b b-m" title="Methodology not disclosed or not yet verified">held out</span>'}</td><td style="color:var(--blbr)">${b.inc.toFixed(1)}%</td><td style="color:var(--red2)">${b.opp.toFixed(1)}%</td><td style="color:var(--amb2)">${b.tf.toFixed(1)}%</td><td style="white-space:normal">${top}</td></tr>`;}).join('')}</tbody>`;
+    return `<tr><td>${p.date}</td><td><a href="${p.url}" target="_blank" rel="noopener">${mapEsc(p.pollster)}</a>${p.eligible?'':' <span class="b b-m" title="Methodology not disclosed or not yet verified">held out</span>'}</td><td style="color:var(--blbr)">${b.inc.toFixed(1)}%</td><td style="color:var(--red2)">${b.opp.toFixed(1)}%</td><td style="color:var(--others)">${b.tf.toFixed(1)}%</td><td style="white-space:normal">${top}</td></tr>`;}).join('')}</tbody>`;
   const cf=$('#ctxFacts');
   if(cf)cf.innerHTML=CONTEXT_FACTS.map(x=>`<li><span class="ctx-d">${x.date}</span> ${mapEsc(x.t)} <a href="${x.url}" target="_blank" rel="noopener">source</a></li>`).join('');
 }
