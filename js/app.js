@@ -596,6 +596,7 @@ function rNat(r){
   <div style="flex:1;padding:10px;background:var(--s2);border:1px solid var(--bdr);">
     <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">${l}</div>
     <div style="font-family:var(--disp);font-size:28px;color:var(--${c})">${pct(v)}</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;">${N.format(Math.round(v*n.v))} votes</div>
     <div class="pbar mt6"><div class="pf p-${c==='blbr'?'b':c==='red2'?'r':'a'}" style="width:${pct(v,0)}"></div></div>
   </div>`).join('')}
   </div>
