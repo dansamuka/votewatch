@@ -526,71 +526,48 @@ function renderAll(){
     const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
 
     rHeadline(r,mc_,i25);
-
-    rKPIs(r,mc_,dr,f,i25);
-    rImpl(r,mc_);
-    rNat(r);
-    rTornado(r.nat);
-    rRunoff(r,mc_);
-    rTipping(r,f,i25);
-    rScen();
-    rConst(r,mc_);
-    rMap(r.ctyRes);
-    rDispute(r.ctyRes,dr);
-    rSens();
-    rCountyGrid(r.ctyRes);
-    rWardDrill(r.wardRes);
-    rIntel();
+    // Only the open tab is drawn now; the others are marked stale and drawn
+    // when opened (cuts first render and every slider move).
+    S.ctx={r,mc:mc_,dr,f,i25};
+    S.dirty=new Set(Object.keys(PANE_RENDER));
+    const open=document.querySelector('.tbtn.act')?.dataset.t||'cmd';
+    renderPane(open);
     rShockLog();
   }catch(err){
     console.error('renderAll error:',err);
   }
 }
 
+const PANE_RENDER={
+  cmd:c=>{rKPIs(c.r,c.mc,c.dr,c.f,c.i25);rImpl(c.r,c.mc);rNat(c.r);rTornado(c.r.nat);},
+  ro:c=>rRunoff(c.r,c.mc),
+  tip:c=>rTipping(c.r,c.f,c.i25),
+  mat:()=>rScen(),
+  con:c=>{rConst(c.r,c.mc);rSens();},
+  map:c=>{rMap(c.r.ctyRes);rCountyGrid(c.r.ctyRes);rWardDrill(c.r.wardRes);},
+  dis:c=>rDispute(c.r.ctyRes,c.dr),
+  int:()=>rIntel(),
+  report:()=>renderExecutiveReport()
+};
+function renderPane(k){
+  const fn=PANE_RENDER[k];if(!fn||!S.ctx)return;
+  try{fn(S.ctx);}catch(e){console.error('render '+k,e);}
+  if(S.dirty)S.dirty.delete(k);
+}
 function rKPIs(r,mc_,dr,f,i25){
-  const n=r.nat;
-  const top3=[
-    {name:n.A?.name||S.cfg.teams[0]||'Team A',share:n.i,cls:'vg'},
-    ...(n.B&&n.B.members&&n.B.members.length?[{name:n.B.name||S.cfg.teams[1]||'Team B',share:n.o,cls:'vr'}]:[]),
-    ...((n.others||[]).map(x=>({name:x.name,share:x.share,cls:'va'})))
-  ].sort((a,b)=>b.share-a.share).slice(0,3);
+  const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
+  VZ.race($('#raceStrip'),r,mc_,i25,o25);
   $('#kpiRow').innerHTML=`
-  <div class="kpi">
-    <div class="kpi-l">First round · top 3</div>
-    ${top3.map((x,idx)=>`<div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:${idx===0?'10':'8'}px 0;${idx<top3.length-1?'border-bottom:1px solid var(--bdr);':''}">
-      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${idx+1}</span>
-      <span style="min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${mapEsc(x.name)}</span>
-      <span class="${x.cls}" style="font-family:var(--disp);font-size:${idx===0?'28':'22'}px;">${pct(x.share,1)}</span>
-      <span></span>
-      <span class="kpi-d" style="margin:0;"><strong>${fmtVotes(x.share*n.v)}</strong> votes</span>
-      <span></span>
-    </div>`).join('')}
-    <div class="kpi-d" style="margin-top:8px;">${N.format(Math.round(n.v))} total votes cast</div>
+  <div class="kpi kpi-dots">
+    <div class="kpi-l">How the election ends <span class="kpi-hint">100 simulations shown as dots</span></div>
+    <div id="kpiDots"></div>
   </div>
-  <div class="kpi">
-    <div class="kpi-l">Chance of a run-off</div>
-    <div class="kpi-v ${mc_.ro>0.55?'vr':mc_.ro>0.30?'va':'vgr'}">${pct(mc_.ro,0)}</div>
-    <div class="kpi-d">Outright win: A ${pct(mc_.iW,0)} · B ${pct(mc_.oW,0)}</div>
-    <div class="kpi-d">${f.tbi>0?`A further <strong>${pct(f.tbi)}</strong> third-force vote would force one`:'A is below 50%'}</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-l">Counties where A has 25%+ <span class="kpi-hint">needs 24</span></div>
-    <div class="kpi-v ${i25>=24?'vgr':'vr'}">${i25}<span style="font-size:20px;color:var(--muted)">/47</span></div>
-    <div class="kpi-d">${i25>=24?'<span class="b b-gr">Passes county test</span>':'<span class="b b-r">Short by '+(24-i25)+'</span>'}</div>
-    <div class="kpi-d">B has 25%+ in ${r.ctyRes.filter(c=>c.o>=0.25).length}</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-l">Dispute risk <span class="kpi-hint">0–100</span></div>
-    <div class="kpi-v ${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}</div>
-    <div class="kpi-d">${dr.n} close counties · tightest margin ${pct(dr.minM)}</div>
-    <div class="kpi-d">Most of them in ${dr.top}</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-l">Others · national</div>
-    <div class="kpi-v va">${pct(n.t,1)}</div>
-    <div class="kpi-d">${n.others&&n.others[0]?`Largest: ${n.others[0].name} ${pct(n.others[0].share)}`:'none'}</div>
-    <div class="kpi-d">${f.forced?'<span class="b b-r">Enough to force a run-off</span>':'<span class="b b-g">Not enough to force a run-off</span>'}</div>
+  <div class="kpi kpi-dis">
+    <div class="kpi-l">Dispute risk <span class="kpi-hint">${Math.round(dr.score)}/100</span></div>
+    <div id="kpiMargins"></div>
   </div>`;
+  VZ.outcomes($('#kpiDots'),mc_);
+  VZ.margins($('#kpiMargins'),r.ctyRes,{w:520,h:84,r:4});
 }
 
 function rImpl(r,mc_){
@@ -606,7 +583,7 @@ function rNat(r){
   $('#natBd').innerHTML=`
   <div class="flex g8 mb12" style="align-items:stretch;">
   ${[['Incumbent',n.i,'blbr'],['Opposition',n.o,'red2'],['Third Force',n.t,'others']].map(([l,v,c])=>`
-  <div style="flex:1;padding:10px;background:var(--s2);border:1px solid var(--bdr);">
+  <div style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--bdr);">
     <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">${l}</div>
     <div style="font-family:var(--disp);font-size:28px;color:var(--${c})">${pct(v)}</div>
     <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;">${N.format(Math.round(v*n.v))} votes</div>
@@ -652,38 +629,28 @@ function rTornado(nat){
 
 function rRunoff(r,mc_){
   const{nat,ctyRes}=r,f=ff(nat);
-  $('#roKpis').innerHTML=`
-  <div class="kpi"><div class="kpi-l">First round</div>
-    <div class="kpi-v ${f.forced?'va':mc_.iW>0.5?'vgr':'vr'}">${f.forced?'Run-off':mc_.iW>0.5?'A wins':'Close'}</div>
-    <div class="kpi-d">A ${pct(nat.i)} · B ${pct(nat.o)} · others ${pct(nat.t)}</div></div>
-  <div class="kpi"><div class="kpi-l">Chance of a run-off</div>
-    <div class="kpi-v ${mc_.ro>0.55?'vr':mc_.ro>0.30?'va':'vgr'}">${pct(mc_.ro,0)}</div>
-    <div class="kpi-d">Across ${N.format(ITERS)} simulated elections</div></div>
-  <div class="kpi"><div class="kpi-l">Extra vote for others to force a run-off</div>
-    <div class="kpi-v va">${f.ia?'+'+pct(f.tbi):'Already forced'}</div>
-    <div class="kpi-d">${f.ia?`On top of today's ${pct(nat.t)}, to pull the incumbent below 50%+1`:`The incumbent is already below 50% at ${pct(nat.t)} third-force share`}</div></div>`;
-
+  if($('#roKpis'))$('#roKpis').innerHTML='';
   // Run-off pairing = actual top two in round one (Art. 138(5))
   const pr=r2pair(nat),A=blocName(pr.a),B=blocName(pr.b),E=blocName(pr.e);
-  const BC={inc:'var(--blbr)',opp:'var(--red2)',tf:'var(--others)'};
-  const sh={inc:nat.i,opp:nat.o,tf:nat.t};
+  const BC=new Proxy({},{get:(_,k)=>VZ.ink(k)});
+  const sh=k=>k==='inc'?nat.i:k==='opp'?nat.o:((nat.others||[]).find(o=>o.key===k)||{share:0}).share;
   const dirs=[{k:'toA',l:`If the other candidates' voters lean to ${A}`,c:BC[pr.a]},{k:'toB',l:`If they lean to ${B}`,c:BC[pr.b]},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
   $('#roScens').innerHTML=`<div class="ro-pair" style="grid-column:1/-1"><span class="ro-pair-l">Run-off pairing</span>
-      <b style="color:${BC[pr.a]}">${A}</b> <span class="ro-pair-s">${pct(sh[pr.a])}</span> vs <b style="color:${BC[pr.b]}">${B}</b> <span class="ro-pair-s">${pct(sh[pr.b])}</span>
-      <span class="ro-pair-e">${E} comes third with ${pct(sh[pr.e])}; votes for everyone else decide round two.${mc_.ro>0?` Across simulated run-offs, this pairing comes up ${pct((mc_.pairs||{})[[pr.a,pr.b].sort().join('|')]||0,0)} of the time; with an even split, ${A} wins round two in ${pct((mc_.r2Win||{})[pr.a]||0,0)} and ${B} in ${pct((mc_.r2Win||{})[pr.b]||0,0)}.`:''}</span></div>`+
+      <b style="color:${BC[pr.a]}">${A}</b> <span class="ro-pair-s">${pct(sh(pr.a))}</span> vs <b style="color:${BC[pr.b]}">${B}</b> <span class="ro-pair-s">${pct(sh(pr.b))}</span>
+      <span class="ro-pair-e">${E} comes third with ${pct(sh(pr.e))}; votes for everyone else decide round two.${mc_.ro>0?` Across simulated run-offs, this pairing comes up ${pct((mc_.pairs||{})[[pr.a,pr.b].sort().join('|')]||0,0)} of the time; with an even split, ${A} wins round two in ${pct((mc_.r2Win||{})[pr.a]||0,0)} and ${B} in ${pct((mc_.r2Win||{})[pr.b]||0,0)}.`:''}</span></div>`+
   dirs.map(d=>{
     const ro=r2sim(ctyRes,nat,d.k);
     const carriedA=ro.r2cty.filter(c=>c.r2lead===ro.a).length;
     return`<div class="ro-card">
       <div class="ro-ttl" style="color:${d.c}">${d.l}</div>
       <div class="ro-val" style="color:${BC[ro.winner]}">${pct(Math.max(ro.shareA,ro.shareB))}</div>
-      <div style="font-size:13px;color:var(--text-2);margin-top:6px;">${A} ${pct(ro.shareA)} · ${B} ${pct(ro.shareB)} · ${A} leads in ${carriedA}/47 counties</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:8px;">${A} ${pct(ro.shareA)} · ${B} ${pct(ro.shareB)} · ${A} leads in ${carriedA}/47 counties</div>
       <div class="pbar mt8"><div class="pf" style="width:${pct(ro.shareA,0)};background:${BC[ro.a]}"></div></div>
-      <div style="margin-top:6px;"><span class="b ${ro.winner==='inc'?'b-b':ro.winner==='opp'?'b-r':'b-a'}">${blocName(ro.winner)} wins</span></div>
+      <div style="margin-top:8px;"><span class="b" style="color:${BC[ro.winner]};border-color:currentColor">${blocName(ro.winner)} wins</span></div>
     </div>`;
   }).join('');
 
-  $('#roTrans').innerHTML=`<p class="cty-empty">When a voter's candidate is out of the run-off, the model sends <b>70%</b> of them to the finalist they lean toward and 30% to the other, or splits them evenly if there is no lean. Turnout stays the same as round one.</p>`;
+  VZ.flow($('#roFlow'),r,S.flowDir||'spl');
 
   const ro=r2sim(ctyRes,nat,'spl');
   const marg=ro.r2cty.filter(c=>Math.abs(c.r2a-0.5)<0.10).sort((x,y)=>Math.abs(x.r2a-0.5)-Math.abs(y.r2a-0.5));
@@ -691,7 +658,7 @@ function rRunoff(r,mc_){
   <tbody>${marg.map(c=>`<tr>
     <td style="font-weight:600">${c.name}</td>
     <td style="color:${c.r2a>=0.5?BC[ro.a]:BC[ro.b]}">${pct(c.r2a)}</td>
-    <td><span class="b ${c.r2lead==='inc'?'b-b':c.r2lead==='opp'?'b-r':'b-a'}">${blocName(c.r2lead)}</span></td>
+    <td><span class="b" style="color:${VZ.ink(c.r2lead)};border-color:currentColor">${blocName(c.r2lead)}</span></td>
     <td style="font-size:12px;color:var(--muted)">${c.cluster}</td>
   </tr>`).join('')||'<tr><td colspan="4" class="hint">No county within 10 points of 50/50.</td></tr>'}</tbody>`;
 
@@ -705,13 +672,13 @@ function rRunoff(r,mc_){
 function rTipping(r,f,i25){
   const tip=S.tip||[];
   $('#ffBoxes').innerHTML=`
-  <div style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--bdr);">
-    <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Extra vote for others to keep A under 50%</div>
+  <div style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--bdr);">
+    <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Extra vote for others to keep A under 50%</div>
     <div style="font-family:var(--disp);font-size:26px;color:${f.ia?'var(--amb2)':'var(--gbr)'};">${f.ia?pct(f.tbi):'Already &lt;50%'}</div>
     <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">Others now: ${pct(f.cur)}</div>
   </div>
-  <div style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--bdr);">
-    <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Extra vote for others to keep B under 50%</div>
+  <div style="flex:1;padding:12px;background:var(--s2);border:1px solid var(--bdr);">
+    <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Extra vote for others to keep B under 50%</div>
     <div style="font-family:var(--disp);font-size:26px;color:${f.oa?'var(--amb2)':'var(--gbr)'};">${f.oa?pct(f.tbo):'Already &lt;50%'}</div>
     <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">Run-off: ${f.forced?'<span class="b b-r">FORCED</span>':'Not yet forced'}</div>
   </div>`;
@@ -720,12 +687,12 @@ function rTipping(r,f,i25){
 
   const below=tip.filter(t=>t.ig>0),marg=tip.filter(t=>t.ig<=0&&t.ig>-0.05);
   $('#p24').innerHTML=`<div class="g2 mb12">
-    <div style="padding:11px;background:var(--rdim);border:1px solid var(--red);">
+    <div style="padding:12px;background:var(--rdim);border:1px solid var(--red);">
       <div style="font-family:var(--mono);font-size:12px;color:var(--red2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;">Below 25%</div>
       <div style="font-family:var(--disp);font-size:30px;color:var(--red2);">${below.length} counties</div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">Closest: ${below[0]?.name||'—'} (${pct(below[0]?.i||0)})</div>
     </div>
-    <div style="padding:11px;background:var(--gdark);border:1px solid var(--grn);">
+    <div style="padding:12px;background:var(--gdark);border:1px solid var(--grn);">
       <div style="font-family:var(--mono);font-size:12px;color:var(--gbr);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;">Marginal (≤30%)</div>
       <div style="font-family:var(--disp);font-size:30px;color:var(--gbr);">${marg.length} counties</div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">At risk with -3pp swing</div>
@@ -751,7 +718,7 @@ function rTipping(r,f,i25){
   $('#a138Tbl').innerHTML=`<thead><tr><th>County</th><th>Lead</th><th>A</th><th>≥25?</th><th>B</th><th>≥25?</th><th>Others</th></tr></thead>
   <tbody>${(S.res?.ctyRes||[]).map(c=>`<tr>
     <td style="font-weight:600">${c.name}</td>
-    <td><span class="b ${c.lead==='inc'?'b-b':'b-r'}">${c.lead.toUpperCase()}</span></td>
+    <td><span class="b" style="color:${VZ.ink(c.lead==='tf'?'x':c.lead)};border-color:currentColor">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'}</span></td>
     <td style="color:var(--blbr)">${pct(c.i)}</td>
     <td>${c.ia?'<span class="b b-gr">✓</span>':'<span class="b b-r">✗</span>'}</td>
     <td style="color:var(--red2)">${pct(c.o)}</td>
@@ -873,22 +840,14 @@ function rConst(r,mc_){
   const i25=ctyRes.filter(c=>c.i>=0.25).length;
   const o25=ctyRes.filter(c=>c.o>=0.25).length;
 
-  $('#jpBoxes').innerHTML=`<div class="flex g12" style="align-items:stretch;">
-  ${[['Incumbent',mc_.iJ,mc_.iW+mc_.iJ,mc_.iLo,mc_.iHi,i25,'blbr'],
-     ['Opposition',mc_.oJ,mc_.oW+mc_.oJ,mc_.oLo,mc_.oHi,o25,'red2']].map(([l,jp,np,lo,hi,cnt,c])=>`
-  <div style="flex:1;padding:11px;background:var(--s2);border:1px solid var(--bdr);">
-    <div style="font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">${l} — P(Art.138 jointly)</div>
-    <div style="font-family:var(--disp);font-size:34px;color:var(--${c})">${pct(jp)}</div>
-    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">P(nat>50%): ${pct(np)} · Counties: ${cnt}/47</div>
-    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);">90% band: ${pct(lo,1)}–${pct(hi,1)}</div>
-  </div>`).join('')}</div>`;
+  VZ.gates($('#jpBoxes'),r,mc_,i25,o25);
 
   const byC={};
   ctyRes.forEach(c=>{if(!byC[c.cluster])byC[c.cluster]={t:0,a:0,b:0};byC[c.cluster].t++;if(c.i>=0.25)byC[c.cluster].a++;else byC[c.cluster].b++;});
   $('#clExp').innerHTML=Object.entries(byC).sort((a,b)=>b[1].t-a[1].t).map(([cl,d])=>`
-  <div style="margin-bottom:9px;">
+  <div style="margin-bottom:8px;">
     <div class="fb mb8" style="font-size:12px;"><span style="font-weight:600">${cl}</span>
-    <span><span style="color:var(--gbr)">${d.a}✓</span> <span style="color:var(--red2)">${d.b}✗</span> / ${d.t}</span></div>
+    <span class="cl-n">${d.a} of ${d.t} counties</span></div>
     <div style="height:7px;background:var(--bdr);overflow:hidden;border-radius:1px;">
       <div style="height:100%;width:${d.a/d.t*100}%;background:var(--gbr);"></div>
     </div>
@@ -898,12 +857,12 @@ function rConst(r,mc_){
   const cst=OLG.map(n=>ctyRes.find(c=>c.name===n)).filter(Boolean);
   $('#coalDisp').innerHTML=`
   <div class="mb12">
-    <div style="font-weight:600;font-size:12px;color:var(--blbr);margin-bottom:6px;">Western counties</div>
+    <div style="font-weight:600;font-size:12px;color:var(--blbr);margin-bottom:8px;">Western counties</div>
     ${wk.map(c=>`<div class="fb" style="padding:4px 0;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:12px;">
       <span>${c.name}</span><span style="color:var(--blbr)">${pct(c.i)}</span></div>`).join('')}
   </div>
   <div>
-    <div style="font-weight:600;font-size:12px;color:var(--amb2);margin-bottom:6px;">Coast counties</div>
+    <div style="font-weight:600;font-size:12px;color:var(--amb2);margin-bottom:8px;">Coast counties</div>
     ${cst.map(c=>`<div class="fb" style="padding:4px 0;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:12px;">
       <span>${c.name}</span><span style="color:${c.i>=0.25?'var(--blbr)':'var(--red2)'}">${pct(c.i)} ${c.i>=0.25?'✓':'✗'}</span></div>`).join('')}
   </div>`;
@@ -917,7 +876,7 @@ function rConst(r,mc_){
   $('#histCtx').innerHTML=Object.entries(clH).map(([cl,d])=>{
     const a13=avg(d.i13),a17=avg(d.i17),a22=avg(d.i22);
     const up=a22>a17;
-    return`<div style="margin-bottom:9px;">
+    return`<div style="margin-bottom:8px;">
       <div class="fb mb8" style="font-size:12px;"><span style="font-weight:600">${cl}</span>
         <span style="color:${up?'var(--gbr)':'var(--red2)'}">${up?'▲':'▼'} ${pct(Math.abs(a22-a17))}</span></div>
       <div class="flex g12" style="font-family:var(--mono);font-size:12px;color:var(--muted);">
@@ -1104,159 +1063,9 @@ function mapBuildDataset(){
   const rows=VW_MAP_STATE.rows;
   return {metadata:{datasetTitle:'VOTEWATCH 2027 County Boundary Map Dataset',datasetVersion:'v4.4-embedded-boundary-map',sourceName:'VOTEWATCH model state + Kenya county boundary GeoJSON',createdAt:new Date().toISOString(),geographicLevel:'County',country:'Kenya',geometry:'Leaflet boundary layer',boundarySource:VW_MAP_STATE.boundarySource||'not loaded',schemaVersion:'map-4.4',notes:'Values are scenario outputs, not official election results.'},indicators:VW_MAP_INDICATORS,records:rows.map(r=>({county:r.name,countyCode:r.code,cluster:r.cluster,dataQuality:r.dq,values:r.values,status:r.status}))};
 }
-function ensureVWMapControls(){
-  const ind=$('#vwMapIndicator'); if(!ind||ind.dataset.ready)return;
-  ind.innerHTML=Object.entries(VW_MAP_INDICATORS).map(([k,m])=>`<option value="${k}">${m.label}</option>`).join('');
-  ind.value=VW_MAP_STATE.indicator;
-  ind.addEventListener('change',()=>{VW_MAP_STATE.indicator=ind.value;rMap(S.res?.ctyRes||[]);});
-  $('#vwMapClass')?.addEventListener('change',e=>{VW_MAP_STATE.classification=e.target.value;rMap(S.res?.ctyRes||[]);});
-  $('#vwMapFocus')?.addEventListener('change',e=>{VW_MAP_STATE.focus=e.target.value;rMap(S.res?.ctyRes||[]);});
-  $('#vwMapLabels')?.addEventListener('change',e=>{VW_MAP_STATE.labels=e.target.value;rMap(S.res?.ctyRes||[]);});
-  $('#vwMapSearchBtn')?.addEventListener('click',()=>searchVWMapCounty());
-  $('#vwMapResetBtn')?.addEventListener('click',()=>{VW_MAP_STATE.selected=null;S.selCty='Nairobi City';refreshVWLeafletStyles();rVWMapPanels();});
-  $('#vwMapDrillBtn')?.addEventListener('click',()=>openVWMapDrilldown());
-  $('#vwMapSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter')searchVWMapCounty();});
-  $$('.vw-map-tab').forEach(b=>b.addEventListener('click',()=>switchVWMapPanel(b.dataset.mapTab)));
-  ind.dataset.ready='1';
-}
-function switchVWMapPanel(panel){
-  VW_MAP_STATE.activePanel=panel;
-  $$('.vw-map-tab').forEach(b=>b.classList.toggle('active',b.dataset.mapTab===panel));
-  ['summary','profile','ranking','quality','metadata'].forEach(p=>{$('#vwPanel'+p.charAt(0).toUpperCase()+p.slice(1))?.classList.toggle('active',p===panel);});
-}
-function searchVWMapCounty(){
-  const raw=$('#vwMapSearch')?.value||''; const q=normCtyName(raw), cq=compactCtyName(raw); if(!q)return;
-  const canonical=canonicalCtyName(raw);
-  const row=VW_MAP_STATE.rows.find(r=>r.name===canonical)||VW_MAP_STATE.rows.find(r=>normCtyName(r.name).includes(q)||q.includes(normCtyName(r.name))||compactCtyName(r.name).includes(cq));
-  if(row) selCtyMap(row.name,true);
-  else $('#vwPanelProfile').innerHTML=`<div class="note-r">No county matched “${mapEsc(raw)}”. Try Nairobi, Muranga, Tharaka Nithi, Elgeyo Marakwet, Mombasa.</div>`;
-}
-function openVWMapDrilldown(){
-  if(VW_MAP_STATE.selected){selCounty(VW_MAP_STATE.selected);}
-  const btn=[...$$('.tbtn')].find(b=>b.dataset.t==='map'); if(btn)btn.click();
-}
 function mapAbbr(name){return ({'Nairobi City':'NRB','Mombasa':'MSA','Kisumu':'KSM','Nakuru':'NKR','Kiambu':'KBU','Uasin Gishu':'UG',"Murang'A":'MUR','Elgeyo/Marakwet':'EM','Tharaka - Nithi':'TN','Taita Taveta':'TT','Trans Nzoia':'TNZ','Homa Bay':'HB','West Pokot':'WP','Tana River':'TR','Nyandarua':'NDR'})[name]||abbrFallback(name);}
 // multi-word names → initials; single-word names → first three letters (was a lone initial, e.g. "K")
 function abbrFallback(name){const p=String(name).split(/[\s/-]+/).filter(Boolean);return (p.length>1?p.map(x=>x[0]).join(''):p[0]||'').slice(0,3).toUpperCase();}
-function mapShouldDim(row){
-  const f=VW_MAP_STATE.focus;
-  if(f==='none'||!row)return false;
-  if(f==='threshold')return !(row.values.article138Gap<8);
-  if(f==='dispute')return !(row.values.disputeRisk>=45);
-  if(f==='dataQuality')return !(row.dq!=='high');
-  if(f==='cluster'&&VW_MAP_STATE.selected){const sel=VW_MAP_STATE.rowMap.get(VW_MAP_STATE.selected);return !sel||row.cluster!==sel.cluster;}
-  return false;
-}
-function detectVWCountyKey(geojson){
-  const features=geojson?.features||[];
-  const props=features[0]?.properties||{};
-  const explicit=VW_COUNTY_KEY_CANDIDATES.find(k=>props[k]!=null);
-  if(explicit)return explicit;
-  for(const k of Object.keys(props)){
-    const hits=features.slice(0,10).filter(f=>canonicalCtyName(f.properties?.[k])).length;
-    if(hits>=3)return k;
-  }
-  return null;
-}
-function getFeatureCountyName(feature){
-  const props=feature?.properties||{};
-  const raw=props[VW_MAP_STATE.boundaryKey]??props.COUNTY??props.COUNTY_NAME??props.name??props.Name;
-  const byCode=props.COUNTY_CODE||props.countyCode||props.code||props.ID||props.OBJECTID;
-  const canonical=canonicalCtyName(raw);
-  if(canonical)return canonical;
-  if(byCode!=null){const c=CO.find(x=>String(x.code).padStart(3,'0')===String(byCode).padStart(3,'0')); if(c)return c.name;}
-  return String(raw||'Unknown');
-}
-function initVWLeafletMap(){
-  if(VW_MAP_STATE.map||!$('#vwLeafletMap'))return;
-  if(typeof L==='undefined'){
-    VW_MAP_STATE.error='Leaflet library unavailable. Check internet connection or CDN access.';
-    showVWMapToast(VW_MAP_STATE.error,'error');
-    return;
-  }
-  VW_MAP_STATE.map=L.map('vwLeafletMap',{zoomControl:true,attributionControl:true}).setView([0.45,37.9],6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(VW_MAP_STATE.map);
-  setTimeout(()=>VW_MAP_STATE.map.invalidateSize(),120);
-}
-async function loadVWBoundaries(){
-  if(VW_MAP_STATE.layer||VW_MAP_STATE.loading||VW_MAP_STATE.loaded)return;
-  if(!VW_MAP_STATE.map)return;
-  VW_MAP_STATE.loading=true;
-  showVWMapToast('Loading embedded Kenya county boundaries…','warn');
-  try{
-    if(typeof VW_EMBEDDED_COUNTY_GEOJSON!=='undefined'&&VW_EMBEDDED_COUNTY_GEOJSON.features&&VW_EMBEDDED_COUNTY_GEOJSON.features.length){
-      createVWBoundaryLayer(VW_EMBEDDED_COUNTY_GEOJSON,'embedded Kenya county GeoJSON fallback · 38 source polygons + 9 proxy completion polygons');
-      VW_MAP_STATE.loaded=true;VW_MAP_STATE.error=null;
-      showVWMapToast(`Embedded boundary layer loaded: ${VW_MAP_STATE.boundaryMatched}/47 counties matched`,'good');
-      VW_MAP_STATE.loading=false;
-      rVWMapPanels();
-      return;
-    }
-  }catch(e){console.warn('Embedded VOTEWATCH map boundary failed',e);}
-  let lastErr=null;
-  for(const url of VW_GEOJSON_URLS){
-    try{
-      const res=await fetch(url,{cache:'force-cache'});
-      if(!res.ok)throw new Error('HTTP '+res.status);
-      const geo=await res.json();
-      if(!geo||!Array.isArray(geo.features))throw new Error('Invalid GeoJSON FeatureCollection');
-      createVWBoundaryLayer(geo,url);
-      VW_MAP_STATE.loaded=true;VW_MAP_STATE.error=null;
-      showVWMapToast(`Boundary layer loaded: ${VW_MAP_STATE.boundaryMatched}/47 counties matched`,'good');
-      break;
-    }catch(e){lastErr=e;console.warn('VOTEWATCH map boundary source failed',url,e);}
-  }
-  if(!VW_MAP_STATE.loaded){VW_MAP_STATE.error='Could not load county boundary GeoJSON. Map tiles may show, but choropleth polygons are unavailable.';showVWMapToast(VW_MAP_STATE.error,'error');}
-  VW_MAP_STATE.loading=false;
-  rVWMapPanels();
-}
-function createVWBoundaryLayer(geojson,source){
-  if(VW_MAP_STATE.layer){VW_MAP_STATE.layer.remove();VW_MAP_STATE.layer=null;}
-  VW_MAP_STATE.countyLayers.clear();
-  VW_MAP_STATE.boundaryKey=detectVWCountyKey(geojson);
-  VW_MAP_STATE.boundarySource=source;
-  VW_MAP_STATE.boundaryFeatureCount=geojson.features.length;
-  VW_MAP_STATE.boundaryMatched=0;
-  VW_MAP_STATE.layer=L.geoJSON(geojson,{style:f=>styleVWFeature(f),onEachFeature:(feature,layer)=>{
-    const name=getFeatureCountyName(feature);
-    layer._vwCounty=name;
-    if(VW_MAP_STATE.rowMap.has(name)){VW_MAP_STATE.boundaryMatched++;VW_MAP_STATE.countyLayers.set(name,layer);}    
-    layer.bindTooltip(()=>buildVWTooltip(name),{sticky:true,className:'county-tooltip'});
-    layer.on({mouseover:e=>{e.target.setStyle({weight:2.6,color:'#e8bc40',fillOpacity:.90});},mouseout:e=>refreshOneVWLayer(e.target),click:e=>selCtyMap(name,true)});
-  }}).addTo(VW_MAP_STATE.map);
-  if(VW_MAP_STATE.layer.getBounds().isValid())VW_MAP_STATE.map.fitBounds(VW_MAP_STATE.layer.getBounds(),{padding:[18,18]});
-  refreshVWLeafletStyles(true);
-}
-function styleVWFeature(feature){
-  const name=getFeatureCountyName(feature); const row=VW_MAP_STATE.rowMap.get(name);
-  const selected=VW_MAP_STATE.selected===name;
-  const dim=mapShouldDim(row);
-  return {fillColor:row?mapFillForRow(row):'#1a2d44',weight:selected?3:1,color:selected?'#e8bc40':'#1c2a42',opacity:1,fillOpacity:row?(dim?.22:.78):.18,dashArray:row?'':'4 3'};
-}
-function refreshOneVWLayer(layer){if(!layer||!layer.feature)return;layer.setStyle(styleVWFeature(layer.feature));}
-function refreshVWLeafletStyles(rebind=false){
-  if(!VW_MAP_STATE.layer)return;
-  VW_MAP_STATE.layer.eachLayer(layer=>{
-    layer.setStyle(styleVWFeature(layer.feature));
-    const name=layer._vwCounty;
-    if(rebind||VW_MAP_STATE.labels!=='tooltip'){
-      try{layer.unbindTooltip();}catch(e){}
-      if(VW_MAP_STATE.labels==='hidden')return;
-      const permanent=VW_MAP_STATE.labels==='permanent';
-      layer.bindTooltip(permanent?mapAbbr(name):()=>buildVWTooltip(name),{sticky:!permanent,permanent,direction:'center',className:permanent?'county-label':'county-tooltip'});
-    }
-  });
-  rVWMapLegend();
-}
-function showVWMapToast(msg,type=''){
-  const el=$('#vwMapToast'); if(!el)return;
-  el.textContent=msg; el.className='vw-map-toast '+type;
-}
-function buildVWTooltip(name){
-  const row=VW_MAP_STATE.rowMap.get(name), meta=getMapIndicatorMeta();
-  if(!row)return `<strong>${mapEsc(name)}</strong><br>No model row matched`;
-  return `<strong>${mapEsc(row.name)}</strong> <span style="color:#6b8bb0">${row.code}</span><br>${mapEsc(meta.label)}: <strong>${mapFmt(row)}</strong><br>Inc ${mapFmt(row,'incShare')} · Opp ${mapFmt(row,'oppShare')} · TF ${mapFmt(row,'thirdShare')}<br>${mapEsc(row.status.label)} · ${mapEsc(row.cluster)}`;
-}
 // Map tab: SVG county map + county panel (js/map.js). The row/diagnostic
 // bookkeeping is kept for the report and data-quality checks.
 function rMap(ctyRes){
@@ -1266,134 +1075,15 @@ function rMap(ctyRes){
   VW_MAP_STATE.diagnostics=mapDiagnostics(VW_MAP_STATE.rows);
   if(typeof rVoteMap==='function')rVoteMap();
 }
-function rVWMapLegend(){
-  const meta=getMapIndicatorMeta(); const vals=getMapValues(); const lo=Math.min(...vals),hi=Math.max(...vals);
-  $('#vwMapLegend').innerHTML=`<div class="vw-leg-title">${mapEsc(meta.label)}</div><div style="color:var(--muted);font-size:12px;line-height:1.5;">${mapEsc(VW_MAP_STATE.classification)} · ${mapEsc(meta.category)} · ${mapEsc(meta.status)}</div><div class="vw-leg-grad"></div><div class="vw-leg-labels"><span>${mapMetric(meta.min??lo,meta.unit)}</span><span>${mapMetric(((meta.min??lo)+(meta.max??hi))/2,meta.unit)}</span><span>${mapMetric(meta.max??hi,meta.unit)}</span></div><div style="margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45;">${policyLegendText()}</div>`;
-  $('#vwMapSub').textContent=`${meta.label} · ${VW_MAP_STATE.classification}`;
-}
-function policyLegendText(){
-  const k=VW_MAP_STATE.indicator;
-  if(k==='article138Gap')return 'Policy bands: below 25% · 0–5pp buffer · 5–15pp buffer · >15pp buffer';
-  if(k==='disputeRisk'||k==='runoffSensitivity')return 'Policy bands: low · moderate · elevated · severe';
-  if(k==='dataQualityScore')return 'Policy bands: low · medium · high data quality';
-  return 'Colors are scenario indicators, not official results.';
-}
-function rVWMapSummary(){
-  const rows=VW_MAP_STATE.rows, meta=getMapIndicatorMeta(), vals=getMapValues(); if(!$('#vwPanelSummary'))return;
-  const sorted=[...rows].sort((a,b)=>(b.values[VW_MAP_STATE.indicator]??-999)-(a.values[VW_MAP_STATE.indicator]??-999));
-  const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-  const sensitive=rows.filter(r=>r.values.article138Gap<8).length;
-  const elevated=rows.filter(r=>r.values.disputeRisk>=45).length;
-  const q=VW_MAP_STATE.diagnostics||{};
-  $('#vwPanelSummary').innerHTML=`
-    <div class="vw-summary-grid">
-      <div class="vw-mini"><div class="vw-mini-l">Selected indicator</div><div class="vw-mini-v vg">${mapEsc(meta.label).split(' ')[0]}</div><div class="kpi-d">Average: ${mapMetric(avg,meta.unit)}</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">Boundary match</div><div class="vw-mini-v ${q.status==='PASS'?'vgr':q.status==='WARNING'?'va':'vr'}">${q.boundaryMatched||0}/47</div><div class="kpi-d">${mapEsc(q.boundarySource||'loading / not loaded')}</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">Threshold-sensitive</div><div class="vw-mini-v va">${sensitive}</div><div class="kpi-d">Inc Article 138 gap below 8pp</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">Dispute signal</div><div class="vw-mini-v ${elevated>10?'vr':elevated>4?'va':'vgr'}">${elevated}</div><div class="kpi-d">Counties ≥45 risk score</div></div>
-    </div>
-    <div class="divider"></div>
-    <div class="note" style="font-size:12px;line-height:1.7;">Top county by ${mapEsc(meta.label)}: <strong style="color:var(--gold)">${mapEsc(sorted[0]?.name||'—')}</strong> (${sorted[0]?mapFmt(sorted[0]):'—'}). Click any county polygon to update this map panel and the VOTEWATCH drilldown.</div>`;
-}
-function rVWMapDetail(){
-  const row=VW_MAP_STATE.rowMap.get(VW_MAP_STATE.selected)||VW_MAP_STATE.rows[0];
-  if(!row)return;
-  $('#vwPanelProfile').innerHTML=`
-    <div class="vw-profile-title">${mapEsc(row.name)}</div>
-    <div class="kpi-d mb8">${mapEsc(row.cluster)} · Code ${row.code} · ${row.wards||0} wards</div>
-    <div class="vw-kv"><span>Team A</span><strong>${mapFmt(row,'incShare')}</strong></div>
-    <div class="vw-kv"><span>Team B</span><strong>${mapFmt(row,'oppShare')}</strong></div>
-    <div class="vw-kv"><span>Others</span><strong>${mapFmt(row,'thirdShare')}</strong></div>
-    <div class="vw-kv"><span>Turnout</span><strong>${mapFmt(row,'turnout')}</strong></div>
-    <div class="vw-kv"><span>Article 138 gap</span><strong>${mapFmt(row,'article138Gap')}</strong></div>
-    <div class="vw-kv"><span>Dispute risk</span><strong>${mapFmt(row,'disputeRisk')}</strong></div>
-    <div class="vw-kv"><span>Data quality</span><strong>${mapEsc(row.dq)} (${mapFmt(row,'dataQualityScore')})</strong></div>
-    <div class="divider"></div>
-    <div class="note" style="font-size:12px;line-height:1.7;">${mapCountyExplanation(row)}</div>`;
-}
-function mapCountyExplanation(row){
-  const gap=row.values.article138Gap, tf=row.values.thirdShare, risk=row.values.disputeRisk;
-  const gapTxt=gap<0?`${row.name} is below the 25% county floor for the incumbent by ${Math.abs(gap).toFixed(1)}pp.`:gap<8?`${row.name} is threshold-sensitive: incumbent buffer is ${gap.toFixed(1)}pp above 25%.`:`${row.name} is comfortably above the 25% county floor under this scenario.`;
-  const tfTxt=tf>15?`Third Force exposure is high at ${tf.toFixed(1)}%.`:tf>8?`Third Force exposure is material at ${tf.toFixed(1)}%.`:`Third Force exposure is limited at ${tf.toFixed(1)}%.`;
-  const riskTxt=risk>60?'Dispute-risk signal is elevated; validate underlying data and assumptions.':risk>35?'Dispute-risk signal is moderate.':'Dispute-risk signal is comparatively low.';
-  return `${gapTxt} ${tfTxt} ${riskTxt} Data quality: ${row.dq}.`;
-}
-function rVWMapDiagnostics(){
-  const q=VW_MAP_STATE.diagnostics||mapDiagnostics(VW_MAP_STATE.rows);
-  VW_MAP_STATE.diagnostics=q;
-  const cls=q.status==='PASS'?'b-gr':q.status==='WARNING'?'b-a':'b-r';
-  $('#vwMapQualityBadge').className=`b ${cls}`;
-  $('#vwMapQualityBadge').textContent=`QA ${q.status} · ${q.boundaryMatched||0}/47`;
-  $('#vwMapDiagnostics').innerHTML=`
-    <div class="vw-summary-grid">
-      <div class="vw-mini"><div class="vw-mini-l">Model rows</div><div class="vw-mini-v ${q.count===47?'vgr':'vr'}">${q.count}/47</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">Boundary matched</div><div class="vw-mini-v ${q.boundaryMatched>=45?'vgr':q.boundaryMatched?'va':'vr'}">${q.boundaryMatched||0}/47</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">QA score</div><div class="vw-mini-v ${q.score>=90?'vgr':q.score>=70?'va':'vr'}">${Math.round(q.score)}</div></div>
-      <div class="vw-mini"><div class="vw-mini-l">Boundary source</div><div class="kpi-d">${mapEsc(q.boundarySource||'not loaded')}</div></div>
-    </div>
-    <div class="divider"></div>
-    <div class="vw-map-details"><strong>Missing:</strong> ${q.missing.length?q.missing.map(mapEsc).join(', '):'None'}<br><strong>Duplicates:</strong> ${q.dup.length?q.dup.map(mapEsc).join(', '):'None'}<br><strong>Invalid values:</strong> ${q.invalid.length?q.invalid.slice(0,12).map(mapEsc).join('<br>'):'None'}<br><strong>Warnings:</strong> ${q.warnings.length?q.warnings.slice(0,12).map(mapEsc).join('<br>'):'None'}<br><strong>Boundary key:</strong> ${mapEsc(q.boundaryKey||'—')}</div>`;
-  $('#vwMapMethod').innerHTML=`<strong>Map method note:</strong> County polygons are used for visualization only. VOTEWATCH scenario values are model outputs generated from the current sliders, polling anchor, regime switches, shocks and ward dataset. Colors are not official results. Boundary source: ${mapEsc(q.boundarySource||'loading / not loaded')}.`;
-}
-function rVWMapPanels(){
-  rVWMapSummary();rVWMapDetail();rVWMapDiagnostics();
-  $('#vwPanelRanking').innerHTML=mapRankingTableHTML();
-  $('#vwPanelQuality').innerHTML=`<div class="note" style="font-size:12px;line-height:1.7;">${rMapQualityHTML()}</div>`;
-  $('#vwPanelMetadata').innerHTML=`<div class="note" style="font-size:12px;line-height:1.7;">${mapIndicatorMetaHTML()}<div class="divider"></div>${rMapAliasHTML()}</div>`;
-  $('#vwMapIndicatorMeta').innerHTML=mapIndicatorMetaHTML();
-}
-function mapIndicatorMetaHTML(){
-  const m=getMapIndicatorMeta();
-  return `<strong style="color:var(--gold)">${mapEsc(m.label)}</strong><br>Category: ${mapEsc(m.category)}<br>Unit: ${mapEsc(m.unit)}<br>Formula: ${mapEsc(m.formula)}<br>Source: ${mapEsc(m.source)}<br>Status: ${mapEsc(m.status)}<br>Caveat: ${mapEsc(m.caveat)}`;
-}
-function rMapQualityHTML(){
-  const q=VW_MAP_STATE.diagnostics||{};
-  return `<strong style="color:var(--gold)">Map QA</strong><br>Generated: ${mapEsc(q.generatedAt||'—')}<br>Boundary source: ${mapEsc(q.boundarySource||'—')}<br>Boundary key: ${mapEsc(q.boundaryKey||'—')}<br>High/Medium/Low DQ: ${q.highDQ||0}/${q.medDQ||0}/${q.lowDQ||0}<br>Clusters represented: ${q.clusters||0}<br>Quality score: ${Math.round(q.score||0)} / 100`;
-}
-function rMapAliasHTML(){return `<strong style="color:var(--gold)">Alias handling</strong><br>${VW_ALIAS_EXAMPLES.map(a=>`${mapEsc(a[0])} → ${mapEsc(a[1])}`).join('<br>')}`;}
-function mapRankingTableHTML(){
-  const rows=[...VW_MAP_STATE.rows].sort((a,b)=>(b.values[VW_MAP_STATE.indicator]??-999)-(a.values[VW_MAP_STATE.indicator]??-999));
-  return `<div class="tscroll" style="max-height:540px"><table class="tbl"><thead><tr><th>#</th><th>County</th><th>Region</th><th>Value</th><th>Status</th></tr></thead><tbody>${rows.map((r,i)=>`<tr onclick="selCtyMap('${mapEsc(r.name)}',true)" style="cursor:pointer"><td>${i+1}</td><td>${mapEsc(r.name)}</td><td>${mapEsc(r.cluster)}</td><td>${mapFmt(r)}</td><td><span class="b ${r.status.cls}">${r.status.risk}</span></td></tr>`).join('')}</tbody></table></div>`;
-}
-function rMapTbl(){
-  const rows=VW_MAP_STATE.rows;
-  $('#mapTbl').innerHTML=`<thead><tr><th>County</th><th>Region</th><th>A</th><th>B</th><th>Others</th><th>Article 138 Gap</th><th>Dispute</th><th>DQ</th></tr></thead><tbody>${rows.map(r=>`<tr onclick="selCtyMap('${mapEsc(r.name)}',true)" style="cursor:pointer"><td>${mapEsc(r.name)}</td><td>${mapEsc(r.cluster)}</td><td>${mapFmt(r,'incShare')}</td><td>${mapFmt(r,'oppShare')}</td><td>${mapFmt(r,'thirdShare')}</td><td>${mapFmt(r,'article138Gap')}</td><td>${mapFmt(r,'disputeRisk')}</td><td>${mapEsc(r.dq)}</td></tr>`).join('')}</tbody>`;
-}
-function selCtyMap(name,fly=false){
-  const canonical=canonicalCtyName(name)||name;
-  const row=VW_MAP_STATE.rowMap.get(canonical)||VW_MAP_STATE.rows.find(r=>r.name===name);
-  if(!row)return;
-  VW_MAP_STATE.selected=row.name;S.selCty=row.name;
-  rVWMapDetail();rVWMapSummary();rVWMapPanels();refreshVWLeafletStyles();
-  const layer=VW_MAP_STATE.countyLayers.get(row.name);
-  if(layer&&VW_MAP_STATE.map&&fly){VW_MAP_STATE.map.fitBounds(layer.getBounds(),{padding:[40,40],maxZoom:8});layer.openTooltip();}
-}
-function dlVWMapCSV(kind='indicator'){
-  const rows=VW_MAP_STATE.rows; let csv='';
-  if(kind==='ranking'){
-    const sorted=[...rows].sort((a,b)=>(b.values[VW_MAP_STATE.indicator]??-999)-(a.values[VW_MAP_STATE.indicator]??-999));
-    csv='rank,county,code,cluster,value,status\n'+sorted.map((r,i)=>[i+1,r.name,r.code,r.cluster,r.values[VW_MAP_STATE.indicator],r.status.risk].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  }else{
-    csv='county,code,cluster,incShare,oppShare,thirdShare,turnout,article138Gap,runoffSensitivity,disputeRisk,dataQualityScore,projectedVotes,leadMargin,thresholdBuffer\n'+rows.map(r=>[r.name,r.code,r.cluster,r.values.incShare,r.values.oppShare,r.values.thirdShare,r.values.turnout,r.values.article138Gap,r.values.runoffSensitivity,r.values.disputeRisk,r.values.dataQualityScore,r.values.projectedVoters,r.values.leadMargin,r.values.thresholdBuffer].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  }
-  dlBlob(csv,`votewatch_map_${kind}.csv`,'text/csv');
-}
-function dlVWMapDatasetJSON(){dlBlob(JSON.stringify(mapBuildDataset(),null,2),'votewatch_map_dataset.json','application/json');}
-function dlVWMapDiagnostics(){dlBlob(JSON.stringify(VW_MAP_STATE.diagnostics||mapDiagnostics(VW_MAP_STATE.rows),null,2),'votewatch_map_diagnostics.json','application/json');}
-function dlVWMapMetadata(){dlBlob(JSON.stringify({metadata:mapBuildDataset().metadata,indicator:getMapIndicatorMeta(),allIndicators:VW_MAP_INDICATORS,diagnostics:VW_MAP_STATE.diagnostics},null,2),'votewatch_map_metadata.json','application/json');}
-function dlVWMapPNG(){
-  const target=$('#vwMapReportArea');
-  if(typeof html2canvas==='undefined'||!target){dlVWMapDatasetJSON();return;}
-  html2canvas(target,{backgroundColor:'#060810',useCORS:true,scale:2}).then(canvas=>{const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='votewatch_county_boundary_map.png';a.click();});
-}
 function dlBlob(content,filename,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=filename;a.click();URL.revokeObjectURL(a.href);}
 
 function rDispute(ctyRes,dr){
-  $('#rpin').style.left=`${dr.score}%`;
+  if($('#rpin'))$('#rpin').style.left=`${dr.score}%`;
+  VZ.margins($('#disStrip'),ctyRes,{w:760,h:110,r:5});
   $('#disKpis').innerHTML=`
   <div class="kpi"><div class="kpi-l">Risk score</div>
     <div class="kpi-v ${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}</div>
-    <div class="kpi-d">${dr.score>60?'HIGH — petition-viable':'MEDIUM — within norms'}</div></div>
+    <div class="kpi-d">${dr.score>60?'High':'Moderate'}</div></div>
   <div class="kpi"><div class="kpi-l">Close counties in one region</div>
     <div class="kpi-v ${dr.conc>0.60?'vr':dr.conc>0.40?'va':'vgr'}">${pct(dr.conc,0)}</div>
     <div class="kpi-d">of close counties in <strong>${dr.top}</strong> · ${dr.tc}/${dr.n}</div></div>
@@ -1404,7 +1094,7 @@ function rDispute(ctyRes,dr){
   $('#disNarr').innerHTML=`Score ${Math.round(dr.score)}/100. ${dr.n} counties within petition margin. Min margin ${pct(dr.minM)}.${dr.conc>0.60?` <strong style="color:var(--red2)">Geographic concentration alert:</strong> ${pct(dr.conc,0)} of marginal counties in ${dr.top} — single-cluster concentration substantially strengthens a petition narrative around regional data integrity.`:''} ${dr.score>55?' Historical note: 2017 petition was filed with broader national margins. Geographically-concentrated close result with data quality gaps in specific clusters is the most litigation-viable scenario.':''}`;
 
   $('#disClust').innerHTML=Object.entries(dr.byC).sort((a,b)=>b[1]-a[1]).map(([cl,n])=>`
-  <div class="fb" style="padding:6px 0;border-bottom:1px solid var(--bdr);">
+  <div class="fb" style="padding:8px 0;border-bottom:1px solid var(--bdr);">
     <span style="font-weight:600;font-size:12px;">${cl}</span>
     <div class="fc g8"><div class="pbar" style="width:65px;"><div class="pf p-r" style="width:${n/dr.n*100}%"></div></div>
     <span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${n}</span></div>
@@ -1413,7 +1103,7 @@ function rDispute(ctyRes,dr){
   $('#disTbl').innerHTML=`<thead><tr><th>County</th><th>Lead</th><th>Margin</th><th>A</th><th>B</th><th>DQ</th><th>Volatility</th><th>Region</th></tr></thead>
   <tbody>${dr.close.sort((a,b)=>Math.abs(a.ls-0.5)-Math.abs(b.ls-0.5)).map(c=>`<tr>
     <td style="font-weight:600">${c.name}</td>
-    <td><span class="b ${c.lead==='inc'?'b-b':'b-r'}">${c.lead.toUpperCase()}</span></td>
+    <td><span class="b" style="color:${VZ.ink(c.lead==='tf'?'x':c.lead)};border-color:currentColor">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'}</span></td>
     <td><span class="b ${Math.abs(c.ls-0.5)<0.03?'b-r':'b-a'}">${pct(Math.abs(c.ls-0.5))}</span></td>
     <td style="color:var(--blbr)">${pct(c.i)}</td><td style="color:var(--red2)">${pct(c.o)}</td>
     <td><span class="b ${c.dq==='high'?'b-gr':c.dq==='medium'?'b-g':'b-r'}">${c.dq}</span></td>
@@ -1477,7 +1167,7 @@ function rIntel(){
   </div>`).join('');
 
   $('#sentList').innerHTML=SENTS.map(s=>`
-  <div style="padding:7px 0;border-bottom:1px solid var(--bdr);">
+  <div style="padding:8px 0;border-bottom:1px solid var(--bdr);">
     <div class="fb mb8"><span style="font-weight:600;font-size:13px;">${mapEsc(s.t)}</span>
     <div class="fc g6"><span class="b ${s.tier==='HIGH'?'b-r':s.tier==='MED'?'b-g':'b-m'}">${s.tier}</span>
     <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${s.freq}</span></div></div>
@@ -1488,7 +1178,7 @@ function rIntel(){
   <div style="padding:8px 0;border-bottom:1px solid var(--bdr);">
     <div class="fb mb8"><span style="font-weight:600;font-size:12px;">${b.n} (${b.yr})</span>
     <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${b.co}</span></div>
-    <div class="g3" style="font-family:var(--mono);font-size:12px;gap:6px;">
+    <div class="g3" style="font-family:var(--mono);font-size:12px;gap:8px;">
       <div><div style="color:var(--muted)">Model</div><div style="font-weight:600">${pct(b.mb)}</div></div>
       <div><div style="color:var(--muted)">Actual</div><div style="font-weight:600">${pct(b.act)}</div></div>
       <div><div style="color:var(--muted)">Delta</div><div style="font-weight:600;color:${b.d<0?'var(--red2)':'var(--gbr)'}">${b.d>0?'+':''}${pct(b.d)}</div></div>
@@ -1558,8 +1248,8 @@ function rHeadline(r,mc_,i25){
   const el=document.getElementById("verdict");if(!el)return;
   const n=r.nat;let tone,title;
   if(mc_.ro>=0.5){const pr=r2pair(n);tone="warn";title=`Run-off likely: ${blocName(pr.a)} vs ${blocName(pr.b)}`;}
-  else if(mc_.iW>=mc_.oW){tone="inc";title="Incumbent wins in round one";}
-  else{tone="opp";title="Opposition wins in round one";}
+  else if(mc_.iW>=mc_.oW){tone="inc";title=`${blocName("inc")} wins in round one`;}
+  else{tone="opp";title=`${blocName("opp")} wins in round one`;}
   const p=mc_.ro>=0.5?mc_.ro:Math.max(mc_.iW,mc_.oW);
   el.dataset.tone=tone;
   el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p">${pct(p,0)} of simulations</span><span class="v-sep" aria-hidden="true"></span><span class="v-detail">Incumbent <b>${pct(n.i)}</b> · Opposition <b>${pct(n.o)}</b> · ${blocName("tf")} <b>${pct(n.t)}</b> · <b>${i25}</b>/47 counties at 25%+</span>`;
@@ -1587,7 +1277,7 @@ function updateViewModeLabels(){
   if(vb){vb.textContent=S.viewMode==='public'?'Public view':'Analyst view';vb.setAttribute('aria-pressed',String(S.viewMode!=='public'));}
 }
 function applyTheme(){
-  document.body.classList.toggle('light-mode',S.theme==='light');
+  if(S.theme==='dark')document.documentElement.dataset.theme='dark';else delete document.documentElement.dataset.theme;
   const b=document.getElementById('themeBtn');
   if(b){b.textContent=S.theme==='light'?'☾':'☀';b.setAttribute('aria-label',S.theme==='light'?'Switch to dark theme':'Switch to light theme');}
 }
@@ -1725,28 +1415,6 @@ mapDiagnostics=function(rows){
   return q;
 };
 
-// Override map diagnostics and metadata panels
-rVWMapDiagnostics=function(){
-  const q=VW_MAP_STATE.diagnostics||mapDiagnostics(VW_MAP_STATE.rows); VW_MAP_STATE.diagnostics=q;
-  const cls=q.status==='PASS'?'b-gr':q.status==='WARNING'?'b-a':'b-r';
-  $('#vwMapQualityBadge').className=`b ${cls}`; $('#vwMapQualityBadge').textContent=`QA ${q.status} · data ${q.count}/47 · geom ${q.boundaryMatched||0}/47`;
-  $('#vwMapDiagnostics').innerHTML=`<div class="vw-summary-grid"><div class="vw-mini"><div class="vw-mini-l">County data match</div><div class="vw-mini-v ${q.count===47?'vgr':'vr'}">${q.count}/47</div></div><div class="vw-mini"><div class="vw-mini-l">Boundary geometry match</div><div class="vw-mini-v ${q.boundaryMatched>=47?'vgr':q.boundaryMatched?'va':'vr'}">${q.boundaryMatched||0}/47</div></div><div class="vw-mini"><div class="vw-mini-l">Proxy geometry count</div><div class="vw-mini-v ${q.proxyGeometryCount?'va':'vgr'}">${q.proxyGeometryCount||0}</div></div><div class="vw-mini"><div class="vw-mini-l">Model completeness</div><div class="vw-mini-v ${q.modelOutputCompleteness>=99?'vgr':'va'}">${q.modelOutputCompleteness||0}%</div></div><div class="vw-mini"><div class="vw-mini-l">Boundary confidence</div><div class="kpi-d">${mapEsc(q.boundarySourceConfidence||'—')}</div></div><div class="vw-mini"><div class="vw-mini-l">QA score</div><div class="vw-mini-v ${q.score>=90?'vgr':q.score>=70?'va':'vr'}">${Math.round(q.score)}</div></div></div><div class="divider"></div><div class="vw-map-details"><strong>Missing:</strong> ${q.missing.length?q.missing.map(mapEsc).join(', '):'None'}<br><strong>Duplicates:</strong> ${q.dup.length?q.dup.map(mapEsc).join(', '):'None'}<br><strong>Invalid values:</strong> ${q.invalid.length?q.invalid.slice(0,12).map(mapEsc).join('<br>'):'None'}<br><strong>Warnings:</strong> ${q.warnings.length?q.warnings.slice(0,12).map(mapEsc).join('<br>'):'None'}<br><strong>Boundary key:</strong> ${mapEsc(q.boundaryKey||'—')}</div>`;
-  $('#vwMapMethod').innerHTML=`<strong>Map method note:</strong> 47/47 data matching means VOTEWATCH outputs joined to county geometries. It does not imply official legal boundary authority where proxy geometries exist. Boundary confidence: ${mapEsc(q.boundarySourceConfidence||'—')}. Scenario colors are model outputs, not official results.`;
-  $('#vwMapBoundarySourcePanel')&&( $('#vwMapBoundarySourcePanel').innerHTML=boundarySourceHTML() );
-  $('#vwMapMovementPanel')&&( $('#vwMapMovementPanel').innerHTML=mapMovementHTML() );
-};
-mapIndicatorMetaHTML=function(){const m=getMapIndicatorMeta();return `<strong style="color:var(--gold)">${mapEsc(m.label)}</strong><br>Category: ${mapEsc(m.category)}<br>Unit: ${mapEsc(m.unit)}<br>Formula: ${mapEsc(m.formula)}<br>Source: ${mapEsc(m.source)}<br>Status: ${mapEsc(m.status)}<br>Confidence: ${m.status==='computed'?'Medium-high':m.status==='modelled'?'Medium':'Proxy / requires validation'}<br>Caveat: ${mapEsc(m.caveat)}<div class="divider"></div><strong style="color:var(--gold)">Formula cards</strong><br>${indicatorFormulaCardsHTML()}`;};
-rMapQualityHTML=function(){const q=VW_MAP_STATE.diagnostics||{};return `<strong style="color:var(--gold)">Map QA</strong><br>Generated: ${mapEsc(q.generatedAt||'—')}<br>County data match: ${q.countyDataMatch||0}/47<br>Boundary geometry match: ${q.geometryMatch||0}/47<br>Verified/proxy geometry: ${q.verifiedGeometryCount||0}/${q.proxyGeometryCount||0}<br>Boundary source confidence: ${mapEsc(q.boundarySourceConfidence||'—')}<br>Model output completeness: ${q.modelOutputCompleteness||0}%<br>High/Medium/Low DQ: ${q.highDQ||0}/${q.medDQ||0}/${q.lowDQ||0}<br>Quality score: ${Math.round(q.score||0)} / 100`;};
-
-// Override profile explanation for explainability beside scores
-mapCountyExplanation=function(row){
-  const gap=row.values.article138Gap, tf=row.values.thirdShare, risk=row.values.disputeRisk, sig=computeCountySignals(row);
-  const drivers=[]; if(Math.abs(gap)<5)drivers.push('Article 138 proximity'); if(tf>10)drivers.push('Third Force exposure'); if(risk>45)drivers.push('close-margin / dispute-risk signal'); if(row.dq!=='high')drivers.push(`${row.dq} data quality`);
-  const conf=row.dq==='high'&&risk<45?'Medium-high':row.dq==='medium'?'Medium':'Low-to-medium';
-  const dataNeed=row.dq==='high'?'recent polling and official register update':'verified ward results, official register update and county polling';
-  return `<strong>Why this score:</strong> ${(drivers.length?drivers.join(', '):'no single severe driver under current assumptions')}.<br><strong>What moved it:</strong> current TF ${tf.toFixed(1)}%, Article 138 gap ${gap.toFixed(1)}pp, dispute ${risk.toFixed(0)}, civic ${sig.civic.toFixed(0)}, market ${sig.market.toFixed(0)}.<br><strong>Confidence:</strong> ${conf}. <strong>Data that would change this:</strong> ${dataNeed}.`;
-};
-
 // Public mode disables ward sensitivity ranking while preserving drilldown for internal use
 const _rSens_v44=rSens;
 rSens=function(){
@@ -1763,7 +1431,7 @@ function openVwTab(tab){
   $$('.tbtn').forEach(b=>b.classList.remove('act'));
   $$('.tpane').forEach(p=>p.classList.remove('act'));
   btn.classList.add('act');pane.classList.add('act');
-  if(tab==='map'&&S.res){rMap(S.res.ctyRes);}
+  if(S.dirty&&S.dirty.has(tab))renderPane(tab);else if(tab==='map'&&S.res){rMap(S.res.ctyRes);}
   if(tab==='report'){renderExecutiveReport();}
 }
 function currentScenarioSettings(){
@@ -1815,7 +1483,7 @@ function enhanceInteractivePolish(){
 
 // Override renderAll to append governance renders without rewriting base flow
 const _renderAll_v44=renderAll;
-renderAll=function(){_renderAll_v44();renderGovernanceWidgets();updateMcModeUI();updateViewModeLabels();applyTheme();renderExecutiveReport();enhanceInteractivePolish();};
+renderAll=function(){_renderAll_v44();renderGovernanceWidgets();updateMcModeUI();updateViewModeLabels();applyTheme();enhanceInteractivePolish();};
 // ═══ INIT ═══
 function updateLabels(){
   $('#lv-tf').textContent=S.tf+'pp';
@@ -1852,6 +1520,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   bndSlider('si','si',1);   // slider -12–12 → S.si=-12–12
   bndSlider('so','so',1);
   bndSlider('ys','ys',1);   // slider -5–18 → S.ys
+  $$('.tbtn').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.t;if(S.dirty&&S.dirty.has(t))renderPane(t);}));
+  // warm the scenario cards (the slowest tab) once the page is idle
+  (window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>{try{rScen();S.dirty&&S.dirty.delete('mat');}catch(e){}},{timeout:3000});
+  document.querySelectorAll('[data-flow]').forEach(btn=>btn.onclick=()=>{S.flowDir=btn.dataset.flow;document.querySelectorAll('[data-flow]').forEach(x=>x.setAttribute('aria-pressed',String(x===btn)));if(S.res)VZ.flow($('#roFlow'),S.res,S.flowDir);});
   $('#sl-follow')?.addEventListener('input',e=>{S.cfg.follow=+e.target.value;$('#lv-follow').textContent=S.cfg.follow+'%';rerenderTeams();});
   renderTeams();
 

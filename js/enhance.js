@@ -121,7 +121,7 @@ function wrapKPIs(){
   const orig=window.rKPIs; if(typeof orig!=='function')return;
   window.rKPIs=function(r,mc_,dr,f,i25){
     orig.apply(this,arguments);
-    try{decorateKPIs(r,mc_,dr,i25);renderHero();}catch(e){console.error('enhance',e);}
+    try{renderHero();}catch(e){console.error('enhance',e);}
   };
 }
 
@@ -140,7 +140,11 @@ function initShell(){
     document.addEventListener('click',e=>{if(menu.open&&!menu.contains(e.target))menu.open=false;});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.open){menu.open=false;$('summary',menu).focus();}});
   }
-  try{if(localStorage.getItem('vw-guide')==='0'){const g=$('#guide');if(g)g.hidden=true;}}catch(e){}
+  // First visit: show the four-step guide once; afterwards it lives behind the "?" button
+  const guide=$('#guide');
+  try{if(guide){if(localStorage.getItem('vw-guide-seen'))guide.hidden=true;else localStorage.setItem('vw-guide-seen','1');}}catch(e){}
+  const help=$('#helpBtn');
+  if(help&&guide)help.onclick=()=>{const t=$('.tbtn[data-t="cmd"]');if(t)t.click();guide.hidden=false;window.scrollTo({top:0,behavior:'smooth'});};
   if(typeof setLive==='function')setLive(false);
 }
 

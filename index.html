@@ -10,11 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/tokens.css?v=7.5">
-<link rel="stylesheet" href="css/styles.css?v=7.5">
-<link rel="stylesheet" href="css/enhance.css?v=7.5">
-<link rel="stylesheet" href="css/layout.css?v=7.5">
-<link rel="stylesheet" href="css/atlas.css?v=7.5">
+<script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
+<link rel="stylesheet" href="css/tokens.css?v=8.0">
+<link rel="stylesheet" href="css/app.css?v=8.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -27,6 +25,7 @@
     </div>
     <div class="verdict" id="verdict" role="status" aria-live="polite"><span class="v-title">Running the model…</span></div>
     <div class="hdr-actions">
+      <button type="button" class="hbtn hbtn-help" id="helpBtn" aria-label="How to use this page" title="How to use this page">?</button>
       <button type="button" class="hbtn" id="viewBtn" onclick="setViewMode(S.viewMode==='public'?'internal':'public')" title="Switch between public and analyst wording">Public view</button>
       <button type="button" class="hbtn hbtn-icon" id="themeBtn" onclick="setTheme(S.theme==='light'?'dark':'light')" aria-label="Switch to dark theme">☾</button>
       <button type="button" class="hbtn" id="liveBtn" aria-pressed="false" onclick="setLive(!S.live)" title="Inject a random synthetic event every 30 seconds"><span class="live-dot" aria-hidden="true"></span><span class="live-txt">Live</span><span class="live-timer" id="hTimer">paused</span></button>
@@ -127,7 +126,8 @@
     <li><b>4</b> Export a report.</li>
     <button type="button" class="guide-x" onclick="this.closest('.guide').hidden=true;try{localStorage.setItem('vw-guide','0')}catch(e){}" aria-label="Dismiss guide">×</button>
   </ol>
-  <div class="g5 mb12" id="kpiRow"></div>
+  <section class="race card mb16" id="raceStrip" aria-labelledby="raceT"></section>
+  <div class="cards2 mb16" id="kpiRow"></div>
   <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">Every county <span class="pan-s">team A share by region · click one for detail</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel" style="height:220px"></div></div></section>
   <div class="impl-box mb12" id="implBox"><div class="impl-hdr">What this means</div><div class="loading" style="height:80px;"></div></div>
   <div class="g2 mb12">
@@ -162,21 +162,25 @@
 <div class="tpane" id="t-ro" role="tabpanel" aria-labelledby="tab-ro">
   <h2 class="sr-only">Run-off</h2>
   <p class="pane-intro"><strong>If nobody wins outright, the top two meet again.</strong> Who wins depends on where everyone else's voters go.</p>
-  <div class="g3 mb12" id="roKpis"></div>
   <div class="g3 mb12" id="roScens"></div>
+  <section class="pan mb16" aria-labelledby="flowT">
+    <div class="pan-hdr"><span class="pan-t" id="flowT">How round one becomes round two</span>
+      <span class="vtoggle" role="group" aria-label="Where everyone else's voters go">
+        <button type="button" data-flow="toA" aria-pressed="false">Lean to leader</button>
+        <button type="button" data-flow="spl" aria-pressed="true">Even split</button>
+        <button type="button" data-flow="toB" aria-pressed="false">Lean to runner-up</button>
+      </span></div>
+    <div id="roFlow"></div>
+  </section>
   <div class="g2 mb12">
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Where third-place voters go <span class="pan-s">by region</span></span></div>
-      <div id="roTrans"></div>
-    </div>
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Closest counties in a run-off</span></div>
       <div class="tscroll"><table class="tbl" id="roCtbl"></table></div>
     </div>
-  </div>
-  <div class="pan">
-    <div class="pan-hdr"><span class="pan-t">Is a run-off forced?</span></div>
-    <div id="ffDetail"></div>
+    <div class="pan">
+      <div class="pan-hdr"><span class="pan-t">Is a run-off forced?</span></div>
+      <div id="ffDetail"></div>
+    </div>
   </div>
 </div>
 
@@ -222,10 +226,7 @@
   <h2 class="sr-only">Article 138</h2>
   <p class="pane-intro"><strong>The winning rule.</strong> Over 50% of votes, and 25% in at least 24 of 47 counties.</p>
   <div class="g2 mb12">
-    <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Chance of passing both tests</span></div>
-      <div id="jpBoxes"></div>
-      <div class="note mt8" style="margin-top:8px;font-size:12px;">These conditions are correlated but not identical. A candidate can win nationally while failing the county test if their vote concentrates in 2–3 large counties without breadth. The joint probability models their simultaneous requirement.</div>
+    <div class="pan gates" id="jpBoxes">
     </div>
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">The 25% test by region</span></div>
@@ -284,11 +285,8 @@
   <div class="g3 mb12" id="disKpis"></div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Dispute risk</span></div>
-      <div class="rmeter mt8" style="margin-top:8px;"><div class="rpin" id="rpin"></div></div>
-      <div class="fb" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">
-        <span>LOW</span><span>MEDIUM</span><span>HIGH</span>
-      </div>
+      <div class="pan-hdr"><span class="pan-t">How close each county is <span class="pan-s">team A minus team B</span></span></div>
+      <div id="disStrip"></div>
       <div class="divider"></div>
       <div id="disNarr" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;"></div>
     </div>
@@ -389,13 +387,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=7.5"></script>
-<script defer src="data/counties.js?v=7.5"></script>
-<script defer src="data/transport.js?v=7.5"></script>
-<script defer src="data/context.js?v=7.5"></script>
-<script defer src="data/kenya-geo.js?v=7.5"></script>
-<script defer src="js/app.js?v=7.5"></script>
-<script defer src="js/enhance.js?v=7.5"></script>
-<script defer src="js/map.js?v=7.5"></script>
+<script defer src="data/wards.js?v=8.0"></script>
+<script defer src="data/counties.js?v=8.0"></script>
+<script defer src="data/transport.js?v=8.0"></script>
+<script defer src="data/context.js?v=8.0"></script>
+<script defer src="data/kenya-geo.js?v=8.0"></script>
+<script defer src="js/viz.js?v=8.0"></script>
+<script defer src="js/app.js?v=8.0"></script>
+<script defer src="js/enhance.js?v=8.0"></script>
+<script defer src="js/map.js?v=8.0"></script>
 </body>
 </html>

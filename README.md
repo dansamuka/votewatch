@@ -28,13 +28,11 @@ Technical tables sit in "Technical detail" sections, closed by default.
 
 ```
 index.html              markup: header, Teams sidebar, tab panels
-css/tokens.css          base tokens
-css/styles.css          component and print styles
-css/enhance.css         depth, motion, container-query grids
-css/layout.css          app shell, Teams panel, sliders, switches
-css/atlas.css           Kenya Projects Atlas colours/theme + map styles (loaded last)
+css/tokens.css          all design tokens (light default; dark via <html data-theme="dark">)
+css/app.css             all component styles
+js/viz.js               race strip, outcome dots, margin strip, Article 138 gates, run-off flow
 js/app.js               engine (candidate field, teams, simulation, run-off) and rendering
-js/enhance.js           accessibility, cartogram, KPI sparklines/gauge
+js/enhance.js           accessibility, cartogram, first-visit guide
 js/map.js               county map and county panel
 data/wards.js           ward-level dataset  (const WD)
 data/counties.js        county dataset      (const CO)
