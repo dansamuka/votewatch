@@ -12,10 +12,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/tokens.css?v=6.0">
-<link rel="stylesheet" href="css/styles.css?v=6.0">
-<link rel="stylesheet" href="css/enhance.css?v=6.0">
-<link rel="stylesheet" href="css/layout.css?v=6.0">
+<link rel="stylesheet" href="css/tokens.css?v=6.1">
+<link rel="stylesheet" href="css/styles.css?v=6.1">
+<link rel="stylesheet" href="css/enhance.css?v=6.1">
+<link rel="stylesheet" href="css/layout.css?v=6.1">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -211,16 +211,16 @@
 <!-- ═══ TAB: RUN-OFF ═══ -->
 <div class="tpane" id="t-ro" role="tabpanel" aria-labelledby="tab-ro">
   <h2 class="sr-only">Run-off</h2>
-  <p class="pane-intro"><strong>If nobody wins outright, the top two go to a second round.</strong> This tab shows who wins it depending on where third-force voters go.</p>
+  <p class="pane-intro"><strong>If nobody wins outright, the top two go to a second round.</strong> The pairing is whoever actually finishes first and second in round one; this tab shows who wins depending on where the third-placed candidate's voters go.</p>
   <div class="g3 mb12" id="roKpis"></div>
   <div class="g3 mb12" id="roScens"></div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Transfer Rates by Cluster <span class="pan-s">R2 TF vote allocation if TF endorses incumbent</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">How the third-placed bloc's voters move <span class="pan-s">share going to the finalist they lean toward, by region</span></span></div>
       <div id="roTrans"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">R2 Marginal Counties <span class="pan-s">Within ±8pp of 50% threshold · TF→Inc scenario</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Closest counties in the run-off <span class="pan-s">within 10 points of 50/50 · even split</span></span></div>
       <div class="tscroll"><table class="tbl" id="roCtbl"></table></div>
     </div>
   </div>
@@ -556,11 +556,11 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=6.0"></script>
-<script defer src="data/counties.js?v=6.0"></script>
-<script defer src="data/transport.js?v=6.0"></script>
-<script defer src="data/context.js?v=6.0"></script>
-<script defer src="js/app.js?v=6.0"></script>
-<script defer src="js/enhance.js?v=6.0"></script>
+<script defer src="data/wards.js?v=6.1"></script>
+<script defer src="data/counties.js?v=6.1"></script>
+<script defer src="data/transport.js?v=6.1"></script>
+<script defer src="data/context.js?v=6.1"></script>
+<script defer src="js/app.js?v=6.1"></script>
+<script defer src="js/enhance.js?v=6.1"></script>
 </body>
 </html>

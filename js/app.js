@@ -43,7 +43,12 @@ const TO_SIG={
   'Urban/Protest':0.048,'Mountain Rebel':0.042,'Coast/Joho':0.036,
   'Nyanza Split':0.032,'Eastern/Ukambani':0.038,'Rift Valley Anchor':0.024
 };
-// R2 transfer rates
+// R2 transfer rates: how the eliminated (third-placed) bloc's voters move in a
+// region when they lean toward one finalist.
+//   toI = share going to Ruto when they lean to Ruto
+//   toO = share going to the non-Ruto finalist when they lean to that finalist
+//   spl = no lean
+// (v5 read toO as a share to Ruto, so "lean to the opposition" barely moved the result.)
 const R2T={
   toI:{'Mountain Rebel':0.75,'Urban/Protest':0.58,'Coast/Joho':0.52,'Eastern/Ukambani':0.55,'Nyanza Split':0.22,'Rift Valley Anchor':0.48},
   toO:{'Mountain Rebel':0.22,'Urban/Protest':0.52,'Coast/Joho':0.58,'Eastern/Ukambani':0.50,'Nyanza Split':0.78,'Rift Valley Anchor':0.30},
@@ -264,7 +269,7 @@ function anchorRef(params){
 
 function mc(params={},n=ITERS){
   let iW=0,oW=0,ro=0,iJ=0,oJ=0;
-  const iA=[],oA=[],tA=[];
+  const iA=[],oA=[],tA=[],pairs={},r2Win={};
   const prevRng=RNG_SOURCE;
   if(S.mcMode==='research'){
     RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.cc}|${S.pa.inc}|${S.pa.opp}|${S.pa.tf}|${JSON.stringify(S.reg)}|${S.mk}`));
@@ -277,7 +282,14 @@ function mc(params={},n=ITERS){
         const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
         const iP=r.nat.i>0.50&&i25>=CTY_N;
         const oP=r.nat.o>0.50&&o25>=CTY_N;
-        if(iP)iW++;else if(oP)oW++;else ro++;
+        if(iP)iW++;else if(oP)oW++;else{
+          ro++;
+          // which two finish top in this draw, and who wins round two (even split)
+          const r2=r2sim(r.ctyRes,r.nat,'spl');
+          const key=[r2.a,r2.b].sort().join('|');
+          pairs[key]=(pairs[key]||0)+1;
+          r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;
+        }
         if(iP)iJ++;if(oP)oJ++;
         iA.push(r.nat.i);oA.push(r.nat.o);tA.push(r.nat.t);
       }catch(e){}
@@ -285,29 +297,52 @@ function mc(params={},n=ITERS){
   }finally{
     RNG_SOURCE=prevRng;
   }
-  return{iW:iW/n,oW:oW/n,ro:ro/n,iJ:iJ/n,oJ:oJ/n,
+  // pairs / r2Win are shares of the run-off draws only
+  const norm=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,ro?v/ro:0]));
+  return{iW:iW/n,oW:oW/n,ro:ro/n,iJ:iJ/n,oJ:oJ/n,pairs:norm(pairs),r2Win:norm(r2Win),
     iMed:qntl(iA,.5),oMed:qntl(oA,.5),tMed:qntl(tA,.5),
     iLo:qntl(iA,.1),iHi:qntl(iA,.9),oLo:qntl(oA,.1),oHi:qntl(oA,.9),
     iterations:n,mode:S.mcMode,seed:S.mcMode==='research'?S.seed:null};
 }
 
+// Bloc display names, following the political-context switches
+function blocName(k){
+  if(k==='inc')return 'Ruto';
+  if(k==='opp')return 'United Opposition';
+  const who=[S.reg.sifuna&&'Sifuna',S.reg.gach&&'Gachagua'].filter(Boolean);
+  return who.length?who.join('/'):'Third force';
+}
+// Art. 138(5): the run-off is between the two candidates with the most votes
+// in round one. Returns finalists [a,b] (a = first-round leader) and the
+// eliminated bloc e.
+function r2pair(nat){
+  const order=[['inc',nat.i],['opp',nat.o],['tf',nat.t]].sort((x,y)=>y[1]-x[1]).map(x=>x[0]);
+  return{a:order[0],b:order[1],e:order[2]};
+}
+// Share of the eliminated bloc's voters that go to finalist `to` when they lean to it
+function leanRate(to,a,b,cl){
+  if(to==='inc')return R2T.toI[cl]??0.5;
+  if(a==='inc'||b==='inc')return R2T.toO[cl]??0.5; // non-Ruto finalist vs Ruto
+  return 0.65; // Ruto eliminated: assumed lean strength between two opposition finalists
+}
+// dir: 'toA' (eliminated voters lean to the leader), 'toB' (lean to the runner-up), 'spl' (even)
 function r2sim(ctyRes,nat,dir='spl'){
-  const rt=R2T[dir];
-  let r2iV=0,r2oV=0;
+  const {a,b,e}=r2pair(nat);
+  const v=(c,k)=>k==='inc'?c.iv:k==='opp'?c.ov:c.tfv;
+  let aV=0,bV=0;
   const r2cty=ctyRes.map(c=>{
-    const rate=rt[c.cluster]||0.50;
-    const ig=c.tfv*rate,og=c.tfv*(1-rate);
-    const r2i=c.iv+ig,r2o=c.ov+og,r2t=r2i+r2o;
-    r2iV+=r2i;r2oV+=r2o;
-    const r2is=r2i/r2t;
-    return{...c,r2is,r2lead:r2is>=0.5?'inc':'opp'};
+    const ev=v(c,e);
+    const toA=dir==='toA'?leanRate(a,a,b,c.cluster):dir==='toB'?1-leanRate(b,a,b,c.cluster):0.5;
+    const ra=v(c,a)+ev*toA,rb=v(c,b)+ev*(1-toA),t=ra+rb||1;
+    aV+=ra;bV+=rb;
+    const r2a=ra/t;
+    return{...c,r2a,r2lead:r2a>=0.5?a:b};
   });
-  const r2tot=r2iV+r2oV;
-  const r2iN=r2iV/r2tot;
-  const ri25=r2cty.filter(c=>c.r2is>=0.25).length;
-  // Art. 138(7): in the fresh (run-off) election the candidate with the most
-  // votes is elected; there is no 25%-in-24-counties test in round two.
-  return{r2cty,r2iN,r2oN:1-r2iN,win:r2iN>0.50,ri25,dir};
+  const shareA=aV/((aV+bV)||1);
+  // Art. 138(7): most votes wins the run-off; no county-spread test in round two.
+  const winner=shareA>=0.5?a:b;
+  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,
+    r2iN:a==='inc'?shareA:b==='inc'?1-shareA:null};
 }
 
 function ff(nat){
@@ -380,8 +415,9 @@ function implTxt(res,mc_){
   }
 
   if(mc_.ro>0.25){
-    const ri=r2sim(ctyRes,nat,'toI'),ro=r2sim(ctyRes,nat,'toO');
-    out.push(`In a run-off, where third-force voters go matters: leaning to Ruto gives him ${pct(ri.r2iN)}, leaning to the opposition ${pct(ro.r2iN)}, a ${pct(Math.abs(ri.r2iN-ro.r2iN))} swing. ${ri.r2iN>0.5&&ro.r2iN>0.5?'Ruto wins round two either way at these settings.':ri.r2iN<0.5&&ro.r2iN<0.5?'The opposition wins round two either way at these settings.':'That endorsement decides round two.'}`);
+    const ra=r2sim(ctyRes,nat,'toA'),rb=r2sim(ctyRes,nat,'toB');
+    const A=blocName(ra.a),B=blocName(ra.b),E=blocName(ra.e);
+    out.push(`The run-off would be ${A} vs ${B} (${E} finishes third). If ${E}'s voters lean to ${A}, ${A} gets ${pct(ra.shareA)}; if they lean to ${B}, ${A} gets ${pct(rb.shareA)}. ${ra.winner===rb.winner?`${blocName(ra.winner)} wins round two either way at these settings.`:`${E}'s endorsement decides round two.`}`);
   }
 
   if(dr.score>55)
@@ -621,36 +657,44 @@ function rRunoff(r,mc_){
     <div class="kpi-v va">${f.ia?'+'+pct(f.tbi):'Already forced'}</div>
     <div class="kpi-d">${f.ia?`On top of today's ${pct(nat.t)}, to pull the incumbent below 50%+1`:`The incumbent is already below 50% at ${pct(nat.t)} third-force share`}</div></div>`;
 
-  const dirs=[{k:'toI',l:'If third-force voters (Sifuna and others) lean to Ruto',c:'var(--blbr)'},{k:'toO',l:'If they lean to the opposition',c:'var(--red2)'},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
-  $('#roScens').innerHTML=dirs.map(d=>{
+  // Run-off pairing = actual top two in round one (Art. 138(5))
+  const pr=r2pair(nat),A=blocName(pr.a),B=blocName(pr.b),E=blocName(pr.e);
+  const BC={inc:'var(--blbr)',opp:'var(--red2)',tf:'var(--amb2)'};
+  const sh={inc:nat.i,opp:nat.o,tf:nat.t};
+  const dirs=[{k:'toA',l:`If ${E}'s voters lean to ${A}`,c:BC[pr.a]},{k:'toB',l:`If they lean to ${B}`,c:BC[pr.b]},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
+  $('#roScens').innerHTML=`<div class="ro-pair" style="grid-column:1/-1"><span class="ro-pair-l">Run-off pairing</span>
+      <b style="color:${BC[pr.a]}">${A}</b> <span class="ro-pair-s">${pct(sh[pr.a])}</span> vs <b style="color:${BC[pr.b]}">${B}</b> <span class="ro-pair-s">${pct(sh[pr.b])}</span>
+      <span class="ro-pair-e">${E} finishes third with ${pct(sh[pr.e])}; their voters decide round two.${mc_.ro>0?` Across simulated run-offs, this pairing comes up ${pct((mc_.pairs||{})[[pr.a,pr.b].sort().join('|')]||0,0)} of the time; with an even split, ${A} wins round two in ${pct((mc_.r2Win||{})[pr.a]||0,0)} and ${B} in ${pct((mc_.r2Win||{})[pr.b]||0,0)}.`:''}</span></div>`+
+  dirs.map(d=>{
     const ro=r2sim(ctyRes,nat,d.k);
-    const carried=ro.r2cty.filter(c=>c.r2lead==='inc').length;
+    const carriedA=ro.r2cty.filter(c=>c.r2lead===ro.a).length;
     return`<div class="ro-card">
       <div class="ro-ttl" style="color:${d.c}">${d.l}</div>
-      <div class="ro-val" style="color:${ro.win?'var(--gbr)':'var(--red2)'}">${pct(ro.r2iN)}</div>
-      <div style="font-size:13px;color:var(--text-2);margin-top:6px;">Incumbent's second-round share · leads in ${carried}/47 counties</div>
-      <div class="pbar mt8"><div class="pf p-b" style="width:${pct(ro.r2iN,0)}"></div></div>
-      <div style="margin-top:6px;">${ro.win?'<span class="b b-gr">Incumbent wins</span>':'<span class="b b-r">Opposition wins</span>'}</div>
+      <div class="ro-val" style="color:${BC[ro.winner]}">${pct(Math.max(ro.shareA,ro.shareB))}</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:6px;">${A} ${pct(ro.shareA)} · ${B} ${pct(ro.shareB)} · ${A} leads in ${carriedA}/47 counties</div>
+      <div class="pbar mt8"><div class="pf" style="width:${pct(ro.shareA,0)};background:${BC[ro.a]}"></div></div>
+      <div style="margin-top:6px;"><span class="b ${ro.winner==='inc'?'b-b':ro.winner==='opp'?'b-r':'b-a'}">${blocName(ro.winner)} wins</span></div>
     </div>`;
   }).join('');
 
-  $('#roTrans').innerHTML=`<table class="tbl"><thead><tr><th>Cluster</th><th>→Inc Rate</th><th>→Opp Rate</th><th>Basis</th></tr></thead>
+  const nonRuto=pr.a==='inc'?B:pr.b==='inc'?A:null;
+  $('#roTrans').innerHTML=`<table class="tbl"><thead><tr><th>Region</th><th>Lean to Ruto: share to Ruto</th><th>Lean to ${nonRuto?mapEsc(nonRuto):'the other finalist'}: share to them</th><th>Basis</th></tr></thead>
   <tbody>${Object.keys(R2T.toI).map(cl=>`<tr>
     <td style="font-weight:600">${cl}</td>
     <td style="color:var(--blbr)">${pct(R2T.toI[cl])}</td>
-    <td style="color:var(--red2)">${pct(1-R2T.toI[cl])}</td>
-    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${cl==='Mountain Rebel'?'2017 Gichugu analogue':cl==='Nyanza Split'?'2017 NASA retention':'Directional survey est.'}</td>
-  </tr>`).join('')}</tbody></table>`;
+    <td style="color:var(--red2)">${pct(R2T.toO[cl])}</td>
+    <td style="font-size:12px;color:var(--muted)">${cl==='Mountain Rebel'?'2017 Gichugu analogue':cl==='Nyanza Split'?'2017 NASA retention':'Directional survey estimate'}</td>
+  </tr>`).join('')}</tbody></table>${nonRuto?'':'<p class="hint mt8">Ruto finishes third here, so neither column applies: voters are assumed to lean 65/35 toward whichever finalist they favour.</p>'}`;
 
-  const ro=r2sim(ctyRes,nat,'toI');
-  const marg=ro.r2cty.filter(c=>Math.abs(c.r2is-0.5)<0.10).sort((a,b)=>Math.abs(a.r2is-0.5)-Math.abs(b.r2is-0.5));
-  $('#roCtbl').innerHTML=`<thead><tr><th>County</th><th>R2 Inc</th><th>R2 Winner</th><th>Cluster</th></tr></thead>
+  const ro=r2sim(ctyRes,nat,'spl');
+  const marg=ro.r2cty.filter(c=>Math.abs(c.r2a-0.5)<0.10).sort((x,y)=>Math.abs(x.r2a-0.5)-Math.abs(y.r2a-0.5));
+  $('#roCtbl').innerHTML=`<thead><tr><th>County</th><th>${A} share</th><th>Leader</th><th>Region</th></tr></thead>
   <tbody>${marg.map(c=>`<tr>
     <td style="font-weight:600">${c.name}</td>
-    <td style="color:${c.r2is>=0.5?'var(--blbr)':'var(--red2)'}">${pct(c.r2is)}</td>
-    <td><span class="b ${c.r2lead==='inc'?'b-b':'b-r'}">${c.r2lead.toUpperCase()}</span></td>
-    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${c.cluster}</td>
-  </tr>`).join('')}</tbody>`;
+    <td style="color:${c.r2a>=0.5?BC[ro.a]:BC[ro.b]}">${pct(c.r2a)}</td>
+    <td><span class="b ${c.r2lead==='inc'?'b-b':c.r2lead==='opp'?'b-r':'b-a'}">${blocName(c.r2lead)}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${c.cluster}</td>
+  </tr>`).join('')||'<tr><td colspan="4" class="hint">No county within 10 points of 50/50.</td></tr>'}</tbody>`;
 
   $('#ffDetail').innerHTML=`<div class="g3">
     <div><div class="kpi-l">Combined share</div><div style="font-family:var(--disp);font-size:22px;">${pct(nat.i+nat.o)}</div></div>
@@ -1483,12 +1527,12 @@ function regime(k,v){
 function rHeadline(r,mc_,i25){
   const el=document.getElementById("verdict");if(!el)return;
   const n=r.nat;let tone,title;
-  if(mc_.ro>=0.5){tone="warn";title="Run-off likely";}
+  if(mc_.ro>=0.5){const pr=r2pair(n);tone="warn";title=`Run-off likely: ${blocName(pr.a)} vs ${blocName(pr.b)}`;}
   else if(mc_.iW>=mc_.oW){tone="inc";title="Incumbent wins in round one";}
   else{tone="opp";title="Opposition wins in round one";}
   const p=mc_.ro>=0.5?mc_.ro:Math.max(mc_.iW,mc_.oW);
   el.dataset.tone=tone;
-  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p">${pct(p,0)} of simulations</span><span class="v-sep" aria-hidden="true"></span><span class="v-detail">Incumbent <b>${pct(n.i)}</b> · Opposition <b>${pct(n.o)}</b> · Third force <b>${pct(n.t)}</b> · <b>${i25}</b>/47 counties at 25%+</span>`;
+  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p">${pct(p,0)} of simulations</span><span class="v-sep" aria-hidden="true"></span><span class="v-detail">Incumbent <b>${pct(n.i)}</b> · Opposition <b>${pct(n.o)}</b> · ${blocName("tf")} <b>${pct(n.t)}</b> · <b>${i25}</b>/47 counties at 25%+</span>`;
 }
 function setLive(on){
   S.live=!!on;S.timer=30;

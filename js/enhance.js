@@ -50,7 +50,7 @@ function loadGeometry(){
   if(geoReady())return Promise.resolve();
   return geoPromise||(geoPromise=new Promise((res,rej)=>{
     const s=document.createElement('script');
-    s.src='data/county-geojson.js?v=6.0';s.onload=res;s.onerror=rej;
+    s.src='data/county-geojson.js?v=6.1';s.onload=res;s.onerror=rej;
     document.head.appendChild(s);
   }));
 }
