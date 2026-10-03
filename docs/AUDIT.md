@@ -1,4 +1,4 @@
-# Engine and data audit (v5.0, October 2026)
+# Engine and data audit (v5.0–5.1, October 2026)
 
 Scope: the scenario engine in `js/app.js` (`sim`, `mc`, `r2sim`, `disRisk`,
 `tipPts`, shocks), the rendering that reports its numbers, and the data files.
@@ -34,27 +34,39 @@ dropped from about 950 ms to about 210 ms in Preview mode, and Research mode is
 correspondingly faster. Slider labels update instantly; the model re-run is
 debounced.
 
+## Model changes (v5.1, approved)
+
+These change outputs on purpose.
+
+1. **Monte Carlo spread widened.** `rng()` was `(sum of 4 uniforms − 2)/2`,
+   giving a standard deviation of about 0.29 rather than 1. It is now scaled by √3
+   to unit variance, so the cluster (σ 3.6pp), ward and turnout noise terms have
+   the sizes their constants imply. A national swing (`NAT_SWING_SD` = 2pp) is
+   now drawn once per simulated election and applied to every ward, moving
+   support between incumbent and opposition. Previously all error was local
+   and averaged away.
+
+   | Default settings, Research mode | v5.0 | v5.1 |
+   |---|---|---|
+   | Incumbent 10–90% range | 46.4–47.2% | 44.0–49.5% |
+   | Outright incumbent win | 0% | 6% |
+   | Run-off | 100% | 94% |
+
+   With an incumbent swing of +8pp: outright win 54%, run-off 46%. Deterministic
+   (no-noise) results are unchanged.
+2. **Run-off rule follows Article 138(7).** In the fresh election, the candidate
+   with the most votes is elected. `r2sim` no longer also requires 25% in 24
+   counties. The Run-off tab now shows how many counties each side leads,
+   instead of the 25% count.
+
 ## Open: needs a modelling decision (not changed)
 
-These affect outputs, so they need your decision; they were left as they are.
-
-1. **Monte Carlo spread is very narrow.** `rng()` is `(sum of 4 uniforms − 2)/2`, so its
-   standard deviation is about 0.29, not 1. Ward noise is independent per ward,
-   so it averages out nationally. The only shared term is a ±1pp cluster
-   shock. The 10–90% band for the incumbent comes out at about ±0.4pp, so
-   probabilities snap to 0% or 100% (the default shows "Run-off 100%").
-   *Suggested:* scale noise to unit variance and add a national swing term
-   (for example σ≈2pp) shared by all wards in a draw.
-2. **Run-off win rule.** `r2sim` declares a winner only with >50% *and* 25% in
-   24 counties. Under Article 138(5), a run-off is decided by the most votes,
-   with no county-spread test. Check against the Constitution before relying on
-   "misses county test" outcomes.
-3. **Run-off turnout.** Round two reuses round-one turnout and fixed cluster transfer
+1. **Run-off turnout.** Round two reuses round-one turnout and fixed cluster transfer
    rates (`R2T`).
-4. **Reproducibility.** Seeded Research mode covers `mc()` only. The scenario
+2. **Reproducibility.** Seeded Research mode covers `mc()` only. The scenario
    matrix (60 runs per preset) and shocks use `Math.random`, so they vary
    between runs even with a fixed seed.
-5. **Errors are swallowed.** `mc()` still wraps each iteration in an empty
+3. **Errors are swallowed.** `mc()` still wraps each iteration in an empty
    `catch`. A failing run is silently dropped but still counted in the
    denominator.
 

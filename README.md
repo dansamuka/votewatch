@@ -56,4 +56,4 @@ Deployed by GitHub Pages (`.github/workflows/static.yml`) on every push to `main
 
 Ward baselines are imputed from 2022 constituency aggregates. Treat output as
 scenario analysis, not a forecast. See `docs/AUDIT.md` for known modelling
-limitations, including the narrow Monte Carlo spread.
+limitations and the v5.1 model changes.

@@ -77,7 +77,11 @@ let RNG_SOURCE=null;
 function seedHash(str){let h=2166136261>>>0;for(let i=0;i<String(str).length;i++){h^=String(str).charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 function randUnit(){return RNG_SOURCE?RNG_SOURCE():Math.random();}
-const rng=()=>(randUnit()+randUnit()+randUnit()+randUnit()-2)/2;
+// Approximate standard normal (mean 0, sd 1): sum of 4 uniforms has variance 1/3,
+// so centre and scale by √3. (Was ÷2, giving sd ≈0.29 and far too narrow a spread.)
+const rng=()=>(randUnit()+randUnit()+randUnit()+randUnit()-2)*1.7320508075688772;
+// National swing shared by every ward in a simulated election (sd, share points)
+const NAT_SWING_SD=0.020;
 
 const qntl=(a,p)=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);const i=(s.length-1)*p;const b=Math.floor(i);return s[b+1]!==undefined?s[b]+(i-b)*(s[b+1]-s[b]):s[b];};
 const dbnc=(fn,ms=150)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
@@ -116,6 +120,9 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const pollW=0.40; // polling anchor weight
 
   // Cluster noise: drawn in fixed CLUSTERS order so seeded runs stay reproducible
+  // A national swing is drawn first and applied to every ward, so polling-style
+  // error is correlated nationally instead of averaging away across wards.
+  const natSwing=noise?rng()*NAT_SWING_SD:0;
   const clNoise={};
   CLUSTERS.forEach(cl=>clNoise[cl]=noise?rng()*0.036:0);
 
@@ -166,8 +173,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tn=noise?rng()*k.toSig:0;
 
     // Asymmetric share calculation
-    let inc=w.bi+si+clNoise[w.cl]+ssh+polIncAdj+csi+ns;
-    let opp=w.bo+so-clNoise[w.cl]*0.5+polOppAdj+coa-ns*0.4;
+    let inc=w.bi+si+clNoise[w.cl]+ssh+polIncAdj+csi+ns+natSwing;
+    let opp=w.bo+so-clNoise[w.cl]*0.5+polOppAdj+coa-ns*0.4-natSwing;
 
     // Leakage
     const caps=k.caps,iw=k.iw;
@@ -245,7 +252,9 @@ function r2sim(ctyRes,nat,dir='spl'){
   const r2tot=r2iV+r2oV;
   const r2iN=r2iV/r2tot;
   const ri25=r2cty.filter(c=>c.r2is>=0.25).length;
-  return{r2cty,r2iN,r2oN:1-r2iN,win:r2iN>0.50&&ri25>=CTY_N,ri25,dir};
+  // Art. 138(7): in the fresh (run-off) election the candidate with the most
+  // votes is elected; there is no 25%-in-24-counties test in round two.
+  return{r2cty,r2iN,r2oN:1-r2iN,win:r2iN>0.50,ri25,dir};
 }
 
 function ff(nat){
@@ -558,13 +567,13 @@ function rRunoff(r,mc_){
   const dirs=[{k:'toI',l:'If third force backs the incumbent',c:'var(--blbr)'},{k:'toO',l:'If third force backs the opposition',c:'var(--red2)'},{k:'spl',l:'If third-force voters split evenly',c:'var(--muted)'}];
   $('#roScens').innerHTML=dirs.map(d=>{
     const ro=r2sim(ctyRes,nat,d.k);
-    const ri25=ro.r2cty.filter(c=>c.r2is>=0.25).length;
+    const carried=ro.r2cty.filter(c=>c.r2lead==='inc').length;
     return`<div class="ro-card">
       <div class="ro-ttl" style="color:${d.c}">${d.l}</div>
       <div class="ro-val" style="color:${ro.win?'var(--gbr)':'var(--red2)'}">${pct(ro.r2iN)}</div>
-      <div style="font-size:13px;color:var(--text-2);margin-top:6px;">Incumbent's second-round share · 25%+ in ${ri25}/47 counties</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:6px;">Incumbent's second-round share · leads in ${carried}/47 counties</div>
       <div class="pbar mt8"><div class="pf p-b" style="width:${pct(ro.r2iN,0)}"></div></div>
-      <div style="margin-top:6px;">${ro.win?'<span class="b b-gr">Incumbent wins</span>':ro.r2iN>0.5?'<span class="b b-a">Incumbent ahead but misses county test</span>':'<span class="b b-r">Opposition wins</span>'}</div>
+      <div style="margin-top:6px;">${ro.win?'<span class="b b-gr">Incumbent wins</span>':'<span class="b b-r">Opposition wins</span>'}</div>
     </div>`;
   }).join('');
 
