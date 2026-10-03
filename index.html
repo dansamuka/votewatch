@@ -12,10 +12,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/tokens.css?v=5.1">
-<link rel="stylesheet" href="css/styles.css?v=5.1">
-<link rel="stylesheet" href="css/enhance.css?v=5.1">
-<link rel="stylesheet" href="css/layout.css?v=5.1">
+<link rel="stylesheet" href="css/tokens.css?v=6.0">
+<link rel="stylesheet" href="css/styles.css?v=6.0">
+<link rel="stylesheet" href="css/enhance.css?v=6.0">
+<link rel="stylesheet" href="css/layout.css?v=6.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -62,64 +62,79 @@
   <details class="side-box" id="sideBox" open>
     <summary class="side-sum"><span id="sideT">Scenario settings</span><span class="side-sum-hint">Change these and every tab updates</span></summary>
     <div class="side-body">
+    <section class="side-sec" aria-labelledby="secStart">
+      <label class="side-h" id="secStart" for="presetSelect">Start from a scenario</label>
+      <select class="gov-select w100" id="presetSelect" onchange="if(this.value)applyScenario(this.value)"></select>
+      <p class="hint">Real 2027 alliance paths as of October 2026. Pick one, then fine-tune below.</p>
+    </section>
     <section class="side-sec" aria-labelledby="secCtx">
       <h3 class="side-h" id="secCtx">Political context</h3>
       <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="gach" aria-describedby="h-gach" onclick="regime('gach',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Gachagua runs for president</span></button>
-        <p class="hint" id="h-gach">Adds a Mt Kenya-based third-force candidate.</p>
+        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="gach" aria-describedby="h-gach" onclick="regime('gach',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Gachagua runs separately</span></button>
+        <p class="hint" id="h-gach">Off: he backs one United Opposition candidate. On: he runs on DCP and takes most of the Mt Kenya vote himself.</p>
       </div>
       <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="odm" aria-describedby="h-odm" onclick="regime('odm',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">ODM–Linda Ground deal holds</span></button>
-        <p class="hint" id="h-odm">Coast opposition machine delivers for the coalition.</p>
+        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="odm" aria-describedby="h-odm" onclick="regime('odm',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">ODM (Oburu) backs Ruto</span></button>
+        <p class="hint" id="h-odm">The broad-based pact holds into 2027 and part of ODM's Nyanza and Coast vote follows it.</p>
       </div>
       <div class="reg-row">
-        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="uda" aria-describedby="h-uda" onclick="regime('uda',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">UDA keeps Rift Valley majority</span></button>
-        <p class="hint" id="h-uda">Off: incumbent loses about 3 points in the Kalenjin belt.</p>
+        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="sifuna" aria-describedby="h-sifuna" onclick="regime('sifuna',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Sifuna runs on his own ticket</span></button>
+        <p class="hint" id="h-sifuna">Linda Mwananchi candidate, strongest in Western, Nairobi and the Coast. Off: he joins the United Opposition.</p>
+      </div>
+      <div class="reg-row">
+        <button type="button" class="switch" role="switch" aria-checked="false" data-reg="uda" aria-describedby="h-uda" onclick="regime('uda',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Ruto holds the Rift Valley</span></button>
+        <p class="hint" id="h-uda">Off: Ruto loses about 3 points across the Kalenjin belt.</p>
       </div>
       <div class="reg-row">
         <button type="button" class="switch" role="switch" aria-checked="false" data-reg="poll" aria-describedby="h-poll" onclick="regime('poll',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Anchor to latest polls</span></button>
-        <p class="hint" id="h-poll">Blends 40% of the national poll shares below (%) into the 2022 pattern.</p>
+        <p class="hint" id="h-poll">Pulls national shares 40% of the way to these poll shares (decided voters, %). Defaults: average of the two latest model-eligible polls.</p>
       </div>
       <div class="poll-fields" id="pollFields" data-off>
-        <div class="poll-f"><label for="pi">Incumbent</label><input id="pi" type="number" min="25" max="70" value="48" step="0.5" inputmode="decimal"></div>
-        <div class="poll-f"><label for="po">Opposition</label><input id="po" type="number" min="20" max="60" value="36" step="0.5" inputmode="decimal"></div>
-        <div class="poll-f"><label for="pt">Third force</label><input id="pt" type="number" min="2" max="25" value="13" step="0.5" inputmode="decimal"></div>
+        <div class="poll-f"><label for="pi">Ruto</label><input id="pi" type="number" min="20" max="70" value="43.5" step="0.5" inputmode="decimal"></div>
+        <div class="poll-f"><label for="po">Opposition</label><input id="po" type="number" min="15" max="65" value="39" step="0.5" inputmode="decimal"></div>
+        <div class="poll-f"><label for="pt">Sifuna &amp; others</label><input id="pt" type="number" min="2" max="35" value="17" step="0.5" inputmode="decimal"></div>
         <span class="b b-m" id="pollStat">Off</span>
       </div>
     </section>
     <section class="side-sec" aria-labelledby="secAss">
       <h3 class="side-h" id="secAss">Assumptions</h3>
       <div class="sl">
-        <label class="sl-top" for="sl-tf"><span>Third-force surge</span><output id="lv-tf">3pp</output></label>
-        <input type="range" id="sl-tf" min="0" max="20" step="0.5" value="3" aria-describedby="h-sl-tf">
-        <div class="sl-scale" aria-hidden="true"><span>0</span><span>+20pp</span></div>
-        <p class="hint" id="h-sl-tf">Extra national share for third-force candidates.</p>
+        <label class="sl-top" for="sl-mk"><span>Mt Kenya shift away from Ruto</span><output id="lv-mk">55%</output></label>
+        <input type="range" id="sl-mk" min="0" max="90" step="5" value="55" aria-describedby="h-sl-mk">
+        <div class="sl-scale" aria-hidden="true"><span>0%</span><span>90%</span></div>
+        <p class="hint" id="h-sl-mk">Share of Ruto's 2022 Mt Kenya vote that has left him. Planning range 40–80%.</p>
       </div>
       <div class="sl">
-        <label class="sl-top" for="sl-si"><span>Swing to incumbent</span><output id="lv-si">±0pp</output></label>
+        <label class="sl-top" for="sl-si"><span>Swing to Ruto</span><output id="lv-si">±0pp</output></label>
         <input type="range" id="sl-si" min="-12" max="12" step="0.5" value="0" aria-describedby="h-sl-si">
         <div class="sl-scale" aria-hidden="true"><span>−12</span><span>+12</span></div>
-        <p class="hint" id="h-sl-si">Shift in incumbent support everywhere.</p>
+        <p class="hint" id="h-sl-si">Shift in Ruto's support everywhere.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-so"><span>Swing to opposition</span><output id="lv-so">±0pp</output></label>
         <input type="range" id="sl-so" min="-12" max="12" step="0.5" value="0" aria-describedby="h-sl-so">
         <div class="sl-scale" aria-hidden="true"><span>−12</span><span>+12</span></div>
-        <p class="hint" id="h-sl-so">Shift in opposition support, set separately.</p>
+        <p class="hint" id="h-sl-so">Shift in United Opposition support, set separately.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-ys"><span>Youth turnout</span><output id="lv-ys">+0pp</output></label>
         <input type="range" id="sl-ys" min="-5" max="18" step="1" value="0" aria-describedby="h-sl-ys">
         <div class="sl-scale" aria-hidden="true"><span>−5</span><span>+18</span></div>
-        <p class="hint" id="h-sl-ys">Change in turnout driven by young voters.</p>
+        <p class="hint" id="h-sl-ys">Change in turnout driven by ~5.7M expected new, mostly young voters.</p>
       </div>
       <div class="sl">
-        <label class="sl-top" for="sl-cc"><span>Coalition cohesion</span><output id="lv-cc">90%</output></label>
+        <label class="sl-top" for="sl-tf"><span>Other candidates and protest vote</span><output id="lv-tf">2pp</output></label>
+        <input type="range" id="sl-tf" min="0" max="20" step="0.5" value="2" aria-describedby="h-sl-tf">
+        <div class="sl-scale" aria-hidden="true"><span>0</span><span>+20pp</span></div>
+        <p class="hint" id="h-sl-tf">Extra national share for minor candidates, on top of Sifuna/Gachagua.</p>
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-cc"><span>Ally delivery</span><output id="lv-cc">90%</output></label>
         <input type="range" id="sl-cc" min="55" max="100" step="1" value="90" aria-describedby="h-sl-cc">
         <div class="sl-scale" aria-hidden="true"><span>55%</span><span>100%</span></div>
-        <p class="hint" id="h-sl-cc">How fully allied parties deliver their vote.</p>
+        <p class="hint" id="h-sl-cc">How fully Ruto's allies (Ford-K in Western, ODM at the Coast) deliver their vote.</p>
       </div>
-      <button type="button" class="btn btn-ghost w100" id="bReset">↺ Reset everything</button>
+      <button type="button" class="btn btn-ghost w100" id="bReset">↺ Reset to current trajectory</button>
     </section>
     <details class="side-adv">
       <summary>Advanced</summary>
@@ -244,7 +259,7 @@
 <!-- ═══ TAB: SCENARIOS ═══ -->
 <div class="tpane" id="t-mat" role="tabpanel" aria-labelledby="tab-mat">
   <h2 class="sr-only">Scenarios</h2>
-  <p class="pane-intro"><strong>Four preset futures.</strong> Built from the two biggest uncertainties: third-force strength and whether Mt Kenya holds. Your assumption sliders don't apply here; the political-context switches do.</p>
+  <p class="pane-intro"><strong>Four real paths to 2027.</strong> Built from the open questions as of October 2026: does the United Opposition field one candidate, does Sifuna run alone, and does the Ruto–ODM pact survive. Each card runs its own settings; press <em>Use these settings</em> to load one into the sidebar.</p>
   <div class="sqg mb12" id="sqMat"></div>
   <div class="pan">
     <div class="pan-hdr"><span class="pan-t">Scenario Comparison</span></div>
@@ -444,28 +459,39 @@
 <!-- ═══ TAB: INTEL ═══ -->
 <div class="tpane" id="t-int" role="tabpanel" aria-labelledby="tab-int">
   <h2 class="sr-only">Signals</h2>
-  <p class="pane-intro"><strong>Real-world signals to watch.</strong> What each event would do to the model, and how often to check it.</p>
+  <p class="pane-intro"><strong>Where the race stands and what to watch.</strong> Latest national polls, the alliance facts behind the options, and what each development would do to the model.</p>
+  <div class="polls-grid mb12">
+    <div class="pan">
+      <div class="pan-hdr"><span class="pan-t">Latest national polls <span class="pan-s">decided voters, grouped into the model's blocs</span></span></div>
+      <div class="tscroll"><table class="tbl" id="pollsTbl"></table></div>
+      <p class="hint mt8">*Opposition = Kalonzo, Matiang'i, Gachagua, Karua. "Held out" polls haven't disclosed or verified methodology and aren't used in the anchor default. Source: kenya-election-intelligence-engine.</p>
+    </div>
+    <div class="pan">
+      <div class="pan-hdr"><span class="pan-t">Alliance facts behind the options <span class="pan-s">as of 3 Oct 2026</span></span></div>
+      <ul class="ctx-list" id="ctxFacts"></ul>
+    </div>
+  </div>
   <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Strategic Levers <span class="pan-s">Model-impact ranked</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">Developments that would move the model</span></div>
       <div id="levList"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Sentiment Monitor</span></div>
+      <div class="pan-hdr"><span class="pan-t">What to monitor</span></div>
       <div id="sentList"></div>
     </div>
   </div>
   <div class="g3 mb12">
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">By-Election Calibration <span class="pan-s">2023–2025</span></span></div>
+      <div class="pan-hdr"><span class="pan-t">By-election checks <span class="pan-s">2023–2024</span></span></div>
       <div id="byeList"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Data Upgrade Roadmap</span></div>
+      <div class="pan-hdr"><span class="pan-t">Data upgrades</span></div>
       <div id="dataRoadmap"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><span class="pan-t">Regime Switch Effects</span></div>
+      <div class="pan-hdr"><span class="pan-t">What each switch does</span></div>
       <div id="regEffects"></div>
     </div>
   </div>
@@ -530,10 +556,11 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=5.1"></script>
-<script defer src="data/counties.js?v=5.1"></script>
-<script defer src="data/transport.js?v=5.1"></script>
-<script defer src="js/app.js?v=5.1"></script>
-<script defer src="js/enhance.js?v=5.1"></script>
+<script defer src="data/wards.js?v=6.0"></script>
+<script defer src="data/counties.js?v=6.0"></script>
+<script defer src="data/transport.js?v=6.0"></script>
+<script defer src="data/context.js?v=6.0"></script>
+<script defer src="js/app.js?v=6.0"></script>
+<script defer src="js/enhance.js?v=6.0"></script>
 </body>
 </html>

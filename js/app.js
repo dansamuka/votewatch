@@ -13,11 +13,25 @@ const TF_BASE={
   'Urban/Protest':0.068,'Mountain Rebel':0.042,'Coast/Joho':0.028,
   'Eastern/Ukambani':0.025,'Nyanza Split':0.025,'Rift Valley Anchor':0.018
 };
-// Added when Gachagua regime ON
-const TF_GACH={
-  'Mountain Rebel':0.140,'Urban/Protest':0.050,'Eastern/Ukambani':0.030,
-  'Coast/Joho':0.020,'Nyanza Split':0.010,'Rift Valley Anchor':0.005
-};
+// ═══ 2027 REALIGNMENT LAYER (v6) ═══
+// Ward baselines are the 2022 Ruto (bi) vs Raila (bo) result. These rules move
+// shares of that baseline to where 2026 alliances put them. Blocs:
+//   inc = Ruto + allies · opp = United Opposition candidate · tf = everyone else
+// Sources/calibration: engine repo regional_swing_assumptions (GEMA transfer
+// 60%, range 40–80), TIFA Jul 2026 regional cuts (Ruto ~40% in Nyanza; Sifuna
+// 28% Western, 27% Coast, 22% Nairobi), and the national poll average in
+// data/context.js. All are assumptions, shown and adjustable in the UI.
+//
+// Mt Kenya (Mountain Rebel): `mk`% of Ruto's 2022 vote leaves him. It goes to
+// the opposition, or mostly to Gachagua as a separate candidate if he runs alone.
+const MK_TO_TF_IF_GACH_ALONE=0.75;
+// ODM–Ruto pact: share of the 2022 Raila vote that follows ODM (Oburu) to Ruto.
+const ODM_TO_INC={'Nyanza Split':0.30,'Coast/Joho':0.20,'Urban/Protest':0.10,'Eastern/Ukambani':0.0,'Mountain Rebel':0.0,'Rift Valley Anchor':0.05};
+// Sifuna (Linda Mwananchi) running separately: share of the remaining
+// opposition-leaning vote he takes.
+const SIFUNA_TF={'Urban/Protest':0.45,'Coast/Joho':0.30,'Nyanza Split':0.20,'Eastern/Ukambani':0.05,'Mountain Rebel':0.05,'Rift Valley Anchor':0.05};
+// Matiang'i's home counties: little of the ODM vote follows the pact to Ruto
+const ODM_HOLDOUT={Kisii:0.10,Nyamira:0.10};
 // Cluster-dynamic leakage caps
 const LCAPS={
   'Mountain Rebel':{i:0.58,o:0.24},'Urban/Protest':{i:0.48,o:0.40},
@@ -35,20 +49,23 @@ const R2T={
   toO:{'Mountain Rebel':0.22,'Urban/Protest':0.52,'Coast/Joho':0.58,'Eastern/Ukambani':0.50,'Nyanza Split':0.78,'Rift Valley Anchor':0.30},
   spl:{'Mountain Rebel':0.50,'Urban/Protest':0.50,'Coast/Joho':0.50,'Eastern/Ukambani':0.50,'Nyanza Split':0.50,'Rift Valley Anchor':0.50}
 };
-// Scenario presets — stored as RAW integers (pp), engine divides by 100
+// Default assumptions ("current trajectory", Oct 2026). RAW integers: engine divides by 100.
+const DEFAULTS={tf:2,si:0,so:0,ys:0,cc:90,mk:55,
+  reg:{gach:false,odm:true,sifuna:true,uda:true,poll:false}};
+// Scenario presets: real 2027 alliance paths. `p` holds slider values, `reg` the political context.
 const SCENS=[
-  {id:'q1',tier:'Q1 — HIGH RISK',c:'#b83232',t:'TF Strong + Mt Kenya Fractures',
-    d:'Gachagua runs. TF polls 18%+ nationally. Ruto loses >60% of Mountain Rebel base.',
-    p:{tf:16,si:-7,so:2,ys:10,cc:68}},
-  {id:'q2',tier:'Q2 — CONTESTED',c:'#b86a10',t:'TF Strong + Mt Kenya Holds',
-    d:'Third Force significant but Ruto retains Kikuyu core. Urban protest vote elevated.',
-    p:{tf:13,si:1,so:-1,ys:6,cc:88}},
-  {id:'q3',tier:'Q3 — UNCERTAIN',c:'#b86a10',t:'TF Weak + Mt Kenya Fractures',
-    d:'Linda Mwananchi collapses. Ruto loses Mt Kenya without meaningful TF offset.',
-    p:{tf:2,si:-8,so:3,ys:2,cc:70}},
-  {id:'q4',tier:'Q4 — INC HOLDS',c:'#1b7a4a',t:'TF Weak + Mt Kenya Consolidates',
-    d:'TF fades. UDA sweeps Mt Kenya. Broad-Based delivers fully. Coalition intact.',
-    p:{tf:1,si:6,so:-3,ys:0,cc:97}}
+  {id:'s1',tier:'Current trajectory',c:'#b86a10',t:'Ruto + ODM vs United Opposition, Sifuna runs',
+    d:'ODM (Oburu) stays with Ruto; Kalonzo, Gachagua, Matiang\'i and Karua field one candidate; Sifuna runs on the Linda Mwananchi ticket.',
+    p:{tf:2,si:0,so:0,ys:0,cc:90,mk:55},reg:{gach:false,odm:true,sifuna:true,uda:true}},
+  {id:'s2',tier:'Grand opposition',c:'#b83232',t:'Sifuna folds into the United Opposition',
+    d:'The Muriu coalition formula works: one opposition candidate backed by all principals including Sifuna. Youth turnout up.',
+    p:{tf:1,si:0,so:1,ys:6,cc:88,mk:60},reg:{gach:false,odm:true,sifuna:false,uda:true}},
+  {id:'s3',tier:'Fragmented field',c:'#1b7a4a',t:'Gachagua and Sifuna both run separately',
+    d:'Talks on a single flagbearer fail: Gachagua runs on DCP, Sifuna on Linda Mwananchi, Kalonzo–Matiang\'i lead the rest.',
+    p:{tf:2,si:0,so:-1,ys:0,cc:92,mk:55},reg:{gach:true,odm:true,sifuna:true,uda:true}},
+  {id:'s4',tier:'ODM walks out',c:'#b83232',t:'Zoning row breaks the Ruto–ODM pact',
+    d:'ODM leaves the broad-based arrangement and backs the opposition; Sifuna returns to the fold.',
+    p:{tf:2,si:-1,so:1,ys:2,cc:80,mk:55},reg:{gach:false,odm:false,sifuna:false,uda:true}}
 ];
 // Coalition counties
 const FK=['Bungoma','Kakamega','Vihiga','Busia','Trans Nzoia'];
@@ -59,9 +76,9 @@ const CTY_N=24;
 
 // ═══ STATE — all raw integers, engine divides ═══
 const S={
-  tf:3,si:0,so:0,ys:0,cc:90,  // RAW: tf=3 means 3pp; engine does /100
-  reg:{gach:false,odm:true,uda:true,poll:false},
-  pa:{inc:48,opp:36,tf:13},   // RAW polling %
+  tf:DEFAULTS.tf,si:DEFAULTS.si,so:DEFAULTS.so,ys:DEFAULTS.ys,cc:DEFAULTS.cc,mk:DEFAULTS.mk,  // RAW pp/%; engine does /100
+  reg:{...DEFAULTS.reg},
+  pa:{inc:POLL_ANCHOR_DEFAULT.inc,opp:POLL_ANCHOR_DEFAULT.opp,tf:POLL_ANCHOR_DEFAULT.tf},   // RAW polling % (latest eligible polls)
   selCty:'Nairobi City',
   shocks:[],shLog:[],timer:30,live:false,
   res:null,wards:null,sens:null,tip:null,mc:null,
@@ -101,7 +118,10 @@ const DQ_SIG={high:0.015,medium:0.028,low:0.044,imputed:0.058},DN_MUL={high:0.8,
 const CO_IDX=new Map(CO.map((c,i)=>[c.name,i]));
 const WK=WARDS.map(w=>({
   ci:CO_IDX.has(w.county)?CO_IDX.get(w.county):-1,
-  tfB:TF_BASE[w.cl]||0.025, tfG:TF_GACH[w.cl]||0,
+  tfB:TF_BASE[w.cl]||0.025,
+  mtk:w.cl==='Mountain Rebel',
+  odmT:ODM_HOLDOUT[w.county]!==undefined?ODM_HOLDOUT[w.county]:(ODM_TO_INC[w.cl]||0),
+  sifT:SIFUNA_TF[w.cl]||0,
   fk:FK.includes(w.county), olg:OLG.includes(w.county), rv:RV_UDA.includes(w.county),
   sig:(DQ_SIG[w.dq]||0.034)*(DN_MUL[w.dn]||1.0)*(VL_MUL[w.vl]||1.0),
   toSig:TO_SIG[w.cl]||0.038,
@@ -117,6 +137,9 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const so  =(params.so  !==undefined?params.so  :S.so )  /100;
   const ys  =(params.ys  !==undefined?params.ys  :S.ys )  /100;
   const cc  =(params.cc  !==undefined?params.cc  :S.cc )  /100;
+  const mk  =(params.mk  !==undefined?params.mk  :S.mk )  /100;
+  // Political context: presets can override individual switches
+  const reg={...S.reg,...(params.reg||{})};
   const pollW=0.40; // polling anchor weight
 
   // Cluster noise: drawn in fixed CLUSTERS order so seeded runs stay reproducible
@@ -132,24 +155,38 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     tv:0,iv:0,ov:0,tfv:0,ts:0,wc:0,il:0,ol:0
   }));
 
-  // Polling anchor adjustment — fully wired for incumbent, opposition and Third Force
+  // Polling anchor: pull the model 40% of the way from its own national result
+  // (same settings, anchor off, no noise) toward the entered poll shares.
+  // (v5 measured the gap from the fixed 2022 result, which double-counted the
+  // 2027 realignment.)
   let polIncAdj=0, polOppAdj=0, polTfAdj=0;
-  if(S.reg.poll){
-    const pi=S.pa.inc/100, po=S.pa.opp/100, pt=S.pa.tf/100;
-    polIncAdj=(pi-0.505)*pollW;      // 0.505 = 2022 incumbent-aligned national baseline
-    polOppAdj=(po-0.489)*pollW;      // 0.489 = 2022 opposition-aligned national baseline
-    polTfAdj=(pt-0.030)*pollW;       // 0.030 = scenario Third Force prior baseline
+  if(reg.poll&&!params._noPoll){
+    const ref=anchorRef(params);
+    polIncAdj=(S.pa.inc/100-ref.i)*pollW;
+    polOppAdj=(S.pa.opp/100-ref.o)*pollW;
+    polTfAdj=(S.pa.tf/100-ref.t)*pollW;
   }
   // Active shocks; cluster shocks are defined with `cl`, older ones with `cluster`
   const shockList=shocks?S.shocks.map(sh=>({sh,cl:sh.cluster||sh.cl})):[];
-  const {gach,odm,uda,poll}=S.reg;
+  const {gach,odm,sifuna,uda}=reg, poll=reg.poll&&!params._noPoll;
 
   const wardRes=[];
   for(let wi=0;wi<WARDS.length;wi++){
     const w=WARDS[wi],k=WK[wi];
-    // TF base: regime-dependent
-    let tfBase=k.tfB+(gach?k.tfG:0)+tf;
+    // TF base: background third-force/protest vote plus the slider
+    let tfBase=k.tfB+tf;
     if(poll)tfBase=clamp(tfBase+polTfAdj,0,0.35);
+
+    // 2027 realignment of the 2022 baseline (see REALIGNMENT LAYER above)
+    let rInc=0,rOpp=0,rTf=0;
+    if(k.mtk){
+      const moved=w.bi*mk;rInc-=moved;
+      if(gach){rTf+=moved*MK_TO_TF_IF_GACH_ALONE;rOpp+=moved*(1-MK_TO_TF_IF_GACH_ALONE);}
+      else rOpp+=moved;
+    }
+    let oppPool=w.bo;
+    if(odm){const t=w.bo*k.odmT;rInc+=t;rOpp-=t;oppPool-=t;}
+    if(sifuna){const t=oppPool*k.sifT;rOpp-=t;rTf+=t;}
 
     // Coalition adjustments
     let csi=0,coa=0;
@@ -173,15 +210,17 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tn=noise?rng()*k.toSig:0;
 
     // Asymmetric share calculation
-    let inc=w.bi+si+clNoise[w.cl]+ssh+polIncAdj+csi+ns+natSwing;
-    let opp=w.bo+so-clNoise[w.cl]*0.5+polOppAdj+coa-ns*0.4-natSwing;
+    let inc=w.bi+rInc+si+clNoise[w.cl]+ssh+polIncAdj+csi+ns+natSwing;
+    let opp=w.bo+rOpp+so-clNoise[w.cl]*0.5+polOppAdj+coa-ns*0.4-natSwing;
 
     // Leakage
     const caps=k.caps,iw=k.iw;
     const leakR=clamp(tfBase*k.sens2,0,0.26);
     const il=Math.min(inc*caps.i,inc*leakR*iw);
     const ol=Math.min(opp*caps.o,opp*leakR*(1-iw));
-    inc-=il;opp-=ol;let tf_=tfBase+il+ol+stf; // stf: Third Force shocks (previously computed but never applied)
+    // stf: third-force shocks; rTf: named third-force candidates (added after
+    // leakage so their support isn't amplified by the leakage rule)
+    inc-=il;opp-=ol;let tf_=tfBase+il+ol+stf+rTf;
 
     // Normalize
     const tot=Math.max(inc,0)+Math.max(opp,0)+Math.max(tf_,0)||1;
@@ -209,12 +248,26 @@ function sim(params={},noise=false,shocks=true,capWards=false){
 }
 
 
+// National result for the same settings with the poll anchor off and no noise,
+// cached because every Monte Carlo draw needs it.
+const _anchorCache=new Map();
+function anchorRef(params){
+  const key=JSON.stringify([params,S.tf,S.si,S.so,S.ys,S.cc,S.mk,S.reg,S.shocks.map(s=>[s.t,s.county||'',s.eff])]);
+  let r=_anchorCache.get(key);
+  if(!r){
+    if(_anchorCache.size>64)_anchorCache.clear();
+    r=sim({...params,_noPoll:true},false,true,false).nat;
+    _anchorCache.set(key,r);
+  }
+  return r;
+}
+
 function mc(params={},n=ITERS){
   let iW=0,oW=0,ro=0,iJ=0,oJ=0;
   const iA=[],oA=[],tA=[];
   const prevRng=RNG_SOURCE;
   if(S.mcMode==='research'){
-    RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.cc}|${S.pa.inc}|${S.pa.opp}|${S.pa.tf}|${S.reg.gach}|${S.reg.odm}|${S.reg.uda}|${S.reg.poll}`));
+    RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.cc}|${S.pa.inc}|${S.pa.opp}|${S.pa.tf}|${JSON.stringify(S.reg)}|${S.mk}`));
   }
   try{
     for(let i=0;i<n;i++){
@@ -315,7 +368,8 @@ function implTxt(res,mc_){
   else
     out.push(`Genuinely contested configuration. Incumbent outright: ${pct(mc_.iW)}, run-off: ${pct(mc_.ro)}. Small parameter shifts produce qualitatively different outcomes — this is peak scenario sensitivity.`);
 
-  const vulnCl=S.reg.gach?'Mountain Rebel':'Urban/Protest';
+  const lowBy={};ctyRes.forEach(c=>{if(c.i<0.30)lowBy[c.cluster]=(lowBy[c.cluster]||0)+1;});
+  const vulnCl=Object.entries(lowBy).sort((a,b)=>b[1]-a[1])[0]?.[0]||'Mountain Rebel';
   const vuln=ctyRes.filter(c=>c.cluster===vulnCl&&c.i<0.25);
   if(vuln.length>0)
     out.push(`Critical Art.138 exposure in ${vulnCl}: ${vuln.length} count${vuln.length>1?'ies':'y'} (${vuln.map(c=>c.name).slice(0,3).join(', ')}) fall below the 25% constitutional threshold. Each denies a county in the Art.138(4)(b) count.`);
@@ -327,7 +381,7 @@ function implTxt(res,mc_){
 
   if(mc_.ro>0.25){
     const ri=r2sim(ctyRes,nat,'toI'),ro=r2sim(ctyRes,nat,'toO');
-    out.push(`Run-off outcome is endorsement-sensitive: TF→Inc yields ${pct(ri.r2iN)} incumbent R2; TF→Opp yields ${pct(ro.r2iN)}. The endorsement swing is ${pct(Math.abs(ri.r2iN-ro.r2iN))} — decisive if R2 is close.`);
+    out.push(`In a run-off, where third-force voters go matters: leaning to Ruto gives him ${pct(ri.r2iN)}, leaning to the opposition ${pct(ro.r2iN)}, a ${pct(Math.abs(ri.r2iN-ro.r2iN))} swing. ${ri.r2iN>0.5&&ro.r2iN>0.5?'Ruto wins round two either way at these settings.':ri.r2iN<0.5&&ro.r2iN<0.5?'The opposition wins round two either way at these settings.':'That endorsement decides round two.'}`);
   }
 
   if(dr.score>55)
@@ -336,52 +390,53 @@ function implTxt(res,mc_){
     out.push(`Dispute exposure moderate (${Math.round(dr.score)}/100), minimum margin ${pct(dr.minM)}. Within historical norms for election-day litigation filing. Would not constitute a strong evidentiary basis for a 2017-style petition absent specific data irregularities.`);
 
   if(S.reg.gach)
-    out.push(`REGIME ALERT: Gachagua candidacy switch ACTIVE. Mountain Rebel TF elevated +14pp. Incumbent's 2022 base in Meru, Nyeri, Kirinyaga, Nyandarua, Murang'a and Kiambu is structurally compromised. Run-off module is now the primary analytical lens.`);
-  else if(!S.reg.odm)
-    out.push(`COALITION ALERT: ODM-LG deal OFF. Coast counties revert to 2022 opposition base. Incumbent share in Kilifi projected below 25% — Article 138 coastal counties critically at risk.`);
+    out.push(`Split opposition: Gachagua runs separately. Most of the Mt Kenya vote that has left Ruto goes to him rather than the United Opposition candidate, which lowers the opposition's first-round share and makes the run-off pairing less certain.`);
+  if(!S.reg.odm)
+    out.push(`ODM out of the pact: without the Ruto–ODM arrangement, Ruto keeps only his 2022 share of the Nyanza and Coast vote and the opposition consolidates the old Raila base.`);
+  else if(S.reg.sifuna)
+    out.push(`Sifuna on the ballot: his Linda Mwananchi run splits the opposition-leaning vote in Western, Nairobi and the Coast, so the third force is at ${pct(nat.t)} nationally. Whether he endorses in a run-off decides much of round two.`);
 
   return out;
 }
 
-// ═══ INTEL DATA ═══
+// ═══ INTEL DATA (updated Oct 2026; see data/context.js for sources) ═══
 const LEVERS=[
-  {s:'red',t:'Gachagua candidacy declaration',d:'Formal Linda Mwananchi/Kenya Moja candidacy — binary regime switch, not a slider.',i:'+14pp TF Mountain Rebel · Inc swing -7 to -10pp in Meru/Nyeri/Kirinyaga/Kiambu · Run-off P +35–45pp'},
-  {s:'red',t:'ODM-Linda Ground deal collapse',d:'Talks fail. Coast opposition share reverts, removing Joho machine delivery from coalition.',i:'Inc loses -3 to -5pp Mombasa/Kilifi/Kwale · Art.138 coast counties at risk'},
-  {s:'amb',t:'IEBC voter registration surge',d:'New registrations in Urban/Protest and Mountain Rebel wards. Key leading indicator for youth surge magnitude.',i:'Each 1% new youth registration → ~0.5pp effective youthSurge · Update youthRatio by ward'},
-  {s:'amb',t:'Third Force financing filings',d:'IEBC campaign filings. Underfunded TF (<KSh 2B) collapses to <4% nationally.',i:'If weak: TF baseline -5 to -8pp · Run-off forcing threshold rises proportionally'},
-  {s:'amb',t:'UDA parliamentary defections',d:'MPs shifting to opposition or TF — signals Rift Valley Anchor softening.',i:'Each RV defection: ~0.4pp RV swing uncertainty · 5+ defections → toggle UDA switch'},
-  {s:'grn',t:'Fuel/CPI data release',d:'Single strongest economic driver of Urban/Protest swing. KNBS monthly data.',i:'CPI >10% sustained: Urban -2 to -4pp inc · Youth surge +3 to +6pp'},
-  {s:'grn',t:'TIFA/Infotrak polling release',d:'County-level tracking. Use Polling Anchor feature with actual numbers.',i:'>5pp county divergence from model = revise cluster baseline via Polling Anchor'}
+  {s:'red',t:'United Opposition names one flagbearer',d:'Kalonzo, Gachagua, Matiang\'i and Karua agree a single candidate (negotiation vs opinion-poll method still disputed).',i:'Keeps "Gachagua runs separately" off · if Gachagua walks, switch "Gachagua runs separately" on: about −6.5pp opposition, +6.5pp third force nationally'},
+  {s:'red',t:'Sifuna joins or stays out',d:'Linda Mwananchi endorsed Sifuna (Sep 2026); its party is due in October. The Muriu coalition formula includes him.',i:'"Sifuna runs" on: ~45% of the remaining Western/Nairobi opposition vote and ~30% at the Coast go to him'},
+  {s:'red',t:'Ruto–ODM pact survives the zoning row',d:'ODM wants Nyanza, parts of Western and the Coast zoned for its candidates; UDA wants to field its own.',i:'"ODM backs Ruto" off: Ruto loses ~30% of the Nyanza ODM vote he gains under the pact · opposition outright win becomes likely'},
+  {s:'amb',t:'Mt Kenya realignment',d:'How much of Ruto\'s 2022 Mt Kenya vote has moved since Gachagua\'s impeachment; Kindiki is the region\'s figure on Ruto\'s side.',i:'Each 10 points on the Mt Kenya slider moves about 1.5pp of the national vote from Ruto to the opposition'},
+  {s:'amb',t:'New-voter registration',d:'About 5.7 million new, mostly young voters are expected to register before 2027.',i:'Feed into Youth turnout · biggest single source of uncertainty in turnout'},
+  {s:'grn',t:'Cost of living and protest calendar',d:'Fuel, tax and Gen-Z protest cycles drive the urban and youth vote.',i:'Swing to opposition +2 to +4pp in Nairobi/Western; youth turnout up'},
+  {s:'grn',t:'New national polls',d:'Enter the latest model-eligible poll in "Anchor to latest polls".',i:'Pulls the model 40% of the way to the poll\'s bloc shares'}
 ];
 const SENTS=[
-  {tier:'HIGH',freq:'Wkly',t:'Ruto/UDA constituency project announcements',n:'Service delivery → inc swing in target county'},
-  {tier:'HIGH',freq:'Wkly',t:'Raila domestic presence vs. international calendar',n:'Absence affects Nyanza mobilisation baseline'},
-  {tier:'HIGH',freq:'Wkly',t:'Gachagua Mt Kenya rallies — language analysis',n:'"Coalition" vs "movement" language signals candidacy timeline'},
-  {tier:'HIGH',freq:'Wkly',t:'Linda Mwananchi/Kenya Moja polling releases',n:'Calibrate against TF baseline — enter in Polling Anchor'},
-  {tier:'MED',freq:'Mthly',t:'Fuel prices and public grievance index',n:'Urban/Protest cluster swing sensitivity — strongest single lever'},
-  {tier:'MED',freq:'Mthly',t:'CDF disbursement and county absorption rates',n:'Service delivery proxy → inc sentiment'},
-  {tier:'MED',freq:'Mthly',t:'Security incidents in ASAL counties',n:'Turnout suppressor — adjust turnoutBase for affected counties'},
-  {tier:'LOW',freq:'Qtrly',t:'Diaspora remittance trends',n:'Coast/diaspora vote motivation proxy'},
-  {tier:'LOW',freq:'Qtrly',t:'Senate censure motions against Ruto',n:'Elite defection risk indicator within UDA'}
+  {tier:'HIGH',freq:'Wkly',t:'United Opposition talks: flagbearer method and timing',n:'A named single candidate locks in the opposition bloc; a walk-out creates a third force'},
+  {tier:'HIGH',freq:'Wkly',t:'Linda Mwananchi party launch and Sifuna\'s coalition moves',n:'Decides whether his vote counts as third force or opposition'},
+  {tier:'HIGH',freq:'Wkly',t:'UDA–ODM zoning talks and ODM NDC resolutions',n:'Pact holds → Nyanza/Coast gains for Ruto; collapse reverses them'},
+  {tier:'HIGH',freq:'Mthly',t:'National polls (TIFA, Infotrak, Swiss Poll, Mizani, Politrack)',n:'Check methodology disclosure before anchoring'},
+  {tier:'MED',freq:'Mthly',t:'Mt Kenya rallies: Gachagua (DCP) vs Kindiki',n:'Adjust the Mt Kenya shift slider'},
+  {tier:'MED',freq:'Mthly',t:'Fuel prices, taxes and protest activity',n:'Urban and youth swing'},
+  {tier:'MED',freq:'Qtrly',t:'IEBC registration figures',n:'Youth turnout assumption'},
+  {tier:'LOW',freq:'Qtrly',t:'Defections between UDA, ODM and opposition parties',n:'Rift Valley and coalition-delivery signals'}
 ];
 const BYES=[
-  {n:'Kasarani',co:'Nairobi City',yr:2023,mb:0.462,act:0.441,d:-0.021,note:'Urban protest 2.1pp above 2022 model base — update Urban cluster by -2pp'},
-  {n:'Kibwezi West',co:'Makueni',yr:2023,mb:0.091,act:0.084,d:-0.007,note:'Eastern/Ukambani well-calibrated; within measurement error'},
-  {n:'Embakasi East',co:'Nairobi City',yr:2024,mb:0.462,act:0.429,d:-0.033,note:'Urban protest strengthening — Urban base should be revised -3pp'}
+  {n:'Kasarani',co:'Nairobi City',yr:2023,mb:0.462,act:0.441,d:-0.021,note:'Urban vote 2.1pp weaker for the incumbent than the 2022 base'},
+  {n:'Kibwezi West',co:'Makueni',yr:2023,mb:0.091,act:0.084,d:-0.007,note:'Ukambani in line with the 2022 base'},
+  {n:'Embakasi East',co:'Nairobi City',yr:2024,mb:0.462,act:0.429,d:-0.033,note:'Urban vote 3.3pp weaker for the incumbent'}
 ];
 const ROADMAP=[
-  {p:'P1',i:'IEBC 2022 Form 34C ward tallies',imp:'Upgrades 450 Nyanza/Nairobi/Busia wards low→medium quality',src:'Harvard Dataverse'},
-  {p:'P1',i:'KNBS 2019 census ward age breakdown',imp:'Replace county-imputed youthRatio with ward-precise values',src:'Kenya Open Data'},
-  {p:'P2',i:'KPLC electrification data by ward',imp:'Replace synthetic infrastructureIndex',src:'KPLC/REREC reports'},
-  {p:'P2',i:'IEBC registration growth 2019→2022',imp:'Refine 2027 voter projections by ward',src:'IEBC public register'},
-  {p:'P3',i:'CDF expenditure by constituency',imp:'Replace synthetic serviceDeliverySignal',src:'National Treasury'},
-  {p:'P3',i:'TIFA/Infotrak 2026 county polling',imp:'Calibrate cluster baselines via Polling Anchor',src:'Purchase/FOI'}
+  {p:'P1',i:'County-level cuts of 2026 national polls',imp:'Replace the assumed regional transfer rates (Mt Kenya, ODM, Sifuna) with measured ones',src:'TIFA / Infotrak regional tables'},
+  {p:'P1',i:'IEBC 2022 Form 34C ward tallies',imp:'Upgrade imputed ward baselines',src:'IEBC / Harvard Dataverse'},
+  {p:'P2',i:'KNBS 2019 census ward age breakdown',imp:'Ward-precise youth ratios',src:'Kenya Open Data'},
+  {p:'P2',i:'IEBC 2026–27 registration drive results',imp:'Refine 2027 voter projections and youth turnout',src:'IEBC'},
+  {p:'P3',i:'Pollster methodology disclosures (Mizani, Politrack)',imp:'Admit held-out polls to the anchor average',src:'kenya-election-intelligence-engine review queue'}
 ];
 const REG_EFF=[
-  {sw:'Gachagua Runs: YES',e:'TF_BASE[Mountain Rebel] += 14pp. TF_BASE[Urban] += 5pp. Applied as additive to ward-level TF before leakage. Expected: +8–10pp TF national, -6pp Inc national, run-off P +35–45pp.'},
-  {sw:'ODM-LG Deal: OFF',e:'Coast reverts to 2022 opposition base without Joho delivery. Inc loses ~3–5pp in Mombasa/Kilifi/Kwale. 25% threshold at risk in Kilifi.'},
-  {sw:'UDA Majority: OFF',e:'RV Anchor swing -3pp inc in Nandi/Kericho/Bomet/Baringo/Elgeyo belt. Trans Nzoia and Baringo become marginal.'},
-  {sw:'Polling Anchor: ON',e:'Bayesian shrinkage: county baselines weighted 40% toward current polling national shares, 60% toward 2022 spatial pattern. Enter latest TIFA/Infotrak figures in fields above sliders.'}
+  {sw:'Gachagua runs separately: ON',e:'Of the Mt Kenya vote that leaves Ruto, 75% goes to Gachagua as a third force instead of the United Opposition.'},
+  {sw:'ODM backs Ruto: OFF',e:'Removes the pact transfer (30% of the 2022 Raila vote in Nyanza, 20% Coast, 10% Western/Nairobi) and the Coast coalition bonus.'},
+  {sw:'Sifuna runs: ON',e:'Moves part of the remaining opposition vote to Sifuna: 45% Western/Nairobi, 30% Coast, 20% Nyanza, 5% elsewhere.'},
+  {sw:'Ruto holds Rift Valley: OFF',e:'−3pp for Ruto in Nandi, Kericho, Bomet, Baringo, Elgeyo-Marakwet, Uasin Gishu and West Pokot.'},
+  {sw:'Anchor to latest polls: ON',e:'Moves national shares 40% of the way from the model\'s own result to the entered poll shares (defaults: average of the two latest model-eligible polls).'}
 ];
 
 // Tile map positions [col, row] in 40×40px cells
@@ -404,14 +459,14 @@ const TPOS={
 
 // ═══ SHOCK SYSTEM ═══
 const SH_DEF=[
-  {t:'Large rally in Eldoret',cl:'Rift Valley Anchor',si:0.018,desc:'+1.8% Inc RV Anchor'},
-  {t:'Urban protest disruption',cl:'Urban/Protest',si:-0.014,to:-0.010,desc:'-1.4% Inc Urban'},
-  {t:'Third Force youth rally',cl:'Urban/Protest',tf:0.018,desc:'+1.8% TF Urban'},
-  {t:'Mt Kenya political signal',cl:'Mountain Rebel',si:-0.016,desc:'-1.6% Inc Mtn Rebel'},
-  {t:'Coastal development event',cl:'Coast/Joho',si:0.014,desc:'+1.4% Inc Coast'},
-  {t:'Economic discontent signal',cl:'Urban/Protest',si:-0.012,desc:'-1.2% Inc Urban'},
-  {t:'County endorsement signal',rnd:true,si:0.012,desc:'+1.2% Inc in county'},
-  {t:'Service delivery goodwill',rnd:true,si:0.014,desc:'+1.4% Inc in county'}
+  {t:'Ruto rally tour in the Rift Valley',cl:'Rift Valley Anchor',si:0.018,desc:'+1.8% Ruto in Rift Valley'},
+  {t:'Gen-Z protest day in Nairobi and Western towns',cl:'Urban/Protest',si:-0.014,to:-0.010,desc:'−1.4% Ruto in Nairobi/Western, lower turnout'},
+  {t:'Linda Mwananchi rally (Sifuna)',cl:'Urban/Protest',tf:0.018,desc:'+1.8% third force in Nairobi/Western'},
+  {t:'Gachagua–Kalonzo joint Mt Kenya tour',cl:'Mountain Rebel',si:-0.016,desc:'−1.6% Ruto in Mt Kenya'},
+  {t:'Coast projects launch with ODM leaders',cl:'Coast/Joho',si:0.014,desc:'+1.4% Ruto at the Coast'},
+  {t:'Fuel price rise',cl:'Urban/Protest',si:-0.012,desc:'−1.2% Ruto in Nairobi/Western'},
+  {t:'County endorsement',rnd:true,si:0.012,desc:'+1.2% Ruto in the county'},
+  {t:'Service delivery event',rnd:true,si:0.014,desc:'+1.4% Ruto in the county'}
 ];
 function addShock(){
   const b=SH_DEF[Math.floor(Math.random()*SH_DEF.length)];
@@ -489,7 +544,7 @@ function rKPIs(r,mc_,dr,f,i25){
   <div class="kpi">
     <div class="kpi-l">Third force · national</div>
     <div class="kpi-v va">${pct(n.t,1)}</div>
-    <div class="kpi-d">Simulation median ${pct(mc_.tMed)} · ${S.reg.gach?'Gachagua in the race':'no Gachagua candidacy'}</div>
+    <div class="kpi-d">Simulation median ${pct(mc_.tMed)} · ${[S.reg.sifuna&&'Sifuna',S.reg.gach&&'Gachagua'].filter(Boolean).join(' and ')||'no major candidate'} outside the two blocs</div>
     <div class="kpi-d">${f.forced?'<span class="b b-r">Enough to force a run-off</span>':'<span class="b b-g">Not enough to force a run-off</span>'}</div>
   </div>`;
 }
@@ -535,7 +590,9 @@ function rTornado(nat){
     {l:'Opposition swing +6pp',v:run({so:S.so+6})},
     {l:'Cohesion 65%',v:run({cc:65})},
     {l:'Cohesion 98%',v:run({cc:98})},
-    {l:'Incumbent swing +6pp',v:run({si:S.si+6})}
+    {l:'Incumbent swing +6pp',v:run({si:S.si+6})},
+    {l:'Mt Kenya shift +15pp',v:run({mk:Math.min(90,S.mk+15)})},
+    {l:'Mt Kenya shift −15pp',v:run({mk:Math.max(0,S.mk-15)})}
   ].map(c=>({...c,c:c.v>=base?'var(--gbr)':base-c.v>0.04?'var(--red2)':'var(--amb2)'}))
    .sort((a,b)=>Math.abs(b.v-base)-Math.abs(a.v-base));
   const rng_=Math.max(...cases.map(c=>Math.abs(c.v-base)))||0.08;
@@ -564,7 +621,7 @@ function rRunoff(r,mc_){
     <div class="kpi-v va">${f.ia?'+'+pct(f.tbi):'Already forced'}</div>
     <div class="kpi-d">${f.ia?`On top of today's ${pct(nat.t)}, to pull the incumbent below 50%+1`:`The incumbent is already below 50% at ${pct(nat.t)} third-force share`}</div></div>`;
 
-  const dirs=[{k:'toI',l:'If third force backs the incumbent',c:'var(--blbr)'},{k:'toO',l:'If third force backs the opposition',c:'var(--red2)'},{k:'spl',l:'If third-force voters split evenly',c:'var(--muted)'}];
+  const dirs=[{k:'toI',l:'If third-force voters (Sifuna and others) lean to Ruto',c:'var(--blbr)'},{k:'toO',l:'If they lean to the opposition',c:'var(--red2)'},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
   $('#roScens').innerHTML=dirs.map(d=>{
     const ro=r2sim(ctyRes,nat,d.k);
     const carried=ro.r2cty.filter(c=>c.r2lead==='inc').length;
@@ -661,58 +718,73 @@ function rTipping(r,f,i25){
 }
 
 function rScen(){
-  const results=SCENS.map(sc=>{
+  // Each preset: one deterministic run plus a seeded 200-draw Monte Carlo, so the
+  // cards are stable between renders (previously 60 unseeded draws).
+  const N_SC=200;
+  // Presets ignore the sliders and switches, so only the seed and poll anchor
+  // matter: cache so slider moves stay fast.
+  const key=JSON.stringify([S.seed,S.reg.poll,S.pa]);
+  if(rScen._key!==key){rScen._key=key;rScen._res=null;}
+  const results=rScen._res||(rScen._res=SCENS.map(sc=>{
+    const p={...sc.p,reg:sc.reg};
+    const r=sim(p,false,false,false);
+    const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
+    const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
+    let iW=0,oW=0;
+    const prev=RNG_SOURCE;
+    RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${sc.id}`));
     try{
-      const r=sim(sc.p,false,false,false);
-      const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
-      const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
-      // Quick MC for runoff prob
-      let ro=0;
-      for(let i=0;i<60;i++){
-        try{
-          const mr=sim(sc.p,true,false,false);
-          const mi25=mr.ctyRes.filter(c=>c.i>=0.25).length;
-          const mo25=mr.ctyRes.filter(c=>c.o>=0.25).length;
-          if(!(mr.nat.i>0.5&&mi25>=CTY_N)&&!(mr.nat.o>0.5&&mo25>=CTY_N))ro++;
-        }catch(e){}
+      for(let i=0;i<N_SC;i++){
+        const mr=sim(p,true,false,false);
+        const mi25=mr.ctyRes.filter(c=>c.i>=0.25).length;
+        const mo25=mr.ctyRes.filter(c=>c.o>=0.25).length;
+        if(mr.nat.i>0.5&&mi25>=CTY_N)iW++;else if(mr.nat.o>0.5&&mo25>=CTY_N)oW++;
       }
-      return{...sc,r,i25,o25,n:r.nat,ro:ro/60,wins:r.nat.i>0.50&&i25>=CTY_N};
-    }catch(e){return{...sc,r:null,i25:0,o25:0,n:{i:0,o:0,t:0},ro:1,wins:false};}
-  });
+    }finally{RNG_SOURCE=prev;}
+    const ro=1-(iW+oW)/N_SC;
+    const outcome=iW/N_SC>=0.5?['b-gr','Ruto wins outright']:oW/N_SC>=0.5?['b-r','Opposition wins outright']:['b-a','Run-off'];
+    return{...sc,r,i25,o25,n:r.nat,iW:iW/N_SC,oW:oW/N_SC,ro,outcome};
+  }));
+  const active=SCENS.find(sc=>Object.entries(sc.reg).every(([k,v])=>S.reg[k]===v)&&Object.entries(sc.p).every(([k,v])=>S[k]===v));
+  const ps=$('#presetSelect');
+  if(ps){
+    if(!ps.options.length)ps.innerHTML=SCENS.map(s=>`<option value="${s.id}">${s.tier}</option>`).join('')+'<option value="">Custom (your own settings)</option>';
+    ps.value=active?active.id:'';
+  }
 
   $('#sqMat').innerHTML=results.map(sc=>`
-  <div class="sqc" style="border-left:3px solid ${sc.c}">
+  <div class="sqc${active&&active.id===sc.id?' sqc-on':''}" style="border-left:3px solid ${sc.c}">
     <div class="sq-tier">${sc.tier}</div>
     <div class="sq-t" style="color:${sc.c}">${sc.t}</div>
-    <div class="sq-d">${sc.d}</div>
-    <div class="g2 mb8" style="gap:6px;">
-      <div style="padding:9px;background:var(--s2);border:1px solid var(--bdr);">
-        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:2px;">Incumbent</div>
-        <div class="sq-n" style="color:var(--blbr)">${pct(sc.n.i)}</div>
-      </div>
-      <div style="padding:9px;background:var(--s2);border:1px solid var(--bdr);">
-        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:2px;">Counties</div>
-        <div class="sq-n" style="color:${sc.i25>=24?'var(--gbr)':'var(--red2)'}">${sc.i25}/47</div>
-      </div>
+    <div class="sq-d">${mapEsc(sc.d)}</div>
+    <div class="sq-bars" aria-label="First-round shares">
+      ${[['Ruto',sc.n.i,'var(--blbr)'],['United Opposition',sc.n.o,'var(--red2)'],['Third force',sc.n.t,'var(--amb2)']].map(([l,v,col])=>`
+      <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b></div>`).join('')}
     </div>
-    <div class="fb" style="font-family:var(--mono);font-size:12px;">
-      <span>Opp: <strong>${pct(sc.n.o)}</strong></span>
-      <span>TF: <strong style="color:var(--amb2)">${pct(sc.n.t)}</strong></span>
-      <span>RO: <strong>${pct(sc.ro)}</strong></span>
-      ${sc.wins?'<span class="b b-gr">INC WIN</span>':sc.n.o>0.5&&sc.o25>=24?'<span class="b b-r">OPP WIN</span>':'<span class="b b-a">RUN-OFF</span>'}
+    <div class="sq-foot">
+      <span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span>
+      <span>Run-off ${pct(sc.ro,0)} · Ruto 25%+ in ${sc.i25}/47</span>
+      ${active&&active.id===sc.id?'<span class="b b-m">In use</span>':`<button type="button" class="btn" onclick="applyScenario('${sc.id}')">Use these settings</button>`}
     </div>
   </div>`).join('');
 
-  $('#sqTbl').innerHTML=`<thead><tr><th>Scenario</th><th>Inc</th><th>Opp</th><th>TF</th><th>Inc Counties</th><th>Run-off P</th><th>Outcome</th></tr></thead>
+  $('#sqTbl').innerHTML=`<thead><tr><th>Scenario</th><th>Ruto</th><th>Opposition</th><th>Third force</th><th>Ruto 25%+ counties</th><th>Run-off chance</th><th>Most likely</th></tr></thead>
   <tbody>${results.map(sc=>`<tr>
-    <td style="font-weight:600;color:${sc.c}">${sc.t}</td>
+    <td style="font-weight:600;color:${sc.c}">${sc.tier}</td>
     <td style="color:var(--blbr)">${pct(sc.n.i)}</td>
     <td style="color:var(--red2)">${pct(sc.n.o)}</td>
     <td style="color:var(--amb2)">${pct(sc.n.t)}</td>
     <td>${sc.i25}/47</td>
-    <td>${pct(sc.ro)}</td>
-    <td>${sc.wins?'<span class="b b-gr">INC WIN</span>':sc.n.o>0.5&&sc.o25>=24?'<span class="b b-r">OPP WIN</span>':'<span class="b b-a">RUN-OFF</span>'}</td>
+    <td>${pct(sc.ro,0)}</td>
+    <td><span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span></td>
   </tr>`).join('')}</tbody>`;
+}
+// Copy a preset into the live settings (sliders + political context)
+function applyScenario(id){
+  const sc=SCENS.find(s=>s.id===id);if(!sc)return;
+  Object.assign(S,sc.p);Object.assign(S.reg,sc.reg);
+  ['tf','si','so','ys','cc','mk'].forEach(k=>{const el=$('#sl-'+k);if(el)el.value=S[k];});
+  syncRegimeUI();updateLabels();renderAll();rShockLog();
 }
 
 function rConst(r,mc_){
@@ -745,12 +817,12 @@ function rConst(r,mc_){
   const cst=OLG.map(n=>ctyRes.find(c=>c.name===n)).filter(Boolean);
   $('#coalDisp').innerHTML=`
   <div class="mb12">
-    <div style="font-weight:600;font-size:12px;color:var(--blbr);margin-bottom:6px;">Ford Kenya — Western (Cohesion ${S.cc}%)</div>
+    <div style="font-weight:600;font-size:12px;color:var(--blbr);margin-bottom:6px;">Ford Kenya — Western (ally delivery ${S.cc}%)</div>
     ${wk.map(c=>`<div class="fb" style="padding:4px 0;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:12px;">
       <span>${c.name}</span><span style="color:var(--blbr)">${pct(c.i)}</span></div>`).join('')}
   </div>
   <div>
-    <div style="font-weight:600;font-size:12px;color:var(--amb2);margin-bottom:6px;">ODM Linda Ground — Coast · ${S.reg.odm?'<span class="b b-gr">DEAL ON</span>':'<span class="b b-r">DEAL OFF</span>'}</div>
+    <div style="font-weight:600;font-size:12px;color:var(--amb2);margin-bottom:6px;">ODM — Coast · ${S.reg.odm?'<span class="b b-gr">Backs Ruto</span>':'<span class="b b-r">Out of the pact</span>'}</div>
     ${cst.map(c=>`<div class="fb" style="padding:4px 0;border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:12px;">
       <span>${c.name}</span><span style="color:${c.i>=0.25?'var(--blbr)':'var(--red2)'}">${pct(c.i)} ${c.i>=0.25?'✓':'✗'}</span></div>`).join('')}
   </div>`;
@@ -1358,14 +1430,19 @@ function rIntel(){
     <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5">${r.e}</div>
   </div>`).join('');
 
-  $('#methNotes').innerHTML=`<strong style="color:var(--gold)">v4.5 — Think-Tank Governance Upgrade</strong><br><br>
-① TF baselines calibrated to 2025 pre-declaration levels — not 15%/10% which artificially forced run-off at defaults.<br>
-② Parameter division fixed: sliders store raw pp values (e.g., 3), engine divides by 100 once — eliminates 100× underscaling that made sliders non-functional.<br>
-③ Tipping point filter corrected: strictly |iGap| &lt; 8pp from 25% threshold. High-share counties (Garissa 72%) excluded.<br>
-④ Dispute risk recalibrated with dynamic 0–100 range — not pegged at 100 at baseline.<br>
-⑤ Scenario matrix parameter spread: Q1 TF=16pp/Inc -7pp vs Q4 TF=1pp/Inc +6pp = 15pp TF and 13pp swing spread.<br>
-⑥ Tile map click handlers applied after SVG DOM update — not in innerHTML (browser security restriction).<br>
-⑦ All render functions wrapped in try/catch for graceful degradation.<br>⑧ Poll anchor fully wired across Incumbent, Opposition and Third Force.<br>⑨ Monte Carlo modes added: Preview 400, Standard 1,000, Research 5,000 seeded.<br>⑩ Map QA separates county data match, geometry match, proxy geometry count and boundary confidence.<br><br>⚠ All 1,457 ward baselines imputed from 2022 IEBC constituency aggregates. Treat as scenario analysis, not a validated forecast.`;
+  $('#methNotes').innerHTML=`<strong style="color:var(--gold)">How the model works (v6, October 2026)</strong><br><br>
+1. Starts from the 2022 result in each of 1,457 wards (Ruto vs Raila), imputed from IEBC constituency aggregates.<br>
+2. Moves parts of that vote to where 2026 alliances put it: Mt Kenya away from Ruto (slider), ODM's vote toward Ruto while the Oburu pact holds, part of the opposition vote to Sifuna if he runs, and Gachagua's Mt Kenya vote to a separate third force if he runs alone.<br>
+3. Applies your swings, youth turnout, ally delivery, background third-force leakage and any live events.<br>
+4. Optionally pulls national shares 40% of the way to the latest polls.<br>
+5. Monte Carlo: a 2pp national swing, 3.6pp regional swings and ward noise per simulated election. Outright win = 50%+1 and 25% in 24 counties; a run-off is won by most votes (Art. 138).<br><br>
+The regional transfer rates are assumptions calibrated so the "Current trajectory" lands near the poll average (${POLL_ANCHOR_DEFAULT.inc}/${POLL_ANCHOR_DEFAULT.opp}/${POLL_ANCHOR_DEFAULT.tf}). Treat output as scenario analysis, not a forecast.`;
+
+  const pt=$('#pollsTbl');
+  if(pt)pt.innerHTML=`<thead><tr><th>Released</th><th>Pollster</th><th>Ruto</th><th>Opposition*</th><th>Sifuna &amp; others</th><th>Raw top line</th></tr></thead><tbody>${POLLS.map(p=>{const b=pollBlocs(p);const top=Object.entries(p.r).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,v])=>`${mapEsc(n.split(' ').pop())} ${v}`).join(' · ');
+    return `<tr><td>${p.date}</td><td><a href="${p.url}" target="_blank" rel="noopener">${mapEsc(p.pollster)}</a>${p.eligible?'':' <span class="b b-m" title="Methodology not disclosed or not yet verified">held out</span>'}</td><td style="color:var(--blbr)">${b.inc.toFixed(1)}%</td><td style="color:var(--red2)">${b.opp.toFixed(1)}%</td><td style="color:var(--amb2)">${b.tf.toFixed(1)}%</td><td style="white-space:normal">${top}</td></tr>`;}).join('')}</tbody>`;
+  const cf=$('#ctxFacts');
+  if(cf)cf.innerHTML=CONTEXT_FACTS.map(x=>`<li><span class="ctx-d">${x.date}</span> ${mapEsc(x.t)} <a href="${x.url}" target="_blank" rel="noopener">source</a></li>`).join('');
 }
 
 function rShockLog(){
@@ -1430,10 +1507,10 @@ function syncRegimeUI(){
 
 
 // ═══ v4.5 THINK-TANK GOVERNANCE / QA / RISK LAYERS ═══
-const PUBLIC_LABELS={internal:['Gachagua runs for president','ODM–Linda Ground deal holds','UDA keeps Rift Valley majority','Anchor to latest polls'],public:['Third Force Entry','Opposition alliance cohesion','Incumbent coalition cohesion','Polling anchor']};
+const PUBLIC_LABELS={internal:['Gachagua runs separately','ODM (Oburu) backs Ruto','Sifuna runs on his own ticket','Ruto holds the Rift Valley','Anchor to latest polls'],public:['A major opposition figure runs separately','Largest Nyanza party backs the incumbent','A Western-based candidate runs separately','Incumbent holds his home region','Anchor to latest polls']};
 function updateViewModeLabels(){
   const labels=PUBLIC_LABELS[S.viewMode==='public'?'public':'internal'];
-  $$('.reg-lbl').forEach((el,i)=>{if(i<4)el.textContent=labels[i]||el.textContent;});
+  $$('.reg-lbl').forEach((el,i)=>{el.textContent=labels[i]||el.textContent;});
   document.body.classList.toggle('public-mode',S.viewMode==='public');
 }
 function applyTheme(){document.body.classList.toggle('light-mode',S.theme==='light');}
@@ -1454,6 +1531,7 @@ function assumptionSensitivityHTML(){
     ['Third-force surge +5pp',{tf:S.tf+5}],['Third-force surge −5pp',{tf:Math.max(0,S.tf-5)}],
     ['Swing to incumbent +4pp',{si:S.si+4}],['Swing to opposition +4pp',{so:S.so+4}],
     ['Youth turnout +8pp',{ys:S.ys+8}],['Coalition cohesion −15pp',{cc:Math.max(55,S.cc-15)}],
+    ['Mt Kenya shift +10pp',{mk:Math.min(90,S.mk+10)}],['Mt Kenya shift −10pp',{mk:Math.max(0,S.mk-10)}],
     ['Anchor to latest polls',{},{poll:true}]
   ];
   const oldPoll=S.reg.poll;
@@ -1611,7 +1689,7 @@ function openVwTab(tab){
   if(tab==='report'){renderExecutiveReport();}
 }
 function currentScenarioSettings(){
-  return {mode:S.mcMode,iterations:ITERS,seed:S.seed,viewMode:S.viewMode,theme:S.theme,tfDelta:S.tf,incSwing:S.si,oppSwing:S.so,youthSurge:S.ys,coalitionCohesion:S.cc,pollAnchor:S.reg.poll?'ON':'OFF',pollInc:S.pa.inc,pollOpp:S.pa.opp,pollTF:S.pa.tf,thirdForceEntry:S.reg.gach,oppositionDeal:S.reg.odm,incumbentCoalition:S.reg.uda};
+  return {mode:S.mcMode,iterations:ITERS,seed:S.seed,viewMode:S.viewMode,theme:S.theme,tfDelta:S.tf,mtKenyaShift:S.mk,sifunaRuns:S.reg.sifuna,gachaguaSeparate:S.reg.gach,odmBacksRuto:S.reg.odm,incSwing:S.si,oppSwing:S.so,youthSurge:S.ys,coalitionCohesion:S.cc,pollAnchor:S.reg.poll?'ON':'OFF',pollInc:S.pa.inc,pollOpp:S.pa.opp,pollTF:S.pa.tf,thirdForceEntry:S.reg.gach,oppositionDeal:S.reg.odm,incumbentCoalition:S.reg.uda};
 }
 function qaStatusClass(status){return status==='PASS'?'qa-pass':status==='FAIL'?'qa-fail':'qa-warn';}
 function technicalEngineQA(){
@@ -1667,6 +1745,7 @@ function updateLabels(){
   $('#lv-so').textContent=(S.so>0?'+':'')+S.so+'pp';
   $('#lv-ys').textContent=(S.ys>0?'+':'')+S.ys+'pp';
   $('#lv-cc').textContent=S.cc+'%';
+  const mk=$('#lv-mk');if(mk)mk.textContent=S.mk+'%';
 }
 
 function bndSlider(id,key,scale){
@@ -1698,16 +1777,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   bndSlider('so','so',1);
   bndSlider('ys','ys',1);   // slider -5–18 → S.ys
   bndSlider('cc','cc',1);   // slider 55–100 → S.cc=55–100 (raw %)
+  bndSlider('mk','mk',1);   // slider 0–90 → % of Ruto's 2022 Mt Kenya vote that has moved
 
   $('#bRefresh').addEventListener('click',()=>{addShock();renderAll();decayShocks();rShockLog();S.timer=30;});
   $('#bReset').addEventListener('click',()=>{
     // Full reset: assumptions, political context, polls and probability settings.
     // (Previously left regimes/polls untouched and kept a stale iteration count and theme.)
-    Object.assign(S,{tf:3,si:0,so:0,ys:0,cc:90,shocks:[],shLog:[],timer:30,mcMode:'preview',seed:'2027-baseline-001',viewMode:'internal'});
-    S.reg={gach:false,odm:true,uda:true,poll:false};
-    S.pa={inc:48,opp:36,tf:13};
-    [['sl-tf',3],['sl-si',0],['sl-so',0],['sl-ys',0],['sl-cc',90]].forEach(([id,v])=>$(('#'+id)).value=v);
-    [['pi',48],['po',36],['pt',13]].forEach(([id,v])=>$('#'+id)&&($('#'+id).value=v));
+    const {reg:dReg,...dSl}=DEFAULTS;
+    Object.assign(S,dSl,{shocks:[],shLog:[],timer:30,mcMode:'preview',seed:'2027-baseline-001',viewMode:'internal'});
+    S.reg={...dReg};
+    S.pa={inc:POLL_ANCHOR_DEFAULT.inc,opp:POLL_ANCHOR_DEFAULT.opp,tf:POLL_ANCHOR_DEFAULT.tf};
+    Object.keys(dSl).forEach(k=>{const el=$('#sl-'+k);if(el)el.value=S[k];});
+    [['pi',S.pa.inc],['po',S.pa.opp],['pt',S.pa.tf]].forEach(([id,v])=>$('#'+id)&&($('#'+id).value=v));
     $('#mcModeSelect')&&($('#mcModeSelect').value=S.mcMode);$('#seedInput')&&($('#seedInput').value=S.seed);$('#viewModeSelect')&&($('#viewModeSelect').value=S.viewMode);
     syncRegimeUI();updateMcModeUI();updateViewModeLabels();updateLabels();renderAll();rShockLog();
   });

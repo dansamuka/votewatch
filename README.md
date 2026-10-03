@@ -9,8 +9,12 @@ Live: https://dansamuka.github.io/votewatch/
 
 ## Using it
 
-1. **Scenario settings** (left, or the top panel on mobile): four political-context
-   switches and five assumption sliders. Every tab updates.
+1. **Scenario settings** (left, or the top panel on mobile): start from one of
+   four real 2027 paths, then adjust. Political context: Gachagua runs
+   separately · ODM (Oburu) backs Ruto · Sifuna runs on his own ticket · Ruto
+   holds the Rift Valley · anchor to latest polls. Assumptions: Mt Kenya shift
+   away from Ruto, swings, youth turnout, minor candidates, ally delivery.
+   Every tab updates.
 2. **Verdict** in the header: the most likely outcome and how often it happens
    across simulations.
 3. **Tabs** explain why: Run-off, Swing counties, Scenarios, Article 138, Map,
@@ -34,6 +38,7 @@ js/enhance.js           a11y wiring, county cartogram, KPI sparklines/gauge, laz
 data/wards.js           ward-level dataset  (const WD)
 data/counties.js        county dataset      (const CO)
 data/transport.js       transfer/road data  (const TR, synthetic)
+data/context.js         2025–26 national polls, bloc mapping, dated alliance facts (as of 3 Oct 2026)
 data/county-geojson.js  county boundaries (~1 MB, loaded lazily)
 docs/AUDIT.md           engine and data audit: what was fixed, what's still open
 ```
@@ -56,4 +61,12 @@ Deployed by GitHub Pages (`.github/workflows/static.yml`) on every push to `main
 
 Ward baselines are imputed from 2022 constituency aggregates. Treat output as
 scenario analysis, not a forecast. See `docs/AUDIT.md` for known modelling
-limitations and the v5.1 model changes.
+limitations, the v5.1 Monte Carlo fix and the v6 alliance layer.
+
+## Updating the political context
+
+Polls and alliance facts live in `data/context.js`. Add new polls at the top of
+`POLLS` (from the kenya-election-intelligence-engine repo), and the poll-anchor
+defaults update automatically. The realignment rules and preset scenarios are
+at the top of `js/app.js` (`DEFAULTS`, `SCENS`, `ODM_TO_INC`, `SIFUNA_TF`).
+Method and calibration are in `docs/AUDIT.md`.
