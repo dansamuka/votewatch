@@ -50,7 +50,7 @@ function loadGeometry(){
   if(geoReady())return Promise.resolve();
   return geoPromise||(geoPromise=new Promise((res,rej)=>{
     const s=document.createElement('script');
-    s.src='data/county-geojson.js';s.onload=res;s.onerror=rej;
+    s.src='data/county-geojson.js?v=5.0';s.onload=res;s.onerror=rej;
     document.head.appendChild(s);
   }));
 }
@@ -83,24 +83,36 @@ function renderHero(){
   const rows=S.res.ctyRes.slice().sort((a,b)=>String(a.cluster).localeCompare(String(b.cluster))||b.i-a.i);
   const groups=new Map();
   rows.forEach(c=>{if(!groups.has(c.cluster))groups.set(c.cluster,[]);groups.get(c.cluster).push(c);});
-  const R=26,W=R*1.732,PER=6,PAD=8,GAP=28;
-  let x0=PAD,svg='',maxY=0;
+  // Lay out in real pixels: region groups flow left→right and wrap to a new
+  // band when the panel is too narrow, so hexes never shrink below legibility.
+  const R=22,W=R*1.732,PER=6,PAD=4,GAP=24,LABEL=28;
+  const avail=Math.max(260,body.clientWidth||800);
+  let x0=PAD,y0=0,bandH=0,svg='',maxX=0;
   const abbr=n=>(typeof mapAbbr==='function'?mapAbbr(n):String(n).slice(0,3).toUpperCase());
+  const p1=v=>(v*100).toFixed(1)+'%';
   groups.forEach((list,cl)=>{
     const cols=Math.min(PER,Math.ceil(list.length/Math.ceil(list.length/PER)));
-    svg+=`<text class="hero-cl" x="${x0}" y="14">${cl}</text>`;
+    const rowsN=Math.ceil(list.length/cols);
+    const gw=(cols+0.5)*W, gh=LABEL+R+(rowsN-1)*R*1.5+R+8;
+    if(x0>PAD&&x0+gw>avail){x0=PAD;y0+=bandH+8;bandH=0;}
+    svg+=`<text class="hero-cl" x="${x0}" y="${y0+14}">${cl}</text>`;
     list.forEach((c,k)=>{
       const col=k%cols,row=Math.floor(k/cols);
-      const cx=x0+W/2+col*W+(row%2?W/2:0), cy=36+R+row*R*1.5;
+      const cx=x0+W/2+col*W+(row%2?W/2:0), cy=y0+LABEL+R+row*R*1.5;
       const pts=[0,1,2,3,4,5].map(j=>{const a=Math.PI/180*(60*j-30);return`${(cx+R*Math.cos(a)).toFixed(1)},${(cy+R*Math.sin(a)).toFixed(1)}`;}).join(' ');
       const name=c.name||c.county;
-      svg+=`<g class="hex" tabindex="0" role="button" data-c="${name}" aria-label="${name}: incumbent ${(c.i*100).toFixed(1)}%"><title>${name} · Inc ${(c.i*100).toFixed(1)}% · Opp ${(c.o*100).toFixed(1)}% · TF ${(c.t*100).toFixed(1)}%</title><polygon points="${pts}" fill="${shareColor(c.i)}"/><text x="${cx.toFixed(1)}" y="${(cy+4).toFixed(1)}" text-anchor="middle">${abbr(name)}</text></g>`;
-      maxY=Math.max(maxY,cy+R);
+      svg+=`<g class="hex" tabindex="0" role="button" data-c="${name}" aria-label="${name}: incumbent ${p1(c.i)}. Open county detail"><title>${name}: incumbent ${p1(c.i)} · opposition ${p1(c.o)} · third force ${p1(c.t)}</title><polygon points="${pts}" fill="${shareColor(c.i)}"/><text x="${cx.toFixed(1)}" y="${(cy+4).toFixed(1)}" text-anchor="middle">${abbr(name)}</text></g>`;
     });
-    x0+=(cols+0.5)*W+GAP;
+    maxX=Math.max(maxX,x0+gw);bandH=Math.max(bandH,gh);
+    x0+=gw+GAP;
   });
-  const w=x0-GAP+PAD, h=maxY+PAD;
-  body.innerHTML=`<svg class="hero-svg" viewBox="0 0 ${w.toFixed(0)} ${h.toFixed(0)}" role="group" aria-label="County cartogram grouped by political cluster, coloured by incumbent first-round share">${svg}</svg>`;
+  const w=Math.ceil(maxX+PAD), h=Math.ceil(y0+bandH);
+  body.innerHTML=`<svg class="hero-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="group" aria-label="County cartogram grouped by region, coloured by incumbent first-round share">${svg}</svg>`;
+  if(!body._ro&&window.ResizeObserver){
+    let lastW=body.clientWidth,t=0;
+    body._ro=new ResizeObserver(()=>{const cw=body.clientWidth;if(Math.abs(cw-lastW)<24)return;lastW=cw;clearTimeout(t);t=setTimeout(renderHero,120);});
+    body._ro.observe(body);
+  }
   $('#heroLeg').innerHTML=`<span>0%</span><span class="leg-bar" aria-hidden="true"></span><span>50%+</span>`;
   const act=e=>{
     const g=e.target.closest('.hex'); if(!g)return;
@@ -143,8 +155,29 @@ function wrapKPIs(){
   };
 }
 
+/* ── Shell: sidebar open/closed by width, export menu, first-run guide ── */
+function initShell(){
+  const box=$('#sideBox'), wide=matchMedia('(min-width:1024px)');
+  if(box){
+    const apply=()=>{box.open=wide.matches;};
+    apply();wide.addEventListener('change',apply);
+    // on desktop the settings panel is always visible; the summary is just a heading
+    $('.side-sum',box).addEventListener('click',e=>{if(wide.matches)e.preventDefault();});
+  }
+  const menu=$('.menu');
+  if(menu){
+    $$('.menu-pop button',menu).forEach(b=>b.addEventListener('click',()=>{menu.open=false;}));
+    document.addEventListener('click',e=>{if(menu.open&&!menu.contains(e.target))menu.open=false;});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.open){menu.open=false;$('summary',menu).focus();}});
+  }
+  try{if(localStorage.getItem('vw-guide')==='0'){const g=$('#guide');if(g)g.hidden=true;}}catch(e){}
+  if(typeof setLive==='function')setLive(false);
+}
+
 /* ── boot ── */
 wrapKPIs();wrapGeometryUsers();
-initTabs();labelControls();
-new MutationObserver(()=>labelControls()).observe(document.body,{childList:true,subtree:true});
+initTabs();initShell();labelControls();
+let lblQueued=false;
+new MutationObserver(()=>{if(lblQueued)return;lblQueued=true;requestAnimationFrame(()=>{lblQueued=false;labelControls();});})
+  .observe(document.body,{childList:true,subtree:true});
 })();
