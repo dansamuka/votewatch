@@ -27,4 +27,4 @@ python -m http.server 8000
 
 Leaflet and html2canvas load from CDNs, so an internet connection is needed.
 
-Deployed via GitHub Pages (see `.github/workflows/pages.yml`).
+Deployed via GitHub Pages (see `.github/workflows/static.yml`).
