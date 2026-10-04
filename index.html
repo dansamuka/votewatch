@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=9.2">
-<link rel="stylesheet" href="css/app.css?v=9.2">
+<link rel="stylesheet" href="css/tokens.css?v=9.3">
+<link rel="stylesheet" href="css/app.css?v=9.3">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,11 +71,37 @@
       <div class="tm-chips" id="teamChips"></div>
       <p class="side-h tm-sub">Who joins which team</p>
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
+      <p class="side-h tm-sub">Tickets</p>
+      <div class="tk" id="ticketBox"></div>
       <div class="sl">
-        <label class="sl-top" for="sl-follow"><span>Supporters who follow into a team</span><output id="lv-follow">72%</output></label>
+        <label class="sl-top" for="sl-follow"><span>Running mate's supporters who follow</span><output id="lv-follow">72%</output></label>
         <input type="range" id="sl-follow" list="vwFollow" title="Double-click to reset" min="50" max="100" step="1" value="72">
-        <p class="hint">Real coalitions leak; 80–90% is typical. The default is 72% because ODM and UDA voters were rivals for a decade.</p>
+        <p class="hint">Real coalitions leak; 80–90% is typical. The default is 72% because ODM and UDA voters were rivals for a decade. The presidential candidate keeps all their supporters.</p>
       </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-off"><span>Supporters of candidates left off the ticket who follow</span><output id="lv-off">55%</output></label>
+        <input type="range" id="sl-off" list="vwOff" title="Double-click to reset" min="0" max="100" step="1" value="55">
+        <p class="hint">A candidate who backs the ticket without a place on it keeps fewer of their voters.</p>
+      </div>
+      <details class="side-adv" open>
+        <summary>Where the others go</summary>
+        <p class="hint">Voters who don't follow their candidate into a team. Shares are rescaled to add up to 100%. These are assumptions, not measured.</p>
+        <div class="side-sec">
+      <div class="sl">
+        <label class="sl-top" for="sl-lh"><span>Stay home</span><output id="lv-lh">30%</output></label>
+        <input type="range" id="sl-lh" list="vwLh" title="Double-click to reset" min="0" max="100" step="1" value="30">
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-lc"><span>Cross to the other main side</span><output id="lv-lc">40%</output></label>
+        <input type="range" id="sl-lc" list="vwLc" title="Double-click to reset" min="0" max="100" step="1" value="40">
+        <p class="hint">Opposition voters go to team A; team A's voters go to team B.</p>
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-le"><span>Vote for someone else</span><output id="lv-le">30%</output></label>
+        <input type="range" id="sl-le" list="vwLe" title="Double-click to reset" min="0" max="100" step="1" value="30">
+      </div>
+        </div>
+      </details>
     </section>
     <section class="side-sec" aria-labelledby="secAss">
       <h3 class="side-h" id="secAss">Adjust</h3>
@@ -122,7 +148,7 @@
     </details>
     </div>
   </details>
-  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="72"></option></datalist>
+  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="72"></option></datalist><datalist id="vwOff"><option value="55"></option></datalist><datalist id="vwLh"><option value="30"></option></datalist><datalist id="vwLc"><option value="40"></option></datalist><datalist id="vwLe"><option value="30"></option></datalist>
 </aside>
 
 <main id="main">
@@ -393,14 +419,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=9.2"></script>
-<script defer src="data/counties.js?v=9.2"></script>
-<script defer src="data/transport.js?v=9.2"></script>
-<script defer src="data/context.js?v=9.2"></script>
-<script defer src="data/kenya-geo.js?v=9.2"></script>
-<script defer src="js/viz.js?v=9.2"></script>
-<script defer src="js/app.js?v=9.2"></script>
-<script defer src="js/enhance.js?v=9.2"></script>
-<script defer src="js/map.js?v=9.2"></script>
+<script defer src="data/wards.js?v=9.3"></script>
+<script defer src="data/counties.js?v=9.3"></script>
+<script defer src="data/transport.js?v=9.3"></script>
+<script defer src="data/context.js?v=9.3"></script>
+<script defer src="data/kenya-geo.js?v=9.3"></script>
+<script defer src="js/viz.js?v=9.3"></script>
+<script defer src="js/app.js?v=9.3"></script>
+<script defer src="js/enhance.js?v=9.3"></script>
+<script defer src="js/map.js?v=9.3"></script>
 </body>
 </html>

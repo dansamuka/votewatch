@@ -19,11 +19,22 @@ Live: https://dansamuka.github.io/votewatch/
    - B, Kalonzo bloc: Kalonzo Musyoka
    - C, Mt Kenya breakaway: Rigathi Gachagua
    - everyone else unaligned (solo), including Sifuna (Linda Mwananchi)
-   - follow-through 72% (ODM and UDA bases were rivals for a decade)
+   - tickets: Ruto with Oburu Odinga as running mate; Kalonzo and Gachagua
+     head their own teams
+   - 72% of a running mate's supporters follow (ODM and UDA bases were rivals
+     for a decade); the presidential candidate keeps all their supporters
    - turnout by region: Mt Kenya −12%, Rift Valley +2%, Nyanza −3%,
      Ukambani +4%, Coast −5%, Western −5% (relative to each region's base)
    - Research mode: 5,000 seeded runs. A quick 400-run estimate shows first
      ("refining…") and the full run finishes in the background.
+
+   **Tickets.** Each team with two or more members has a presidential candidate
+   and a running mate (Tickets, in the sidebar). Anyone else on the team is
+   "off the ticket": by default 55% of their supporters follow, and of the rest
+   30% stay home (lowering turnout where that candidate is strong), 40% cross
+   to the other main side (team A, or team B for team A's own members) and
+   30% vote for someone else. These splits are assumptions, adjustable under
+   "Where the others go"; the cross-over share varies ±25% between simulations.
 
    Mudavadi, Wetang'ula, Eugene Wamalwa and Jeremiah Kioni have no published
    presidential polling, so they are not separate entries in the model.

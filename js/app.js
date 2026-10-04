@@ -26,7 +26,8 @@ const TO_SIG={
 const MAX_TEAMS=4;
 function defaultCfg(){
   return presetCfg(['Broad-based government','Kalonzo bloc','Mt Kenya breakaway'],
-    [['William Ruto','Oburu Odinga'],['Kalonzo Musyoka'],['Rigathi Gachagua']],72);
+    [['William Ruto','Oburu Odinga'],['Kalonzo Musyoka'],['Rigathi Gachagua']],72,
+    [{p:'William Ruto',r:'Oburu Odinga'},{p:'Kalonzo Musyoka',r:null},{p:'Rigathi Gachagua',r:null}]);
 }
 // Ruto vs the four highest-polling challengers (the engine dashboard default)
 function topFourCfg(){
@@ -36,13 +37,29 @@ function topFourCfg(){
     else if(n<4){assign[c.name]=1;n++;}
     else assign[c.name]=-1;
   });
-  return {teams:['Ruto’s side','United opposition'],assign,follow:85};
+  return {teams:['Ruto’s side','United opposition'],assign,follow:85,offFollow:LEAK_DEFAULT.off,leak:{...LEAK_DEFAULT.leak}};
 }
 // Presets: real 2027 paths as of October 2026. `cfg` = teams, `p` = sliders.
-function presetCfg(teams,groups,follow=85){
+function presetCfg(teams,groups,follow=85,tickets){
   const assign={};CANDIDATES.forEach(c=>assign[c.name]=-1);
   groups.forEach((g,i)=>g.forEach(n=>assign[n]=i));
-  return {teams,assign,follow};
+  const cfg={teams,assign,follow,offFollow:LEAK_DEFAULT.off,leak:{...LEAK_DEFAULT.leak}};
+  if(tickets)cfg.tickets=tickets;
+  return cfg;
+}
+// Tickets: each team has a presidential candidate and (optionally) a running mate.
+// Supporters of the presidential candidate all follow; the running mate's follow at
+// cfg.follow; members left off the ticket at cfg.offFollow. Those who don't follow
+// split between staying home, crossing to the other main side, and going elsewhere.
+const LEAK_DEFAULT={off:55,leak:{home:30,cross:40,else:30}};
+function teamMembers(cfg,ti){return CANDIDATES.filter(c=>cfg.assign[c.name]===ti).sort((a,b)=>b.avg-a.avg).map(c=>c.name);}
+function ticketOf(cfg,ti){
+  const m=teamMembers(cfg,ti),t=(cfg.tickets&&cfg.tickets[ti])||{};
+  const p=ti===0&&m.includes('William Ruto')?'William Ruto':(m.includes(t.p)?t.p:m[0]||null);
+  let r;
+  if(t.r===null||t.r==='')r=null;
+  else r=(m.includes(t.r)&&t.r!==p)?t.r:(m.find(n=>n!==p)||null);
+  return {p,r,members:m,off:m.filter(n=>n!==p&&n!==r)};
 }
 // Regional turnout: relative change per region (−12 = 12% fewer of its voters turn out)
 const RT_REGIONS=[
@@ -54,7 +71,7 @@ const RT_ZERO=Object.fromEntries(RT_REGIONS.map(r=>[r.k,0]));
 const RT_DEFAULT={mtk:-12,rift:2,nyz:-3,kmb:4,cst:-5,wst:-5,nbi:0,ne:0};
 const SCENS=[
   {id:'s0',tier:'Fractured field',c:'#b86a10',t:'Default: broad-based government vs Kalonzo bloc, Mt Kenya on its own',
-    d:'Ruto and ODM\'s government wing against a Kalonzo-led opposition, with Gachagua\'s Mt Kenya breakaway as a third team and everyone else unaligned. 72% follow-through; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
+    d:'Ruto and ODM\'s government wing against a Kalonzo-led opposition, with Gachagua\'s Mt Kenya breakaway as a third team and everyone else unaligned. 72% of the running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
     cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
   {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
     d:'The four highest-polling challengers combine; Gachagua and the rest run solo. Matches the engine dashboard defaults.',
@@ -173,25 +190,54 @@ function fieldFor(cfg){
   const key=JSON.stringify(cfg);
   let f=_cfgCache.get(key);if(f)return f;
   if(_cfgCache.size>16)_cfgCache.clear();
-  const follow=(cfg.follow??85)/100;
-  const groups=cfg.teams.map((name,i)=>({key:i===0?'inc':i===1?'opp':'t'+i,name,members:[]}));
+  const follow=(cfg.follow??85)/100,offF=(cfg.offFollow??LEAK_DEFAULT.off)/100;
+  const lk=cfg.leak||LEAK_DEFAULT.leak,lt=(lk.home+lk.cross+lk.else)||1;
+  const pH=lk.home/lt,pC=lk.cross/lt,pE=lk.else/lt;
+  const groups=cfg.teams.map((name,i)=>({key:i===0?'inc':i===1?'opp':'t'+i,name,members:[],ti:i}));
   const solos=[];
-  CAND.names.forEach((n,ci)=>{const t=cfg.assign[n];if(t>=0&&t<groups.length)groups[t].members.push(ci);else solos.push({key:'s'+ci,name:n,members:[ci]});});
+  CAND.names.forEach((n,ci)=>{const t=cfg.assign[n];if(t>=0&&t<groups.length)groups[t].members.push(ci);else solos.push({key:'s'+ci,name:n,members:[ci],ti:-1});});
   const all=[...groups,...solos].filter(g=>g.members.length||g.key==='inc'||g.key==='opp');
   const nW=WARDS.length;
-  all.forEach(g=>{
-    const m=g.members.length>1?follow:1;
-    g.base=new Float64Array(nW);
-    for(let i=0;i<nW;i++){let s=0;for(const ci of g.members)s+=CAND.share[ci][i];g.base[i]=s*m;}
-  });
-  for(let i=0;i<nW;i++){let s=0;for(const g of all)s+=g.base[i];if(s>0)for(const g of all)g.base[i]/=s;}
   const A=all.find(g=>g.key==='inc'),B=all.find(g=>g.key==='opp');
+  const rivalOf=g=>g===A?(B&&B.members.length?B:null):(A&&A.members.length?A:null);
+  all.forEach(g=>{g.base=new Float64Array(nW);g.cross=new Float64Array(nW);g.leakE=null;g.rival=rivalOf(g);
+    g.ticket=g.ti>=0&&g.members.length>1?ticketOf(cfg,g.ti):null;});
+  const away=new Float64Array(nW);
+  // pass 1: kept support, stay-home and cross-over flows
+  all.forEach(g=>{
+    g.members.forEach(ci=>{
+      const nm=CAND.names[ci],tk=g.ticket;
+      const keep=!tk||nm===tk.p?1:nm===tk.r?follow:offF;
+      const sh=CAND.share[ci];
+      if(keep>=1){for(let i=0;i<nW;i++)g.base[i]+=sh[i];return;}
+      if(!g.leakE)g.leakE=new Float64Array(nW);
+      for(let i=0;i<nW;i++){
+        const l=sh[i]*(1-keep);g.base[i]+=sh[i]*keep;away[i]+=l*pH;
+        if(g.rival){g.rival.base[i]+=l*pC;g.rival.cross[i]+=l*pC;g.leakE[i]+=l*pE;}
+        else g.leakE[i]+=l*(pC+pE);
+      }
+    });
+  });
+  // pass 2: "elsewhere" goes to everyone outside the team and its rival, in proportion to their support
+  all.forEach(g=>{
+    if(!g.leakE)return;
+    const rec=all.filter(x=>x!==g&&x!==g.rival&&x.members.length);
+    for(let i=0;i<nW;i++){
+      const l=g.leakE[i];if(!l)continue;
+      let tot=0;for(const x of rec)tot+=x.base[i];
+      if(tot>0)for(const x of rec)x.base[i]+=l*x.base[i]/tot;
+      else if(g.rival)g.rival.base[i]+=l;else away[i]+=l;
+    }
+    g.leakE=null;
+  });
+  // shares among those who still vote; 'away' = share of would-be voters who stay home
+  for(let i=0;i<nW;i++){let s=0;for(const g of all)s+=g.base[i];if(s>0)for(const g of all){g.base[i]/=s;g.cross[i]/=s;}away[i]=Math.min(0.6,away[i]/((s+away[i])||1));}
   const others=all.filter(g=>g!==A&&g!==B&&g.members.length);
   const oBase=new Float64Array(nW);
   for(let i=0;i<nW;i++){let s=0;for(const g of others)s+=g.base[i];oBase[i]=s;}
   // each other contestant's fraction of the "others" pool in each ward
   others.forEach(g=>{g.frac=new Float64Array(nW);for(let i=0;i<nW;i++)g.frac[i]=oBase[i]>0?g.base[i]/oBase[i]:0;});
-  f={A,B,others,oBase,key};
+  f={A,B,others,oBase,away,key};
   _cfgCache.set(key,f);
   return f;
 }
@@ -216,6 +262,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const natSwing=noise?rng()*NAT_SWING_SD:0;
   const clNoise={};
   CLUSTERS.forEach(cl=>clNoise[cl]=noise?rng()*0.036:0);
+  // how many disappointed supporters actually cross over varies by ±25% between runs
+  const lkN=noise?rng()*0.25:0;
 
   const agg=CO.map(c=>({
     name:c.name,cluster:c.cluster,pop:c.projectedVoters2027,
@@ -245,15 +293,15 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tn=noise?rng()*k.toSig:0;
 
     // Team A vs team B vs everyone else, from the fitted candidate field
-    let inc=F.A.base[wi]+si+clNoise[w.cl]+ssh+csi+ns+natSwing;
-    let opp=hasB?F.B.base[wi]+so-clNoise[w.cl]*0.5-ns*0.4-natSwing:0;
+    let inc=F.A.base[wi]+F.A.cross[wi]*lkN+si+clNoise[w.cl]+ssh+csi+ns+natSwing;
+    let opp=hasB?F.B.base[wi]+F.B.cross[wi]*lkN+so-clNoise[w.cl]*0.5-ns*0.4-natSwing:0;
     let tf_=F.oBase[wi]+tf+stf;
 
     // Normalize
     const tot=Math.max(inc,0)+Math.max(opp,0)+Math.max(tf_,0)||1;
     const si_=Math.max(inc,0)/tot,so_=Math.max(opp,0)/tot,st_=Math.max(tf_,0)/tot;
 
-    const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)+tn,0.24,0.87);
+    const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)*(1-F.away[wi])+tn,0.2,0.87);
     const vs=w.voters*to;
     const a=k.ci>=0?agg[k.ci]:null;
     if(a){
@@ -618,8 +666,8 @@ function rTornado(nat){
     {l:'If the protest vote grows 8 points',v:run({tf:S.tf+8})},
     {l:'If 12% more young people vote',v:run({ys:S.ys+12})},
     {l:`If ${B} gains 6 points`,v:run({so:S.so+6})},
-    {l:'If only 70% of supporters follow their leaders',v:run({cfg:{...S.cfg,follow:70}})},
-    {l:'If every supporter follows their leader',v:run({cfg:{...S.cfg,follow:100}})},
+    {l:'If only 70% of running mates\' supporters follow',v:run({cfg:{...S.cfg,follow:70}})},
+    {l:'If every running mate\'s supporter follows',v:run({cfg:{...S.cfg,follow:100}})},
     {l:`If ${A} gains 6 points`,v:run({si:S.si+6})}
   ].map(c=>({...c,flip:(c.v>=0.5)!==(base>=0.5)}))
    .sort((a,b)=>Math.abs(b.v-base)-Math.abs(a.v-base));
@@ -828,17 +876,20 @@ function renderTeams(){
     (cfg.teams.length<MAX_TEAMS?'<button type="button" class="tm-add" id="tmAdd">+ Add a team</button>':'');
   chips.querySelectorAll('input').forEach(n=>n.oninput=()=>{cfg.teams[+n.dataset.t]=n.value.trim()||('Team '+L(+n.dataset.t));rerenderTeams();});
   chips.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
-    const i=+b.dataset.rm;cfg.teams.splice(i,1);
+    const i=+b.dataset.rm;cfg.teams.splice(i,1);if(cfg.tickets)cfg.tickets.splice(i,1);
     Object.keys(cfg.assign).forEach(k=>{if(cfg.assign[k]===i)cfg.assign[k]=-1;else if(cfg.assign[k]>i)cfg.assign[k]--;});
     renderTeams();rerenderTeams();
   });
   const add=$('#tmAdd');if(add)add.onclick=()=>{cfg.teams.push('Team '+L(cfg.teams.length));renderTeams();rerenderTeams();};
 
   const rows=[...CANDIDATES].sort((a,b)=>b.avg-a.avg);
+  const tks=cfg.teams.map((_,ti)=>ticketOf(cfg,ti));
+  const roleOf=n=>{const ti=cfg.assign[n];if(!(ti>=0))return '';const t=tks[ti];if(!t||t.members.length<2)return '';
+    return n===t.p?'<small class="tm-role is-p">President</small>':n===t.r?'<small class="tm-role is-r">Running mate</small>':'<small class="tm-role is-off">Off ticket</small>';};
   grid.innerHTML=rows.map((c,ri)=>{
     const cur=cfg.assign[c.name];const fixed=c.name==='William Ruto';
     return `<div class="tm-row${ri>=8&&!renderTeams.all?' tm-more':''}" role="radiogroup" aria-labelledby="tmn${ri}">
-      <span class="tm-name" id="tmn${ri}"><span>${mapEsc(c.name)}</span><i style="--w:${(c.avg/rows[0].avg*100).toFixed(0)}%" aria-hidden="true"></i></span><span class="tm-avg">${c.avg.toFixed(1)}%</span>
+      <span class="tm-name" id="tmn${ri}"><span>${mapEsc(c.name)}</span>${roleOf(c.name)}<i style="--w:${(c.avg/rows[0].avg*100).toFixed(0)}%" aria-hidden="true"></i></span><span class="tm-avg">${c.avg.toFixed(1)}%</span>
       <span class="tm-seg">${cfg.teams.map((t,ti)=>`<label style="--tc:var(${TEAM_VARS[ti]})"><input type="radio" name="tm${ri}" value="${ti}" aria-label="${mapEsc(t)}" ${cur===ti?'checked':''} ${fixed&&ti!==0?'disabled':''}><span>${L(ti)}</span></label>`).join('')}
         <label><input type="radio" name="tm${ri}" value="-1" aria-label="Runs solo" ${!(cur>=0)?'checked':''} ${fixed?'disabled':''}><span>Solo</span></label></span>
     </div>`;}).join('')+
@@ -846,6 +897,31 @@ function renderTeams(){
   grid.querySelectorAll('input').forEach(n=>n.onchange=()=>{cfg.assign[rows[+n.name.slice(2)].name]=+n.value;rerenderTeams();});
   const all=$('#tmAll');if(all)all.onclick=()=>{renderTeams.all=true;renderTeams();};
   const fo=$('#sl-follow');if(fo){fo.value=cfg.follow;$('#lv-follow').textContent=cfg.follow+'%';}
+  renderTickets(tks);
+}
+// Ticket pickers: presidential candidate and running mate for every team with 2+ members
+function renderTickets(tks){
+  const box=$('#ticketBox');if(!box)return;
+  const cfg=S.cfg,L=i=>String.fromCharCode(65+i);
+  const opt=(n,sel)=>`<option value="${mapEsc(n)}"${n===sel?' selected':''}>${mapEsc(n.split(' ').slice(-1)[0])}</option>`;
+  const rowsH=cfg.teams.map((t,ti)=>{const k=tks[ti];if(!k||k.members.length<2)return '';
+    return `<div class="tk-row" style="--tc:var(${TEAM_VARS[ti]})"><p class="tk-h"><b>${L(ti)}</b>${mapEsc(t)}</p>
+      <label class="tk-f"><span>President</span><select class="sel" data-tk="${ti}" data-role="p"${ti===0?' disabled title="Ruto leads team A"':''}>${k.members.map(n=>opt(n,k.p)).join('')}</select></label>
+      <label class="tk-f"><span>Running mate</span><select class="sel" data-tk="${ti}" data-role="r"><option value=""${k.r?'':' selected'}>None</option>${k.members.filter(n=>n!==k.p).map(n=>opt(n,k.r)).join('')}</select></label>
+      ${k.off.length?`<p class="hint tk-off">Off the ticket: ${k.off.map(n=>mapEsc(n.split(' ').slice(-1)[0])).join(', ')}</p>`:''}</div>`;}).join('');
+  box.innerHTML=rowsH||'<p class="hint">Put two or more candidates on a team to choose its ticket.</p>';
+  box.querySelectorAll('select[data-tk]').forEach(sel=>sel.onchange=()=>{
+    const ti=+sel.dataset.tk;cfg.tickets=cfg.tickets||[];const cur=ticketOf(cfg,ti);
+    const t={p:cur.p,r:cur.r};
+    if(sel.dataset.role==='p'){t.p=sel.value;if(t.r===t.p)t.r=cur.p;}else t.r=sel.value||null;
+    cfg.tickets[ti]=t;renderTeams();rerenderTeams();
+  });
+  // leakage controls mirror the config
+  const set=(id,v,txt)=>{const el=$('#'+id);if(el){el.value=v;const o=$('#lv-'+id.slice(3));if(o)o.textContent=txt;}};
+  const lk=cfg.leak||LEAK_DEFAULT.leak,lt=(lk.home+lk.cross+lk.else)||1;
+  set('sl-off',cfg.offFollow??LEAK_DEFAULT.off,(cfg.offFollow??LEAK_DEFAULT.off)+'%');
+  set('sl-lh',lk.home,Math.round(lk.home/lt*100)+'%');set('sl-lc',lk.cross,Math.round(lk.cross/lt*100)+'%');set('sl-le',lk.else,Math.round(lk.else/lt*100)+'%');
+  if(typeof paintRanges==='function')paintRanges();
 }
 // Copy a preset into the live settings (sliders + political context)
 function applyScenario(id){
@@ -1414,7 +1490,9 @@ function renderExecutiveReport(){
   const field=[{k:'inc',l:A,v:n.i}].concat(n.B&&n.B.members.length?[{k:'opp',l:B,v:n.o}]:[]).concat((n.others||[]).map(o=>({k:o.key,l:o.name,v:o.share}))).sort((a,b)=>b.v-a.v);
   const top=field.slice(0,3),rest=field.slice(3).reduce((s,c)=>s+c.v,0);
   let x=0;const segs=top.concat(rest>0.0005?[{k:'rest',l:'Everyone else',v:rest}]:[]).map(c=>{const s=`<i style="--x:${x};--w:${c.v};background:${c.k==='rest'?'var(--line-2)':VZ.col(c.k)}"></i>`;x+=c.v;return s;}).join('');
-  const teamsLine=S.cfg.teams.map((t,i)=>{const m=CAND.names.filter(nm=>S.cfg.assign[nm]===i).map(nm=>nm.split(' ').slice(-1)[0]);return m.length?`<b>${mapEsc(t)}</b>: ${mapEsc(m.join(', '))}`:'';}).filter(Boolean).join(' · ');
+  const sur=n=>n.split(' ').slice(-1)[0];
+  const teamsLine=S.cfg.teams.map((t,i)=>{const k=ticketOf(S.cfg,i);if(!k.members.length)return '';
+    return `<b>${mapEsc(t)}</b>: ${mapEsc(sur(k.p))}${k.r?' – '+mapEsc(sur(k.r)):''}${k.off.length?` (with ${mapEsc(k.off.map(sur).join(', '))})`:''}`;}).filter(Boolean).join(' · ');
   const qa=technicalEngineQA(),mapQ=VW_MAP_STATE?.diagnostics||mapDiagnostics(VW_MAP_STATE?.rows||[]),move=movementFromBaselineRows();
   const topTip=(S.tip||tipPts(r.ctyRes)).slice(0,8),topDis=dr.close.slice().sort((a,b)=>Math.abs(a.ls-0.5)-Math.abs(b.ls-0.5)).slice(0,8);
   const leadB=c=>`<span class="b ${badgeFor(c.lead==='tf'?'x':c.lead)}">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'}</span>`;
@@ -1527,6 +1605,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#sl-follow')?.addEventListener('input',e=>{S.cfg.follow=+e.target.value;$('#lv-follow').textContent=S.cfg.follow+'%';rerenderTeams();});
   renderTeams();
   buildRegionSliders();
+  // off-ticket follow-through and where the rest go
+  const bindLeak=(id,apply,def)=>{const el=$('#'+id);if(!el)return;
+    el.addEventListener('input',()=>{apply(+el.value);renderTickets(S.cfg.teams.map((_,ti)=>ticketOf(S.cfg,ti)));rerenderTeams();});
+    el.addEventListener('dblclick',()=>{el.value=def;el.dispatchEvent(new Event('input',{bubbles:true}));});};
+  const lkOf=()=>(S.cfg.leak=S.cfg.leak||{...LEAK_DEFAULT.leak});
+  bindLeak('sl-off',v=>S.cfg.offFollow=v,LEAK_DEFAULT.off);
+  bindLeak('sl-lh',v=>lkOf().home=v,LEAK_DEFAULT.leak.home);
+  bindLeak('sl-lc',v=>lkOf().cross=v,LEAK_DEFAULT.leak.cross);
+  bindLeak('sl-le',v=>lkOf().else=v,LEAK_DEFAULT.leak.else);
 
   $('#bRefresh').addEventListener('click',()=>{addShock();renderAll();decayShocks();rShockLog();S.timer=30;});
   $('#bReset').addEventListener('click',()=>{
