@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=9.8">
-<link rel="stylesheet" href="css/app.css?v=9.8">
+<link rel="stylesheet" href="css/tokens.css?v=9.9">
+<link rel="stylesheet" href="css/app.css?v=9.9">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -74,9 +74,9 @@
       <p class="side-h tm-sub">Tickets</p>
       <div class="tk" id="ticketBox"></div>
       <div class="sl">
-        <label class="sl-top" for="sl-follow"><span>Running mate's supporters who follow</span><output id="lv-follow">72%</output></label>
-        <input type="range" id="sl-follow" list="vwFollow" title="Double-click to reset" min="50" max="100" step="1" value="72">
-        <p class="hint">Real coalitions leak; 80–90% is typical. The default is 72% because ODM and UDA voters were rivals for a decade. The presidential candidate keeps all their supporters.</p>
+        <label class="sl-top" for="sl-follow"><span>Running mate's supporters who follow</span><output id="lv-follow">65%</output></label>
+        <input type="range" id="sl-follow" list="vwFollow" title="Double-click to reset" min="50" max="100" step="1" value="65">
+        <p class="hint">Real coalitions leak; 80–90% is typical. The default is 65%: bases of former rivals transfer poorly. The presidential candidate keeps all their supporters.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-off"><span>Supporters of candidates left off the ticket who follow</span><output id="lv-off">55%</output></label>
@@ -148,7 +148,7 @@
     </details>
     </div>
   </details>
-  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="72"></option></datalist><datalist id="vwOff"><option value="55"></option></datalist><datalist id="vwLh"><option value="30"></option></datalist><datalist id="vwLc"><option value="40"></option></datalist><datalist id="vwLe"><option value="30"></option></datalist>
+  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="65"></option></datalist><datalist id="vwOff"><option value="55"></option></datalist><datalist id="vwLh"><option value="30"></option></datalist><datalist id="vwLc"><option value="40"></option></datalist><datalist id="vwLe"><option value="30"></option></datalist>
 </aside>
 
 <main id="main">
@@ -419,14 +419,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=9.8"></script>
-<script defer src="data/counties.js?v=9.8"></script>
-<script defer src="data/transport.js?v=9.8"></script>
-<script defer src="data/context.js?v=9.8"></script>
-<script defer src="data/kenya-geo.js?v=9.8"></script>
-<script defer src="js/viz.js?v=9.8"></script>
-<script defer src="js/app.js?v=9.8"></script>
-<script defer src="js/enhance.js?v=9.8"></script>
-<script defer src="js/map.js?v=9.8"></script>
+<script defer src="data/wards.js?v=9.9"></script>
+<script defer src="data/counties.js?v=9.9"></script>
+<script defer src="data/transport.js?v=9.9"></script>
+<script defer src="data/context.js?v=9.9"></script>
+<script defer src="data/kenya-geo.js?v=9.9"></script>
+<script defer src="js/viz.js?v=9.9"></script>
+<script defer src="js/app.js?v=9.9"></script>
+<script defer src="js/enhance.js?v=9.9"></script>
+<script defer src="js/map.js?v=9.9"></script>
 </body>
 </html>

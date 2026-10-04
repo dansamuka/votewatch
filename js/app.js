@@ -20,17 +20,24 @@ const TO_SIG={
 // Team A is Ruto's side (Ruto is fixed there); team B is the main challenger
 // slot; teams C/D and solo candidates make up "others".
 // Default line-up (Oct 2026 testing baseline): the broad-based government
-// (Ruto–Kindiki, with Oburu Odinga's ODM wing on the team but off the ticket) vs
-// a United opposition of Sifuna–Kalonzo with Matiang'i, Babu Owino, Gachagua,
-// Nyoro, Maraga, Karua, Orengo and Omtata behind it; Wajackoyah and Wanjigi run
-// alone. 72% of a running mate's supporters follow (ODM and UDA bases were
-// rivals for a decade).
+// (Ruto–Kindiki, Oburu Odinga's ODM wing off the ticket) vs a Kalonzo–Sifuna
+// United opposition, with Matiang'i–Gachagua running as a third force so their
+// bases split the opposition vote instead of only leaking from it. 65% of a
+// running mate's supporters follow: bases of former rivals transfer poorly.
 const MAX_TEAMS=4;
 function defaultCfg(){
+  return presetCfg(['Broad-based government','United opposition','Third force'],
+    [['William Ruto','Oburu Odinga'],
+     ['Kalonzo Musyoka','Edwin Sifuna','Babu Owino','Ndindi Nyoro','David Maraga','Martha Karua','James Orengo','Okiya Omtata'],
+     ["Fred Matiang'i",'Rigathi Gachagua']],65,
+    [{p:'William Ruto',r:'pick:kindiki'},{p:'Kalonzo Musyoka',r:'Edwin Sifuna'},{p:"Fred Matiang'i",r:'Rigathi Gachagua'}]);
+}
+// Same line-up without the third force: Matiang'i and Gachagua back the United opposition from off the ticket
+function noThirdForceCfg(){
   return presetCfg(['Broad-based government','United opposition'],
     [['William Ruto','Oburu Odinga'],
-     ['Edwin Sifuna','Kalonzo Musyoka',"Fred Matiang'i",'Babu Owino','Rigathi Gachagua','Ndindi Nyoro','David Maraga','Martha Karua','James Orengo','Okiya Omtata']],72,
-    [{p:'William Ruto',r:'pick:kindiki'},{p:'Edwin Sifuna',r:'Kalonzo Musyoka'}]);
+     ['Kalonzo Musyoka','Edwin Sifuna',"Fred Matiang'i",'Rigathi Gachagua','Babu Owino','Ndindi Nyoro','David Maraga','Martha Karua','James Orengo','Okiya Omtata']],65,
+    [{p:'William Ruto',r:'pick:kindiki'},{p:'Kalonzo Musyoka',r:'Edwin Sifuna'}]);
 }
 // Ruto vs the four highest-polling challengers (the engine dashboard default)
 function topFourCfg(){
@@ -93,9 +100,12 @@ const RT_REGIONS=[
 const RT_ZERO=Object.fromEntries(RT_REGIONS.map(r=>[r.k,0]));
 const RT_DEFAULT={mtk:-12,rift:2,nyz:-3,kmb:4,cst:-5,wst:-5,nbi:0,ne:0};
 const SCENS=[
-  {id:'s0',tier:'Fractured field',c:'#b86a10',t:'Default: Ruto–Kindiki vs a Sifuna–Kalonzo United opposition',
-    d:'Ruto runs with Kindiki; Oburu Odinga\'s ODM wing backs him from off the ticket. Sifuna heads a broad United opposition with Kalonzo as running mate, backed by Matiang\'i, Babu Owino, Gachagua, Nyoro, Maraga, Karua, Orengo and Omtata; Wajackoyah and Wanjigi run alone. 72% of the running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
+  {id:'s0',tier:'Three-way split',c:'#b86a10',t:'Default: Ruto–Kindiki vs Kalonzo–Sifuna, with a Matiang\'i–Gachagua third force',
+    d:'Ruto runs with Kindiki; Oburu Odinga\'s ODM wing backs him from off the ticket. Kalonzo heads the United opposition with Sifuna as running mate. Matiang\'i and Gachagua run their own ticket and split the opposition vote. 65% of a running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
     cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
+  {id:'s0b',tier:'No third force',c:'#b86a10',t:'Same line-up, Matiang\'i and Gachagua stay with the opposition',
+    d:'As the default, but Matiang\'i and Gachagua back the Kalonzo–Sifuna ticket from off the ticket instead of running their own. Compare with the default to see what a third force costs the opposition.',
+    cfg:noThirdForceCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
   {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
     d:'The four highest-polling challengers combine; Gachagua and the rest run solo. Matches the engine dashboard defaults.',
     cfg:topFourCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_ZERO}}},
@@ -1757,7 +1767,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // warm the scenario cards (the slowest tab) once the page is idle
   (window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>{try{rScen();S.dirty&&S.dirty.delete('mat');}catch(e){}},{timeout:3000});
   document.querySelectorAll('[data-flow]').forEach(btn=>btn.onclick=()=>{S.flowDir=btn.dataset.flow;document.querySelectorAll('[data-flow]').forEach(x=>x.setAttribute('aria-pressed',String(x===btn)));if(S.res)VZ.flow($('#roFlow'),S.res,S.flowDir);});
-  $('#sl-follow')?.addEventListener('dblclick',e=>{e.target.value=72;e.target.dispatchEvent(new Event('input'));});
+  $('#sl-follow')?.addEventListener('dblclick',e=>{e.target.value=65;e.target.dispatchEvent(new Event('input'));});
   $('#sl-follow')?.addEventListener('input',e=>{S.cfg.follow=+e.target.value;$('#lv-follow').textContent=S.cfg.follow+'%';rerenderTeams();});
   renderTeams();
   buildRegionSliders();
