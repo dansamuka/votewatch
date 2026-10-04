@@ -138,11 +138,12 @@ function card(nat){
   const lead=cs[0],second=cs[1];
   body.innerHTML=`${outlineSVG(name)}
     <div class="cty-res">${cs.filter(x=>x.v>=0.005).slice(0,5).map(x=>`<div class="cty-bar"><span class="nm">${esc(x.name)}</span><span class="tr"><i style="width:${(x.v*100).toFixed(1)}%;background:${x.col}"></i></span><b>${p1(x.v)}</b></div>`).join('')}</div>
-    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[name];return q?`<p class="cty-range">In 80% of simulations: ${esc(S.cfg.teams[0])} ${p0r(q.iLo)}–${p0r(q.iHi)}${nat.B&&nat.B.members.length?`, ${esc(S.cfg.teams[1])} ${p0r(q.oLo)}–${p0r(q.oHi)}`:''}. ${esc(S.cfg.teams[0])} reaches 25% in ${p0r(q.p25)} of them.</p>`:'';})()}
+    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[name];return q?`<p class="cty-range">In 80% of simulations: ${esc(S.cfg.teams[0])} ${p0r(q.iLo)}–${p0r(q.iHi)}${nat.B&&nat.B.members.length?`, ${esc(S.cfg.teams[1])} ${p0r(q.oLo)}–${p0r(q.oHi)}`:''}. ${esc(S.cfg.teams[0])} reaches 25% in ${p0r(q.p25)} of them. ${typeof BACKTEST!=='undefined'?`Treat these ranges as too narrow: in the 2022 back-test only ${Math.round(BACKTEST.variants.find(v=>v.id==='model-bias').coverage80)}% of counties fell inside theirs.`:''}</p>`:'';})()}
     ${nat.B&&nat.B.members.length?marginGauge(c):''}
     <div class="cty-stats">
       <span>Leader <b>${esc(lead.name)}</b> by ${p1(lead.v-(second?second.v:0))}</span>
       <span>Turnout <b>${p1(c.to)}</b></span>
+      ${(()=>{const i=WARDS.findIndex(w=>w.county===name);return i>=0&&typeof WU!=='undefined'?`<span title="Share of voters undecided in polls (TIFA Jun 2026 nationally; Infotrak Jul 2026 for Mt Kenya)">Undecided <b>${p0r(WU[i])}</b></span>`:'';})()}
       <span>Registered <b>${(co.projectedVoters2027||0).toLocaleString('en-KE')}</b></span>
       <span>Votes cast <b>${Math.round(c.tv).toLocaleString('en-KE')}</b></span>
       <span>${esc(S.cfg.teams[0])} 25%+ <b>${c.i>=0.25?'Yes':'No'}</b></span>

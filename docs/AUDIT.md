@@ -1,4 +1,116 @@
-# Engine and data audit (v5.0–7.0, October 2026)
+# VoteWatch 2027: method and audit
+
+This file has two parts. **Current method (v11.0)** describes what the live engine
+does. **Version history** below it is the archived record of earlier versions:
+where it conflicts with the current method, the current method applies.
+
+# Current method (v11.0, 4 Oct 2026)
+
+## Data
+
+| Layer | Source | Status |
+|---|---|---|
+| Geography | IEBC 47 counties / 290 constituencies / 1,450 wards (Kenya Data Atlas registry) | verified |
+| 2022 register | IEBC Gazette Notice 7290, 22,102,532 by ward; 10 Mandera East/Lafey wards on a boundary hold share their constituency total exactly | verified |
+| Register scenarios | Current proxy 25,039,048 (2022 + IEBC's 2,936,516 new registrations to 20 Aug 2026, shared by the 2,345,476 April 2026 ECVR county figures); 2022 certified; IEBC 28.5m target. Wards scale with their 2022 register; largest-remainder rounding keeps every county exact | gross additions only: removals since 2022 are not netted out |
+| 2022 presidential results | Public tally of IEBC Forms 34B for 290 constituencies, checked against the atlas's official Form 34B totals: 224 match (75.4% of the register), 17 rescaled to the official total (5.6%), 4 swapped back (1.6%), 45 unchecked (17.4%) | totals checked, candidate splits not independently read |
+| 2022 turnout | Atlas official Form 34B turnout for 186 constituencies, the checked tally for the other 104 | — |
+| 2017 history | County results (ELOG compilation of IEBC county results, via the engine repo): Kenyatta share, Odinga share, turnout | compiled, not IEBC primary |
+| 2013 history | Removed: the shares on file contradicted the 2013 county winner in 9 counties | — |
+| Polls, 2026 | `POLLS` in `data/context.js`; Mizani and Politrack held out of the central case | — |
+| Polls, 2013–2022 | Final validated polls vs results, `data/history.js` | sourced per poll |
+| Undecided | TIFA Jun 2026: 20% nationally; Infotrak Jul 2026: 26% in Mt Kenya. Other regions share one rate that keeps the national average at 20% | only one region published |
+
+## Engine
+
+1. **Candidate levels.** Validated polls weighted by recency (180-day), sample
+   size and pollster quality; one to three polls are pulled toward a 0.5% prior
+   (55% / 75% / 90% weight). "All published polls" is a sensitivity switch.
+2. **Geography.** Iterative proportional fitting spreads each candidate's level
+   across 1,450 wards: county-group strength from 2026 regional polls (`g`,
+   hand-calibrated) × the constituency's 2022 result, softened by a square root ×
+   home county ×1.25. National levels are preserved exactly.
+3. **Teams and tickets.** Presidential candidates keep all their supporters;
+   running mates keep the follow-through slider (65%); others follow
+   candidate-by-region priors (`TRANSFER_PRIORS`). Those who leave stay home,
+   cross (more where the other side is locally strong) or vote elsewhere.
+4. **Undecided voters.** Polls are shares of decided voters, so by default the
+   undecided split in proportion. A slider and, in simulations, a shared shock
+   move part of the undecided pool from team B to team A, with more effect where
+   more voters are undecided.
+5. **Poll bias.** Optional correction: +4.1 two-way points to team A, the average
+   miss of the final validated polls in 2013, 2017 and 2022. Off in the central case.
+6. **Youth.** Young voters back team A 10 points less (Infotrak, Jun 2026); this
+   only moves the vote when youth turnout changes.
+7. **Simulations.** 5,000 seeded runs. Per run: a national swing, the undecided
+   break, a poll error per team, regional and ward noise, and how many cross over.
+   The national error is calibrated (`ERR_SCALE`, `scripts/calibrate-error.mjs`) so
+   team A's two-way share varies by 4.1 points, the RMS miss of 2013–2022.
+   Failed draws are counted and excluded; the data-quality panel reports them.
+8. **Article 138.** Outright win needs over 50% and 25% in 24 counties; otherwise
+   the top two meet. Run-off transfers follow candidate-by-region priors
+   (`RUNOFF_INC_PRIORS`) with a shock per eliminated contestant; every round-one
+   vote is carried into round two.
+9. **Uncertainty shown.** The 80% simulation range for the line-up, county ranges
+   and 25% odds, and the spread across the preset line-ups (structural).
+10. **Events.** News events are listed in Signals with no vote effect. The "Test
+    events" sandbox applies made-up effects for sensitivity testing only.
+
+## Validation
+
+`scripts/validate-model.mjs` (run by CI before every deploy) reports two kinds of check:
+**integrity** (179: totals, sources, conservation, exact allocation, calibration to the
+poll-error record, failure-free and reproducible simulations, back-test consistency) and
+**sanity bounds** (6 judgement bounds, such as Kisii's third force at 45–65%; passing them
+is not validation, and Gusii was tuned to respect one).
+
+## 2022 back-test
+
+`scripts/backtest-2022.mjs` predicts 2022 using only what was known before the
+election: the final validated polls, the 2017 county pattern, the June 2022
+register and the poll-error record of 2013 and 2017. Results are in
+`data/backtest2022.js` and the Signals tab.
+
+| Method | National miss | County MAE | Winner | 25% test | In 80% range |
+|---|---|---|---|---|---|
+| Model method, polls as published | +4.6 | 9.8 | 43/47 | 42/47 | 57% |
+| Model method + bias correction (2013/17) | +0.7 | 9.3 | 44/47 | 42/47 | 51% |
+| Unsoftened 2017 pattern | +4.6 | 12.3 | 44/47 | 38/47 | 34% |
+| Uniform swing from 2017 | +4.0 | 11.3 | 45/47 | 38/47 | 45% |
+
+Findings:
+- The bias correction works out of sample: estimated from 2013 and 2017 alone,
+  it cuts the 2022 national miss from 4.6 to 0.7 points.
+- The model's softened spreading beats the unsoftened pattern and uniform swing.
+- County ranges were far too narrow: about half of counties fell inside their 80%
+  range, not 80%. The largest misses are realignments (Mandera, Bungoma, Garissa,
+  the Kalenjin counties). The test cannot include the 2027 model's regional poll
+  layer, which exists to capture such shifts; until it can be tested, treat
+  county ranges as too narrow (the county card says so).
+
+## Open
+
+- Back-test the regional layer: needs 2022 regional poll tables (Ipsos, TIFA,
+  Infotrak published zone results).
+- Widen or recalibrate county noise once that test exists.
+- Read candidate splits directly from Forms 34B for the 45 unchecked and 17
+  rescaled constituencies.
+- Net register: rebuild when IEBC publishes the updated register.
+- Estimate transfer, run-off, running-mate and regional-turnout priors from data;
+  sample them in the simulations.
+- Run-off turnout is reused from round one.
+- House effects need more polls than the 6 validated ones available.
+
+---
+
+# Version history (archived)
+
+The sections below describe earlier versions and are kept for provenance.
+Figures and methods in them (for example "186/290 turnout", 50/50 or 70/30
+run-off splits, the census-trend register, the 2013 history) are superseded
+by the current method above.
+
+## Engine and data audit (v5.0–7.0, October 2026)
 
 Scope: the scenario engine in `js/app.js` (`sim`, `mc`, `r2sim`, `disRisk`,
 `tipPts`, shocks), the rendering that reports its numbers, and the data files.
