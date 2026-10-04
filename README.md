@@ -58,14 +58,12 @@ Live: https://dansamuka.github.io/votewatch/
 3. **Tabs**: Overview, Run-off, Swing counties, Scenarios (ready-made
    line-ups), Article 138, Map (click a county for its result and wards),
    Dispute risk, Signals (latest polls and key facts), Report.
-4. **Report** (and Export): a numbered briefing. A bottom-line strip (first
-   round, run-off result with votes, chance of winning, dispute risk), then:
-   1 first round with vote counts; 2 the run-off head to head (even split by
-   default) with shares, vote counts, counties carried and each lean variant;
-   3 every team's ticket and members; 4 a running-mate table per team that
-   re-runs the model for each option; 5 what it means; 6 the counties that
-   decide it; 7 every assumption. Print or save as PDF or HTML; CSVs from
-   Export.
+4. **Report** (and Export): a dashboard. Teams first (each ticket, first-round
+   share and votes, 25%-county meter, chance of winning, who else is on the
+   team), then four headline figures, round one, the run-off with vote counts,
+   what it means and where it is decided, then running-mate options and
+   assumptions. Prints as three A4 landscape pages: at a glance, the race,
+   the detail. CSVs from Export.
 
 Header buttons switch between public and analyst wording and between the light
 and dark themes (light and public are the defaults; the choice is remembered).
