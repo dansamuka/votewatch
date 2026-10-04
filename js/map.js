@@ -9,27 +9,32 @@ const VM={measure:'lead',built:false};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const p1=v=>(v*100).toFixed(1)+'%';
 const TEAMC=['var(--team-a)','var(--team-b)','var(--team-c)','var(--team-d)'];
+const RAMP=['a','b','c','d'];
+// five-step OKLCH ramps (tokens.css): weak → strong, never mixed toward the dark surface
+const step=(v,cuts)=>1+cuts.filter(t=>v>=t).length;
+const ramp=(r,n)=>`var(--ramp-${r}-${n})`;
 
 // contestants in a county: team A, team B, then each other team / solo candidate
 function contestants(c,nat){
-  const cfg=S.cfg,out=[{key:'inc',name:cfg.teams[0],v:c.i,col:TEAMC[0]}];
-  if(nat.B&&nat.B.members.length)out.push({key:'opp',name:cfg.teams[1],v:c.o,col:TEAMC[1]});
+  const cfg=S.cfg,out=[{key:'inc',name:cfg.teams[0],v:c.i,col:TEAMC[0],r:'a'}];
+  if(nat.B&&nat.B.members.length)out.push({key:'opp',name:cfg.teams[1],v:c.o,col:TEAMC[1],r:'b'});
   (nat.others||[]).forEach(o=>{
     const ti=o.key[0]==='t'?+o.key.slice(1):-1;
-    out.push({key:o.key,name:o.name,v:(c.oc?c.oc[o.idx]:0)/(c.tv||1),col:ti>=0?TEAMC[ti]:'var(--ink-subtle)'});
+    out.push({key:o.key,name:o.name,v:(c.oc?c.oc[o.idx]:0)/(c.tv||1),col:ti>=0?TEAMC[ti]:'var(--others)',r:ti>=0?RAMP[ti]:'o'});
   });
   return out.sort((a,b)=>b.v-a.v);
 }
+const LEAD_CUTS=[0.05,0.12,0.2,0.3],SHARE_CUTS=[0.15,0.3,0.45,0.6],TURN_CUTS=[0.55,0.62,0.69,0.76];
 function fillFor(c,nat){
   const m=VM.measure;
   if(m==='lead'){
     const cs=contestants(c,nat),lead=cs[0],gap=lead.v-(cs[1]?cs[1].v:0);
-    return `color-mix(in oklab,${lead.col} ${Math.round(28+Math.min(1,gap/0.4)*62)}%,var(--surface))`;
+    return ramp(lead.r,step(gap,LEAD_CUTS));
   }
-  if(m==='turnout')return `color-mix(in oklab,var(--accent) ${Math.round(Math.max(0,Math.min(1,(c.to-0.45)/0.35))*80+8)}%,var(--surface))`;
-  const v=m==='a'?c.i:c.o,col=m==='a'?TEAMC[0]:TEAMC[1];
-  return `color-mix(in oklab,${col} ${Math.round(Math.min(1,v/0.7)*85+5)}%,var(--surface))`;
+  if(m==='turnout')return ramp('t',step(c.to,TURN_CUTS));
+  return ramp(m==='a'?'a':'b',step(m==='a'?c.i:c.o,SHARE_CUTS));
 }
+const steps=r=>`<span class="lg-steps" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i style="background:${ramp(r,n)}"></i>`).join('')}</span>`;
 
 function build(){
   const svg=$('#vmMap');if(!svg||typeof KE_GEO==='undefined')return false;
@@ -76,14 +81,14 @@ function build(){
 function legend(nat){
   const el=$('#vmLegend');if(!el)return;
   if(VM.measure==='lead'){
-    const cs=[{name:S.cfg.teams[0],col:TEAMC[0]}];
-    if(nat.B&&nat.B.members.length)cs.push({name:S.cfg.teams[1],col:TEAMC[1]});
-    (nat.others||[]).slice(0,3).forEach(o=>{const ti=o.key[0]==='t'?+o.key.slice(1):-1;cs.push({name:o.name,col:ti>=0?TEAMC[ti]:'var(--ink-subtle)'});});
-    el.innerHTML=`<div class="mbar-row">${cs.map(c=>`<span class="lg-i"><i style="background:${c.col}"></i>${esc(c.name)}</span>`).join('')}</div><p class="mbar-note">Colour shows who leads each county; stronger colour means a bigger lead.</p>`;
+    const cs=[{name:S.cfg.teams[0],r:'a'}];
+    if(nat.B&&nat.B.members.length)cs.push({name:S.cfg.teams[1],r:'b'});
+    (nat.others||[]).slice(0,3).forEach(o=>{const ti=o.key[0]==='t'?+o.key.slice(1):-1;cs.push({name:o.name,r:ti>=0?RAMP[ti]:'o'});});
+    el.innerHTML=`<div class="mbar-row">${cs.map(c=>`<span class="lg-i">${steps(c.r)}${esc(c.name)}</span>`).join('')}</div><p class="mbar-note">Colour shows who leads; darker steps mean a bigger lead (under 5, 5–12, 12–20, 20–30, over 30 points).</p>`;
   }else{
-    const col=VM.measure==='a'?TEAMC[0]:VM.measure==='b'?TEAMC[1]:'var(--accent)';
-    const lab=VM.measure==='turnout'?'Turnout: 45% → 80%':`${esc(VM.measure==='a'?S.cfg.teams[0]:S.cfg.teams[1])} share: 0% → 70%`;
-    el.innerHTML=`<div class="mbar-row"><span class="lg-ramp" style="--c:${col}"></span><span class="mbar-note">${lab}</span></div>`;
+    const r=VM.measure==='a'?'a':VM.measure==='b'?'b':'t';
+    const lab=VM.measure==='turnout'?'Turnout: under 55% → over 76%':`${esc(VM.measure==='a'?S.cfg.teams[0]:S.cfg.teams[1])} share: under 15% → over 60%`;
+    el.innerHTML=`<div class="mbar-row"><span class="lg-i">${steps(r)}</span><span class="mbar-note">${lab}</span></div>`;
   }
 }
 
@@ -95,6 +100,17 @@ function outlineSVG(name){
   return `<svg class="cty-map" viewBox="${(x0-pad).toFixed(1)} ${(y0-pad).toFixed(1)} ${(x1-x0+2*pad).toFixed(1)} ${(y1-y0+2*pad).toFixed(1)}" role="img" aria-label="Outline of ${esc(name)}"><path class="cty-out" d="${g.d}"/></svg>`;
 }
 
+// Margin gauge: A minus B on a diverging track centred on "level"; ±5 points (the petition zone) shaded
+function marginGauge(c){
+  const W=300,pad=8,span=0.8,m=c.i-c.o,X=v=>pad+(Math.max(-span,Math.min(span,v))+span)/(2*span)*(W-2*pad);
+  const A=S.cfg.teams[0],B=S.cfg.teams[1];
+  return `<div class="mgauge"><svg viewBox="0 0 ${W} 40" role="img" aria-label="${esc(m>=0?A:B)} ahead by ${p1(Math.abs(m))}${Math.abs(m)<0.05?', inside the 5-point petition zone':''}">
+    <rect class="z" x="${X(-0.05)}" y="4" width="${X(0.05)-X(-0.05)}" height="16" rx="2"/>
+    <line class="tk" x1="${pad}" x2="${W-pad}" y1="12" y2="12"/><line class="mid" x1="${X(0)}" x2="${X(0)}" y1="2" y2="22"/>
+    <circle class="pin" cx="${X(m).toFixed(1)}" cy="12" r="7" style="fill:${m>=0?'var(--team-a)':'var(--team-b)'}"/>
+    <text x="${pad}" y="36">B +80</text><text x="${X(0)}" y="36" text-anchor="middle">level</text><text x="${W-pad}" y="36" text-anchor="end">A +80</text>
+  </svg></div>`;
+}
 // Why the county looks like this: regional poll evidence, home candidates, method
 function basis(name){
   if(typeof GROUP_BASIS==='undefined')return '';
@@ -122,6 +138,7 @@ function card(nat){
   const lead=cs[0],second=cs[1];
   body.innerHTML=`${outlineSVG(name)}
     <div class="cty-res">${cs.filter(x=>x.v>=0.005).slice(0,5).map(x=>`<div class="cty-bar"><span class="nm">${esc(x.name)}</span><span class="tr"><i style="width:${(x.v*100).toFixed(1)}%;background:${x.col}"></i></span><b>${p1(x.v)}</b></div>`).join('')}</div>
+    ${nat.B&&nat.B.members.length?marginGauge(c):''}
     <div class="cty-stats">
       <span>Leader <b>${esc(lead.name)}</b> by ${p1(lead.v-(second?second.v:0))}</span>
       <span>Turnout <b>${p1(c.to)}</b></span>

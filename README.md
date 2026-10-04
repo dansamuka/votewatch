@@ -28,11 +28,17 @@ Technical tables sit in "Technical detail" sections, closed by default.
 
 ```
 index.html              markup: header, Teams sidebar, tab panels
-css/tokens.css          all design tokens (light default; dark via <html data-theme="dark">)
-css/app.css             all component styles
-js/viz.js               race strip, outcome dots, margin strip, Article 138 gates, run-off flow
+css/tokens.css          all design tokens: surfaces, ink, team + lifecycle colours, map ramps,
+                        8pt spacing, type scale, shadows, motion (light default; dark via
+                        <html data-theme="dark">; print overrides)
+css/app.css             component styles, one home per selector (base · shell · header · tabs ·
+                        sidebar · surfaces · text · controls · tables · graphics · map · report)
+js/viz.js               hero ribbon + Kenya dot map, outcome dots, margin strip, Article 138
+                        gates, run-off flow, 25% threshold strip
 js/app.js               engine (candidate field, teams, simulation, run-off) and rendering
-js/enhance.js           accessibility, cartogram, first-visit guide
+js/enhance.js           tabs (ARIA, sliding indicator), docking header verdict, county band,
+                        first-visit guide
+docs/DESIGN-SPEC.md     v9 design audit and spec (colour contract, type scale, motion tokens)
 js/map.js               county map and county panel
 data/wards.js           ward-level dataset  (const WD)
 data/counties.js        county dataset      (const CO)
@@ -41,6 +47,16 @@ data/context.js         candidate polling averages and regional profiles, nation
 data/kenya-geo.js       Kenya + 47 county outlines + lakes, pre-projected (from the Projects Atlas; geoBoundaries / Natural Earth, public domain)
 docs/AUDIT.md           engine and data audit, method and calibration notes
 ```
+
+## Design rules
+
+- **Colour contract.** Team hues identify sides (A orange, B blue, C teal,
+  D violet, others slate) and never mean good or bad. Red, green and amber mean
+  state (risk, passes, watch) and never identify a side. Blue accent marks
+  interactive and selected things only.
+- **Public vs analyst view.** Technical columns carry `class="opt"` and method
+  notes `class="analyst-only"`; both are hidden in public view.
+- **Spacing and type** come from tokens (`--sp-*`, `--t-*`); avoid raw px.
 
 ## Run locally
 

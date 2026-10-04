@@ -1,16 +1,29 @@
-/* UI enhancement layer: accessibility wiring, lazy geometry, hero cartogram,
-   KPI sparklines/gauge. Reads scenario state; never changes scenario logic. */
+/* UI enhancement layer: tab wiring (ARIA, sliding indicator, edge fades),
+   accessible names, the Overview county band, the docking header verdict and
+   the settings shell. Reads scenario state; never changes scenario logic. */
 (function(){
 'use strict';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
-/* ── Tabs: keep ARIA in sync with the existing class-based switching ── */
+/* ── Tabs: ARIA in sync with the class-based switching, one sliding underline ── */
+function placeIndicator(){
+  const list=$('.tablist'),ind=$('.tab-ind'),act=$('.tbtn.act');if(!list||!ind||!act)return;
+  // translateX + scaleX from the active tab's box: transform-only, no layout work
+  ind.style.transform=`translateX(${act.offsetLeft+8}px) scaleX(${Math.max(1,act.offsetWidth-16)})`;
+}
+function fades(){
+  const l=$('.tablist');if(!l)return;
+  l.classList.toggle('fade-l',l.scrollLeft>4);
+  l.classList.toggle('fade-r',l.scrollLeft+l.clientWidth<l.scrollWidth-4);
+}
 function syncTabs(){
   $$('.tbtn').forEach(b=>{
     const on=b.classList.contains('act');
     b.setAttribute('aria-selected',on);
     b.tabIndex=on?0:-1;
+    if(on&&b.scrollIntoView&&b.parentElement.scrollWidth>b.parentElement.clientWidth)b.scrollIntoView({block:'nearest',inline:'nearest'});
   });
+  placeIndicator();fades();
 }
 function initTabs(){
   const list=$('.tablist'); if(!list)return;
@@ -26,6 +39,9 @@ function initTabs(){
     if(!n)return;
     e.preventDefault();n.focus();n.click();
   });
+  list.addEventListener('scroll',fades,{passive:true});
+  addEventListener('resize',()=>{placeIndicator();fades();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(syncTabs);
   syncTabs();
 }
 
@@ -35,56 +51,38 @@ function labelControls(root=document){
     if(el.getAttribute('aria-label')||el.getAttribute('aria-labelledby')||(el.id&&$(`label[for="${el.id}"]`))||el.closest('label'))return;
     let t='';
     const wrap=el.parentElement;
-    const lab=wrap&&$('label,.ctrl-l,.sw-lbl,.rbar-lbl',wrap);
+    const lab=wrap&&$('label',wrap);
     if(lab)t=(lab.childNodes[0]&&lab.childNodes[0].textContent||'').trim()||lab.textContent.trim();
-    if(!t){const p=el.closest('.sw');const l=p&&$('.sw-lbl',p);if(l)t=l.textContent.trim();}
     t=t||el.getAttribute('title')||el.getAttribute('placeholder')||el.id;
     if(t)el.setAttribute('aria-label',t);
   });
 }
 
-/* ── Hero: one-row county band (who leads each county), links to the Map ── */
+/* ── Overview: county band (who leads each county, by region) ── */
+const RAMP={inc:'a',opp:'b',t2:'c',t3:'d'};
 function renderHero(){
   const body=$('#heroBody'); if(!body||typeof S==="undefined"||!S.res)return;
   const nat=S.res.nat,order=['Rift & North','Mt Kenya','Eastern','Coast','Nyanza','Western & Nairobi'];
   const rows=S.res.ctyRes.slice().sort((a,b)=>order.indexOf(a.cluster)-order.indexOf(b.cluster)||b.i-a.i);
   const lead=c=>{const cs=[['inc',c.i],['opp',c.o]].concat((nat.others||[]).map(o=>[o.key,(c.oc?c.oc[o.idx]:0)/(c.tv||1)])).sort((x,y)=>y[1]-x[1]);return {k:cs[0][0],gap:cs[0][1]-(cs[1]?cs[1][1]:0)};};
-  let html='',prev='';
+  // same five-step ramps as the map: weak lead → strong lead
+  const stepOf=g=>1+[0.05,0.12,0.2,0.3].filter(t=>g>=t).length;
+  let html='',prev='';const seen=new Set();
   rows.forEach(c=>{
     if(c.cluster!==prev){html+=`${prev?'</span>':''}<span class="cb-grp"><b>${c.cluster}</b>`;prev=c.cluster;}
-    const l=lead(c),mix=Math.round(30+Math.min(1,l.gap/0.4)*65);
-    html+=`<button type="button" class="cb-c" data-c="${c.name}" style="--c:color-mix(in oklab,${VZ.col(l.k)} ${mix}%,var(--surface))" aria-label="${c.name}: led by ${blocName(l.k,nat)}" title="${c.name}: ${blocName(l.k,nat)} leads"><span>${c.name}</span></button>`;
+    const l=lead(c),r=RAMP[l.k]||'o';seen.add(l.k);
+    html+=`<button type="button" class="cb-c" data-c="${c.name}" style="--c:var(--ramp-${r}-${stepOf(l.gap)})" aria-label="${c.name}: led by ${blocName(l.k,nat)}" title="${c.name}: ${blocName(l.k,nat)} leads by ${(l.gap*100).toFixed(1)} points"><span>${c.name}</span></button>`;
   });
   body.innerHTML=`<div class="cband">${html}</span></div>`;
+  const key=$('#heroKey');
+  if(key)key.innerHTML=[...seen].map(k=>`<span><i style="--c:var(--ramp-${RAMP[k]||'o'}-4)"></i>${blocName(k,nat)}</span>`).join('')+`<span>Paler: a narrower lead</span>`;
   $('#heroLeg').innerHTML=`<a href="#" class="hero-link" id="heroToMap">Open the map →</a>`;
   const go=n=>{if(n&&typeof selCounty==='function')selCounty(n);const b=$('.tbtn[data-t="map"]');if(b)b.click();window.scrollTo({top:0,behavior:'smooth'});};
   body.onclick=e=>{const b=e.target.closest('.cb-c');if(b)go(b.dataset.c);};
   $('#heroToMap').onclick=e=>{e.preventDefault();go(null);};
+  sideSummary();
 }
 
-/* ── KPI sparklines + dispute gauge ── */
-const hist={inc:[],ro:[],art:[],dis:[],tf:[]};
-const MAXH=24;
-function push(k,v){const a=hist[k];a.push(v);if(a.length>MAXH)a.shift();}
-function spark(a){
-  if(a.length<2)return'';
-  const lo=Math.min(...a),hi=Math.max(...a),sp=hi-lo||1;
-  const pts=a.map((v,i)=>`${(i/(a.length-1)*120).toFixed(1)},${(26-(v-lo)/sp*22).toFixed(1)}`).join(' ');
-  return`<svg class="kpi-spark" viewBox="0 0 120 28" preserveAspectRatio="none" role="img" aria-label="Trend over the last ${a.length} runs"><polyline fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
-}
-function gauge(score){
-  const s=Math.max(0,Math.min(100,score)),C=2*Math.PI*26,arc=C*0.75;
-  const col=s>60?'var(--c-red)':s>35?'var(--c-amber)':'var(--c-green)';
-  return`<svg class="kpi-gauge" viewBox="0 0 64 64" role="img" aria-label="Dispute risk ${Math.round(s)} out of 100"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--line-2)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${arc} ${C}" transform="rotate(135 32 32)"/><circle cx="32" cy="32" r="26" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(arc*s/100).toFixed(1)} ${C}" transform="rotate(135 32 32)"/></svg>`;
-}
-function decorateKPIs(r,mc_,dr,i25){
-  push('inc',r.nat.i*100);push('ro',mc_.ro*100);push('art',i25);push('dis',dr.score);push('tf',r.nat.t*100);
-  const keys=['inc','ro','art','dis','tf'];
-  $$('#kpiRow .kpi').forEach((el,i)=>{
-    const k=keys[i]; if(!k)return;
-    el.insertAdjacentHTML('beforeend',k==='dis'?gauge(dr.score):spark(hist[k]));
-  });
-}
 function wrapKPIs(){
   const orig=window.rKPIs; if(typeof orig!=='function')return;
   window.rKPIs=function(r,mc_,dr,f,i25){
@@ -93,14 +91,31 @@ function wrapKPIs(){
   };
 }
 
+/* ── Header: the verdict docks into the header only once the hero ribbon is off-screen ── */
+function initDock(){
+  const hdr=$('.hdr'),hero=$('#raceStrip');if(!hdr)return;
+  let heroVisible=true;
+  const update=()=>{const onOverview=($('.tbtn.act')||{}).dataset?.t==='cmd';hdr.dataset.docked=String(!onOverview||!heroVisible);};
+  if(hero&&'IntersectionObserver'in window){
+    new IntersectionObserver(([e])=>{heroVisible=e.isIntersecting;update();},{rootMargin:'-108px 0px 0px 0px'}).observe(hero);
+  }else heroVisible=false;
+  new MutationObserver(update).observe($('.tablist'),{attributes:true,subtree:true,attributeFilter:['class']});
+  update();
+}
+
 /* ── Shell: sidebar open/closed by width, export menu, first-run guide ── */
+const WIDE=matchMedia('(min-width:1280px)');
+function sideSummary(){
+  const h=$('.side-sum-hint');if(!h||typeof S==='undefined'||!S.cfg)return;
+  h.textContent=WIDE.matches?'Every tab updates as you change these':`${S.cfg.teams.slice(0,2).join(' vs ')} · ${S.cfg.follow}% follow`;
+}
 function initShell(){
-  const box=$('#sideBox'), wide=matchMedia('(min-width:1024px)');
+  const box=$('#sideBox');
   if(box){
-    const apply=()=>{box.open=wide.matches;};
-    apply();wide.addEventListener('change',apply);
+    const apply=()=>{box.open=WIDE.matches;sideSummary();};
+    apply();WIDE.addEventListener('change',apply);
     // on desktop the settings panel is always visible; the summary is just a heading
-    $('.side-sum',box).addEventListener('click',e=>{if(wide.matches)e.preventDefault();});
+    $('.side-sum',box).addEventListener('click',e=>{if(WIDE.matches)e.preventDefault();});
   }
   const menu=$('.menu');
   if(menu){
@@ -118,7 +133,7 @@ function initShell(){
 
 /* ── boot ── */
 wrapKPIs();
-initTabs();initShell();labelControls();
+initTabs();initShell();initDock();labelControls();
 let lblQueued=false;
 new MutationObserver(()=>{if(lblQueued)return;lblQueued=true;requestAnimationFrame(()=>{lblQueued=false;labelControls();});})
   .observe(document.body,{childList:true,subtree:true});

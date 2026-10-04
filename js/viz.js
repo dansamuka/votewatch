@@ -26,14 +26,36 @@ function race(el,r,mc,i25,o25){
   if(!el)return;
   const nat=r.nat,f=field(nat);
   if(!el.dataset.built){
-    el.innerHTML=`<header class="race-hd"><p class="eyebrow" id="raceT">First round · decided voters</p><p class="race-verdict" id="raceV"></p></header>
-      <div class="rs" role="img" id="raceBar"><div class="rs-segs"></div><span class="rs-half"><i>50% + 1</i></span></div>
+    el.innerHTML=`<header class="race-hd"><p class="eyebrow" id="raceT">First round · decided voters</p><p class="race-verdict" id="raceV"></p>
+        <p class="race-total"><span>Votes cast</span><b id="raceTot"></b></p></header>
+      <div class="rs-wrap"><div class="rs" role="img" id="raceBar"><div class="rs-segs"></div></div>
+        <div class="rs-rule" aria-hidden="true"><i>50% + 1</i></div><div class="rs-gap" id="raceGap" aria-hidden="true"><span></span></div></div>
       <ol class="race-legend" id="raceLg"></ol>
-      <div class="ctyband"><span class="eyebrow">25%+ in counties</span><div class="cb-rows" id="raceCb"></div><span class="need">needs 24</span></div>`;
+      <div class="ctyband"><span class="eyebrow">25%+ in counties</span><div class="cb-rows" id="raceCb"></div><span class="need">needs 24</span></div>
+      <svg class="ke-sig" id="keSig" viewBox="-44 -40 560 636" role="link" tabindex="0" aria-label="Who leads each county: open the map"></svg>`;
     el.dataset.built='1';
+    const sig=el.querySelector('#keSig'),go=()=>{const b=document.querySelector('.tbtn[data-t="map"]');if(b){b.click();window.scrollTo({top:0,behavior:'smooth'});}};
+    sig.addEventListener('click',go);sig.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
   }
   const v=verdictOf(mc),pr=r2pair(nat);
-  el.querySelector('#raceV').innerHTML=`<b>${esc(v.t)}</b>${v.t==='Run-off'?` · ${esc(blocName(pr.a,nat))} vs ${esc(blocName(pr.b,nat))}`:''} <span>${p0(v.p)} of simulations</span>`;
+  const A=blocName(pr.a,nat),B=blocName(pr.b,nat),cls=k=>k==='inc'?'rv-a':k==='opp'?'rv-b':'';
+  el.querySelector('#raceV').innerHTML=v.t==='Run-off'
+    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span>${p0(v.p)} of simulations</span>`
+    :`<b>${esc(v.t)}</b> <span>${p0(v.p)} of simulations</span>`;
+  el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
+  // gap annotation: how far the leader is from 50% + 1
+  const lead=f[0],gap=el.querySelector('#raceGap');
+  gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>=0.5);
+  gap.querySelector('span').textContent=lead.v<0.5?`+${((0.5-lead.v)*100).toFixed(1)} pts to win outright`:'';
+  // Kenya signature: county centroids coloured by who leads, sized by votes cast (built when idle)
+  (window.requestIdleCallback||setTimeout)(()=>{
+    const sig=el.querySelector('#keSig');if(!sig||typeof KE_GEO==='undefined')return;
+    const NAME={'Elgeyo-Marakwet':'Elgeyo/Marakwet','Tharaka':'Tharaka - Nithi',"Murang'a":"Murang'A",'Nairobi':'Nairobi City'};
+    const byName=new Map(r.ctyRes.map(c=>[c.name,c]));
+    sig.innerHTML=`<path d="${KE_GEO.kenya}"/>`+KE_GEO.counties.map(g=>{const nm=NAME[g.n]||g.n,c=byName.get(nm);
+      const k=!c?'x':c.lead==='inc'?'inc':c.lead==='opp'?'opp':'x';
+      return `<circle cx="${g.c[0]}" cy="${g.c[1]}" r="${c?(5+Math.sqrt(c.tv)/110).toFixed(1):5}" style="fill:${col(k)}"><title>${esc(nm)}</title></circle>`;}).join('');
+  });
   // keyed segments: transform-only updates so they glide between scenarios
   const segs=el.querySelector('.rs-segs');let x=0;const seen=new Set();
   // top three contestants, then everyone else as one grey segment
@@ -51,9 +73,8 @@ function race(el,r,mc,i25,o25){
   el.querySelector('#raceBar').setAttribute('aria-label',f.slice(0,3).map(c=>`${c.name} ${p1(c.v)}`).join(', ')+'. 50% plus one needed to win outright.');
   // legend: top three plus the rest
   const top=f.slice(0,3),rest=f.slice(3).reduce((s,c)=>s+c.v,0);
-  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*nat.v)}</em></li>`).join('')+
-    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*nat.v)}</em></li>`:'')+
-    `<li class="race-total"><span>Votes cast</span><b>${Math.round(nat.v).toLocaleString('en-KE')}</b></li>`;
+  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*nat.v)} votes</em></li>`).join('')+
+    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*nat.v)} votes</em></li>`:'');
   // 47-county meters for team A and team B
   const row=(k,n)=>`<div class="cb-row" role="img" aria-label="${esc(blocName(k,nat))}: 25% or more in ${n} of 47 counties"><span class="cb-l" style="color:${ink(k)}">${k==='inc'?'A':'B'} <b>${n}</b></span><span class="ticks" style="--c:${col(k)}">${Array.from({length:47},(_,i)=>`<i${i<n?' class="on"':''}></i>`).join('')}</span></div>`;
   el.querySelector('#raceCb').innerHTML=row('inc',i25)+(nat.B&&nat.B.members.length?row('opp',o25):'');
@@ -103,14 +124,17 @@ function gates(el,r,mc,i25,o25){
   const mk=(k,x,l)=>`<span class="mark${k==='opp'?' below':''}" style="--x:${(x*100).toFixed(2)}%;--c:${col(k)}" data-l="${esc(l)}"></span>`;
   const passA1=nat.i>0.5,passB1=hasB&&nat.o>0.5,passA2=i25>=24,passB2=hasB&&o25>=24;
   const who=(passA1&&passA2)?`${esc(blocName('inc'))} passes both`:(passB1&&passB2)?`${esc(blocName('opp'))} passes both`:'Nobody passes both';
+  // each rule is a door on the track: it shows open (green) once someone is through it
+  const door=(x,open)=>`<span class="door${open?' open':''}" style="--x:${x}" aria-hidden="true"></span>`;
+  const both=(passA1&&passA2)||(passB1&&passB2);
   el.innerHTML=`<h3 class="card-t">To win outright you need both</h3>
   <div class="gate"><p class="eyebrow">1 · Over 50% of all votes</p>
-    <div class="track">${mk('inc',nat.i,'A '+p1(nat.i))}${hasB?mk('opp',nat.o,'B '+p1(nat.o)):''}<span class="notch" style="--x:50%"></span></div>
-    <p class="gate-s">${passA1?'A passes':passB1?'B passes':'Neither is above 50%'}</p></div>
+    <div class="track">${door('50%',passA1||passB1,'50% + 1')}${mk('inc',nat.i,'A '+p1(nat.i))}${hasB?mk('opp',nat.o,'B '+p1(nat.o)):''}</div>
+    <p class="gate-s">${passA1?'A is through':passB1?'B is through':'Neither is above 50%'}</p></div>
   <div class="gate"><p class="eyebrow">2 · 25% in at least 24 of 47 counties</p>
-    <div class="track">${mk('inc',i25/47,'A '+i25)}${hasB?mk('opp',o25/47,'B '+o25):''}<span class="notch" style="--x:${(24/47*100).toFixed(2)}%"></span></div>
-    <p class="gate-s">${[passA2&&'A passes',passB2&&'B passes'].filter(Boolean).join(' · ')||'Neither reaches 24'}</p></div>
-  <p class="gate-out"><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations).`:`Outright win chance: A ${p0(mc.iW)}, B ${p0(mc.oW)}.`}</p>`;
+    <div class="track">${door((24/47*100).toFixed(2)+'%',passA2||passB2,'24 counties')}${mk('inc',i25/47,'A '+i25)}${hasB?mk('opp',o25/47,'B '+o25):''}</div>
+    <p class="gate-s">${[passA2&&'A is through',passB2&&'B is through'].filter(Boolean).join(' · ')||'Neither reaches 24'}</p></div>
+  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations).`:`Outright win chance: A ${p0(mc.iW)}, B ${p0(mc.oW)}.`}</span></p>`;
 }
 
 /* ── Run-off transfer flow (three columns) ── */
@@ -121,10 +145,10 @@ function flow(el,r,dir){
   const sh=k=>k==='inc'?nat.i:k==='opp'?nat.o:((nat.others||[]).find(o=>o.key===k)||{share:0}).share;
   const a=sh(ro.a),b=sh(ro.b),pool=Math.max(0,1-a-b);
   const toA=ro.shareA-a,toB=ro.shareB-b; // pool votes that end up with each finalist
-  const W=780,H=220,cw=14,gap=10,top=10,usable=H-2*top-2*gap;
+  const W=780,H=236,cw=14,gap=10,top=26,usable=H-top-10-2*gap;
   const hA=a*usable,hB=b*usable,hP=pool*usable;
   const L=[{k:ro.a,y:top,h:hA},{k:ro.b,y:top+hA+gap,h:hB},{k:'pool',y:top+hA+hB+2*gap,h:hP}];
-  const RA={y:top+(H-2*top-ro.shareA*usable-ro.shareB*usable-gap)/2,h:ro.shareA*usable};const RB={y:RA.y+RA.h+gap,h:ro.shareB*usable};
+  const RA={y:top+(H-top-10-ro.shareA*usable-ro.shareB*usable-gap)/2,h:ro.shareA*usable};const RB={y:RA.y+RA.h+gap,h:ro.shareB*usable};
   const x0=205,x1=W-205;
   const rib=(y0,h0,y1,h1,c)=>`<path d="M${x0+cw},${y0} C${(x0+x1)/2},${y0} ${(x0+x1)/2},${y1} ${x1},${y1} L${x1},${y1+h1} C${(x0+x1)/2},${y1+h1} ${(x0+x1)/2},${y0+h0} ${x0+cw},${y0+h0}Z" style="fill:${c}" class="rib"/>`;
   const pA=toA/(pool||1)*hP;
@@ -136,7 +160,7 @@ function flow(el,r,dir){
     ${L.map(n=>`<text x="${x0-8}" y="${n.y+n.h/2+4}" text-anchor="end" class="fl-l">${esc(n.k==='pool'?'Everyone else':blocName(n.k,nat))} <tspan class="fl-v">${p1(n.k==='pool'?pool:sh(n.k))}</tspan></text>`).join('')}
     <text x="${x1+cw+8}" y="${RA.y+RA.h/2+4}" class="fl-l">${esc(blocName(ro.a,nat))} <tspan class="fl-v">${p1(ro.shareA)}</tspan></text>
     <text x="${x1+cw+8}" y="${RB.y+RB.h/2+4}" class="fl-l">${esc(blocName(ro.b,nat))} <tspan class="fl-v">${p1(ro.shareB)}</tspan></text>
-    <text x="${x0+cw/2}" y="${H-1}" text-anchor="middle" class="ax-l">Round 1</text><text x="${x1+cw/2}" y="${H-1}" text-anchor="middle" class="ax-l">Run-off</text>
+    <text x="${x0+cw/2}" y="12" text-anchor="middle" class="ax-l">ROUND 1</text><text x="${x1+cw/2}" y="12" text-anchor="middle" class="ax-l">RUN-OFF</text>
   </svg>`;
   el.innerHTML=svg+`<p class="mstrip-cap">${esc(blocName(ro.winner,nat))} wins round two with ${p1(Math.max(ro.shareA,ro.shareB))}. Everyone else's votes split ${dir==='toA'?`70/30 toward ${esc(blocName(ro.a,nat))}`:dir==='toB'?`70/30 toward ${esc(blocName(ro.b,nat))}`:'50/50'}.</p>`;
 }
@@ -150,8 +174,8 @@ function threshold(el,ctyRes){
   const mid=H/2-8,yOf=l=>mid+(l%2?1:-1)*Math.ceil(l/2)*(R*2+1);
   const near=pts.filter(p=>Math.abs(p.v-0.25)<0.08).length,pass=pts.filter(p=>p.v>=0.25).length;
   el.innerHTML=`<svg class="mstrip" viewBox="0 0 ${W} ${H}" role="img" aria-label="${pass} of 47 counties give team A 25% or more; ${near} are within 8 points of the line">
-    <rect class="zone" x="${X(0.17)}" y="4" width="${X(0.33)-X(0.17)}" height="${H-28}" rx="3" style="fill:color-mix(in oklab,var(--c-amber) 12%,transparent)"/>
-    <line class="axis" x1="${pad}" x2="${W-pad}" y1="${mid}" y2="${mid}"/><line class="zero" x1="${X(0.25)}" x2="${X(0.25)}" y1="2" y2="${H-24}" style="stroke-dasharray:none;stroke-width:2"/>
+    <rect class="zone-watch" x="${X(0.17)}" y="4" width="${X(0.33)-X(0.17)}" height="${H-28}" rx="3"/>
+    <line class="axis" x1="${pad}" x2="${W-pad}" y1="${mid}" y2="${mid}"/><line class="rule" x1="${X(0.25)}" x2="${X(0.25)}" y1="2" y2="${H-24}"/>
     ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${yOf(p.l).toFixed(1)}" r="${Math.abs(p.v-0.25)<0.08?R+1:R}" style="fill:${p.v>=0.25?'var(--team-a)':'var(--team-b)'}"><title>${esc(p.n)}: team A ${p1(p.v)}</title></circle>`).join('')}
     ${[0,0.25,0.5,0.95].map(t=>`<text x="${X(t)}" y="${H-6}" class="ax-l" text-anchor="${t===0?'start':t===0.95?'end':'middle'}">${Math.round(t*100)}%</text>`).join('')}
   </svg><p class="mstrip-cap"><b>${pass}</b> of 47 counties give team A 25% or more (needs 24). <b>${near}</b> sit in the shaded band within 8 points of the line.</p>`;
