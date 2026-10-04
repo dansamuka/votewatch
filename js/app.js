@@ -586,7 +586,7 @@ function rNat(r){
   <div class="u-well">
     <div class="eyebrow u-mb4">${mapEsc(l)}</div>
     <div class="nat-v" style="color:${VZ.ink(k)}">${pct(v)}</div>
-    <div class="x-01">${N.format(Math.round(v*n.v))} votes</div>
+    <div class="u-meta u-mt4">${N.format(Math.round(v*n.v))} votes</div>
     <div class="pbar mt8"><div class="pf" style="width:${pct(v,0)};background:${VZ.col(k)}"></div></div>
   </div>`).join('')}
   </div>
@@ -644,7 +644,7 @@ function rRunoff(r,mc_){
     return`<div class="ro-card">
       <div class="ro-ttl" style="color:${d.c}">${d.l}</div>
       <div class="ro-val" style="color:${BC[ro.winner]}">${pct(Math.max(ro.shareA,ro.shareB))}</div>
-      <div class="x-02">${A} ${pct(ro.shareA)} · ${B} ${pct(ro.shareB)} · ${A} leads in ${carriedA}/47 counties</div>
+      <div class="ro-sub">${A} ${pct(ro.shareA)} · ${B} ${pct(ro.shareB)} · ${A} leads in ${carriedA}/47 counties</div>
       <div class="pbar mt8"><div class="pf" style="width:${pct(ro.shareA,0)};background:${BC[ro.a]}"></div></div>
       <div class="u-mt8"><span class="b" style="color:${BC[ro.winner]};border-color:currentColor">${blocName(ro.winner)} wins</span></div>
     </div>`;
@@ -663,8 +663,8 @@ function rRunoff(r,mc_){
   </tr>`).join('')||'<tr><td colspan="4" class="hint">No county within 10 points of 50/50.</td></tr>'}</tbody>`;
 
   $('#ffDetail').innerHTML=`<div class="g3">
-    <div><div class="kpi-l">A + B combined</div><div class="x-03">${pct(nat.i+nat.o)}</div></div>
-    <div><div class="kpi-l">Others needed to force a run-off</div><div class="x-04">${f.ia?pct(f.tbi+nat.t):'Blocked'}</div></div>
+    <div><div class="kpi-l">A + B combined</div><div class="stat-v">${pct(nat.i+nat.o)}</div></div>
+    <div><div class="kpi-l">Others needed to force a run-off</div><div class="stat-v c-warn">${f.ia?pct(f.tbi+nat.t):'Blocked'}</div></div>
     <div><div class="kpi-l">Status</div>${f.forced?'<span class="b b-r">Run-off</span>':f.ia?'<span class="b b-g">A above 50%</span>':'<span class="b b-gr">B above 50%</span>'}</div>
   </div>`;
 }
@@ -688,14 +688,14 @@ function rTipping(r,f,i25){
 
   const below=tip.filter(t=>t.ig>0),marg=tip.filter(t=>t.ig<=0&&t.ig>-0.05);
   $('#p24').innerHTML=`<div class="g2 mb12">
-    <div class="x-05">
-      <div class="x-06">Below 25%</div>
-      <div class="x-07">${below.length} counties</div>
+    <div class="tile tile-risk">
+      <div class="tile-k">Below 25%</div>
+      <div class="tile-v">${below.length} counties</div>
       <div class="u-meta u-mt4">Closest: ${below[0]?.name||'—'} (${pct(below[0]?.i||0)})</div>
     </div>
-    <div class="x-08">
-      <div class="x-09">Marginal (≤30%)</div>
-      <div class="x-10">${marg.length} counties</div>
+    <div class="tile tile-ok">
+      <div class="tile-k">Marginal (≤30%)</div>
+      <div class="tile-v">${marg.length} counties</div>
       <div class="u-meta u-mt4">At risk with -3pp swing</div>
     </div>
   </div>
@@ -714,7 +714,7 @@ function rTipping(r,f,i25){
     <td class="c-others">${pct(t.t)}</td>
     <td class="u-meta">${hist?pct(hist.hist17)+'→'+pct(hist.baseIncumbent2022):'—'}</td>
     <td><span class="b ${t.dq==='high'?'b-gr':t.dq==='medium'?'b-g':'b-r'}">${t.dq}</span></td></tr>`;
-  }).join(''):`<tr><td class="x-11" colspan="9">No counties within ±8pp of 25% threshold at current parameters.</td></tr>`}</tbody>`;
+  }).join(''):`<tr><td class="td-empty" colspan="9">No counties within ±8pp of 25% threshold at current parameters.</td></tr>`}</tbody>`;
 
   $('#a138Tbl').innerHTML=`<thead><tr><th>County</th><th>Lead</th><th>A</th><th>≥25?</th><th>B</th><th>≥25?</th><th>Others</th></tr></thead>
   <tbody>${(S.res?.ctyRes||[]).map(c=>`<tr>
@@ -849,7 +849,7 @@ function rConst(r,mc_){
   <div class="u-mb8">
     <div class="fb mb8 u-fs12"><span class="u-strong">${cl}</span>
     <span class="cl-n">${d.a} of ${d.t} counties</span></div>
-    <div class="x-12">
+    <div class="meter">
       <div style="height:100%;width:${d.a/d.t*100}%;background:var(--gbr);"></div>
     </div>
   </div>`).join('');
@@ -858,12 +858,12 @@ function rConst(r,mc_){
   const cst=OLG.map(n=>ctyRes.find(c=>c.name===n)).filter(Boolean);
   $('#coalDisp').innerHTML=`
   <div class="mb12">
-    <div class="x-13">Western counties</div>
+    <div class="u-strong u-fs12 u-mb8 c-team-a">Western counties</div>
     ${wk.map(c=>`<div class="fb u-row u-mono12 u-py4">
       <span>${c.name}</span><span class="c-team-a">${pct(c.i)}</span></div>`).join('')}
   </div>
   <div>
-    <div class="x-14">Coast counties</div>
+    <div class="u-strong u-fs12 u-mb8 c-warn">Coast counties</div>
     ${cst.map(c=>`<div class="fb u-row u-mono12 u-py4">
       <span>${c.name}</span><span style="color:${c.i>=0.25?'var(--blbr)':'var(--red2)'}">${pct(c.i)} ${c.i>=0.25?'✓':'✗'}</span></div>`).join('')}
   </div>`;
@@ -898,7 +898,7 @@ function rSens(){
     <td class="u-strong">${w.ward}</td><td>${w.county}</td>
     <td class="u-meta">${w.constituency}</td>
     <td class="u-mono12">${N.format(w.voters)}</td>
-    <td><div class="pbar x-15"><div class="pf p-g" style="width:${Math.min(100,w.inf*2)}%"></div></div></td>
+    <td><div class="pbar pbar-sm"><div class="pf p-g" style="width:${Math.min(100,w.inf*2)}%"></div></div></td>
     <td style="color:${iCol(w.cis)}">${pct(w.cis)}</td>
     <td><span class="b ${w.dq==='high'?'b-gr':w.dq==='medium'?'b-g':'b-r'}">${w.dq}</span></td>
   </tr>`).join('')}</tbody>`;
@@ -1097,8 +1097,8 @@ function rDispute(ctyRes,dr){
   $('#disClust').innerHTML=Object.entries(dr.byC).sort((a,b)=>b[1]-a[1]).map(([cl,n])=>`
   <div class="fb u-row">
     <span class="u-strong u-fs12">${cl}</span>
-    <div class="fc g8"><div class="pbar x-16"><div class="pf p-r" style="width:${n/dr.n*100}%"></div></div>
-    <span class="x-17">${n}</span></div>
+    <div class="fc g8"><div class="pbar pbar-md"><div class="pf p-r" style="width:${n/dr.n*100}%"></div></div>
+    <span class="u-mono12 c-accent">${n}</span></div>
   </div>`).join('')||'<div class="u-meta">No close counties at current scenario.</div>';
 
   $('#disTbl').innerHTML=`<thead><tr><th>County</th><th>Lead</th><th>Margin</th><th>A</th><th>B</th><th>DQ</th><th>Volatility</th><th>Region</th></tr></thead>
@@ -1158,33 +1158,33 @@ function rWardDrill(wardRes){
 
 function rIntel(){
   $('#levList').innerHTML=LEVERS.map(l=>`
-  <div class="x-18">
+  <div class="item-row">
     <div style="width:7px;height:7px;border-radius:50%;margin-top:3px;flex-shrink:0;
       background:${l.s==='red'?'var(--red2)':l.s==='amb'?'var(--amb2)':'var(--gbr)'};
       box-shadow:0 0 4px ${l.s==='red'?'var(--red2)':l.s==='amb'?'var(--amb2)':'var(--gbr)'}"></div>
-    <div><div class="x-19">${mapEsc(l.t)}</div>
-    <div class="x-20">${mapEsc(l.d)}</div>
-    <div class="x-21"><strong>In the model:</strong> ${mapEsc(l.i)}</div></div>
+    <div><div class="item-t">${mapEsc(l.t)}</div>
+    <div class="item-d">${mapEsc(l.d)}</div>
+    <div class="item-impl"><strong>In the model:</strong> ${mapEsc(l.i)}</div></div>
   </div>`).join('');
 
   $('#sentList').innerHTML=SENTS.map(s=>`
   <div class="u-row">
-    <div class="fb mb8"><span class="x-22">${mapEsc(s.t)}</span>
+    <div class="fb mb8"><span class="item-t">${mapEsc(s.t)}</span>
     <div class="fc g6"><span class="b ${s.tier==='HIGH'?'b-r':s.tier==='MED'?'b-g':'b-m'}">${s.tier}</span>
     <span class="u-meta">${s.freq}</span></div></div>
-    <div class="x-23">${mapEsc(s.n)}</div>
+    <div class="u-meta u-italic">${mapEsc(s.n)}</div>
   </div>`).join('');
 
   $('#byeList').innerHTML=BYES.map(b=>`
   <div class="u-row">
     <div class="fb mb8"><span class="u-strong u-fs12">${b.n} (${b.yr})</span>
     <span class="u-meta">${b.co}</span></div>
-    <div class="g3 x-24">
+    <div class="g3 u-mono12">
       <div><div class="c-muted">Model</div><div class="u-strong">${pct(b.mb)}</div></div>
       <div><div class="c-muted">Actual</div><div class="u-strong">${pct(b.act)}</div></div>
       <div><div class="c-muted">Delta</div><div style="font-weight:600;color:${b.d<0?'var(--red2)':'var(--gbr)'}">${b.d>0?'+':''}${pct(b.d)}</div></div>
     </div>
-    <div class="x-25">${b.note}</div>
+    <div class="u-meta u-mt4 u-italic">${b.note}</div>
   </div>`).join('');
 
   $('#dataRoadmap').innerHTML=ROADMAP.map(d=>`
@@ -1192,13 +1192,13 @@ function rIntel(){
     <span class="b ${d.p==='P1'?'b-r':d.p==='P2'?'b-g':'b-m'}">${d.p}</span>
     <div><div class="u-strong u-fs12">${d.i}</div>
     <div class="u-meta">${d.imp}</div>
-    <div class="x-26">Source: ${d.src}</div></div>
+    <div class="u-meta">Source: ${d.src}</div></div>
   </div>`).join('');
 
   $('#regEffects').innerHTML=REG_EFF.map(r=>`
   <div class="u-row">
-    <div class="x-27">${r.sw}</div>
-    <div class="x-28">${r.e}</div>
+    <div class="u-strong u-fs12 u-mb4 c-accent">${r.sw}</div>
+    <div class="u-meta u-lh-snug">${r.e}</div>
   </div>`).join('');
 
   $('#methNotes').innerHTML=`<strong>How it works</strong><br>Each candidate's support comes from the national polling average and is spread across 1,457 wards using their home regions and 2022 voting patterns. Teams add up their members' support, minus supporters who don't follow. The model then runs the election hundreds of times with random polling error. An outright win needs over 50% nationally and 25% in 24 counties; otherwise the top two go to a run-off, won by most votes. This is a scenario tool, not a forecast.`;
@@ -1212,15 +1212,15 @@ function rIntel(){
     <span class="psm-v"><b class="c-team-a">${b.inc.toFixed(0)}</b> · <b class="c-team-b">${b.opp.toFixed(0)}</b></span></div>`;}).join('')+`<p class="hint mt8">Decided voters only. Orange = ${mapEsc(S.cfg.teams[0])}, blue = ${mapEsc(S.cfg.teams[1]||'team B')}, grey = everyone else. Change the teams and these bars regroup.</p>`;
   const pt=$('#pollsTbl');
   if(pt)pt.innerHTML=`<thead><tr><th>Released</th><th>Pollster</th><th>${mapEsc(S.cfg.teams[0])}</th><th>${mapEsc(S.cfg.teams[1]||'Team B')}</th><th>Others</th><th>Top names</th></tr></thead><tbody>${POLLS.map(p=>{const b=pollTeams(p);const top=Object.entries(p.r).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,v])=>`${mapEsc(n.split(' ').pop())} ${v}`).join(' · ');
-    return `<tr><td>${p.date}</td><td><a href="${p.url}" target="_blank" rel="noopener">${mapEsc(p.pollster)}</a>${p.eligible?'':' <span class="b b-m" title="Methodology not disclosed or not yet verified">held out</span>'}</td><td class="c-team-a">${b.inc.toFixed(1)}%</td><td class="c-team-b">${b.opp.toFixed(1)}%</td><td class="c-others">${b.tf.toFixed(1)}%</td><td class="x-29">${top}</td></tr>`;}).join('')}</tbody>`;
+    return `<tr><td>${p.date}</td><td><a href="${p.url}" target="_blank" rel="noopener">${mapEsc(p.pollster)}</a>${p.eligible?'':' <span class="b b-m" title="Methodology not disclosed or not yet verified">held out</span>'}</td><td class="c-team-a">${b.inc.toFixed(1)}%</td><td class="c-team-b">${b.opp.toFixed(1)}%</td><td class="c-others">${b.tf.toFixed(1)}%</td><td class="u-wrap">${top}</td></tr>`;}).join('')}</tbody>`;
   const cf=$('#ctxFacts');
   if(cf)cf.innerHTML=CONTEXT_FACTS.map(x=>`<li><span class="ctx-d">${x.date}</span> ${mapEsc(x.t)} <a href="${x.url}" target="_blank" rel="noopener">source</a></li>`).join('');
 }
 
 function rShockLog(){
   $('#shLog').innerHTML=S.shLog.length
-    ?S.shLog.map(l=>`<div class="x-30">
-      <span class="x-31">[${l.ts}]</span> <span class="c-ink">${l.e}</span>
+    ?S.shLog.map(l=>`<div class="log-line">
+      <span class="c-muted">[${l.ts}]</span> <span class="c-ink">${l.e}</span>
       <span class="c-muted"> → ${l.d}</span></div>`).join('')
     :'<span class="c-muted">No events yet. Add one here, or turn on live events in the header.</span>';
 }
@@ -1329,7 +1329,7 @@ function renderGovernanceWidgets(){
   $('#securityRiskPanel')&&( $('#securityRiskPanel').innerHTML=riskLensHTML('security') );
   $('#marketRiskPanel')&&( $('#marketRiskPanel').innerHTML=riskLensHTML('market') );
 }
-function validationHTML(){return `<div class="note u-fs12 u-lh-relaxed"><strong class="x-32">Validation status: Not yet externally validated.</strong><br>Required data: 2022 ward presidential results; 2017 ward/constituency tallies; 2023–2025 by-election results; polling time series; official voter-register growth; verified turnout history.<br>Current calibration available: internal by-election analogues and scenario consistency checks only. This panel is intentionally explicit so outputs are not misread as validated forecasts.</div>`;}
+function validationHTML(){return `<div class="note u-fs12 u-lh-relaxed"><strong class="c-warn">Validation status: Not yet externally validated.</strong><br>Required data: 2022 ward presidential results; 2017 ward/constituency tallies; 2023–2025 by-election results; polling time series; official voter-register growth; verified turnout history.<br>Current calibration available: internal by-election analogues and scenario consistency checks only. This panel is intentionally explicit so outputs are not misread as validated forecasts.</div>`;}
 function modelRiskRegisterHTML(){
   const risks=[
     ['Ward-level vote shares imputed from county baseline','High','Replace with actual ward-level presidential results'],
@@ -1365,7 +1365,7 @@ function riskLensHTML(type){
   const key=type==='political'?'political':type==='civic'?'civic':type==='security'?'security':'market';
   const title={political:'Political-economy stress',civic:'Civic-risk signal',security:'Security early-warning',market:'Election-market risk'}[type];
   const top=rows.sort((a,b)=>b.s[key]-a.s[key]).slice(0,8);
-  const taxonomy=type==='security'?'<div class="note x-33">Taxonomy: Low civic tension · Localized tension · Narrative escalation · Administrative flashpoint · Security-sensitive area. This panel flags independent verification and civic monitoring needs; it does not prescribe coercive action.</div><div class="divider"></div>':'';
+  const taxonomy=type==='security'?'<div class="note u-fs12 u-lh-snug">Taxonomy: Low civic tension · Localized tension · Narrative escalation · Administrative flashpoint · Security-sensitive area. This panel flags independent verification and civic monitoring needs; it does not prescribe coercive action.</div><div class="divider"></div>':'';
   return `${taxonomy}<table class="tbl"><thead><tr><th>County</th><th>Region</th><th>${title}</th><th>Source Label</th><th>Driver</th></tr></thead><tbody>${top.map(x=>{const v=x.s[key];return `<tr><td>${x.row.name}</td><td>${x.row.cluster}</td><td class="${lensClass(v)}">${Math.round(v)}</td><td>${type==='political'||type==='market'?'proxy / synthetic':'computed / proxy'}</td><td>${v>=70?'Elevated validation priority':v>=45?'Watch signal':'Low-to-moderate signal'}</td></tr>`}).join('')}</tbody></table>`;
 }
 function formatMovementRows(rows,key,baseFn,sortDesc=true,limit=6){
