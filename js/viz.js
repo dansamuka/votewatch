@@ -40,8 +40,8 @@ function race(el,r,mc,i25,o25){
   const v=verdictOf(mc),pr=r2pair(nat);
   const A=blocName(pr.a,nat),B=blocName(pr.b,nat),cls=k=>k==='inc'?'rv-a':k==='opp'?'rv-b':'';
   el.querySelector('#raceV').innerHTML=v.t==='Run-off'
-    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span>${p0(v.p)} of simulations${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
-    :`<b>${esc(v.t)}</b> <span>${p0(v.p)} of simulations${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
+    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
+    :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
   el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
@@ -96,7 +96,8 @@ function outcomes(el,mc){
   cats.map((c,i)=>[c.v*100-n[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,Math.max(0,left)).forEach(([,i])=>n[i]++);
   const dots=[];cats.forEach((c,i)=>{for(let j=0;j<n[i];j++)dots.push(`<i class="${c.cls}" style="--c:${c.k==='x'?'var(--others)':col(c.k)}"></i>`);});
   el.innerHTML=`<div class="dots" role="img" aria-label="${cats.filter((c,i)=>n[i]).map((c,i)=>`${c.l} ${n[cats.indexOf(c)]} in 100`).join('; ')}">${dots.join('')}</div>
-    <ul class="dots-lg">${cats.map((c,i)=>n[i]?`<li><i class="${c.cls}" style="--c:${c.k==='x'?'var(--others)':col(c.k)}"></i>${esc(c.l)} <b>${n[i]}</b></li>`:'').join('')}</ul>`;
+    <ul class="dots-lg">${cats.map((c,i)=>n[i]?`<li><i class="${c.cls}" style="--c:${c.k==='x'?'var(--others)':col(c.k)}"></i>${esc(c.l)} <b>${n[i]}</b></li>`:'').join('')}</ul>
+    <p class="hint">Out of 100 simulations of this line-up and these assumptions. Not the chance that this line-up forms.</p>`;
 }
 
 /* ── County margin strip (A minus B), petition zone ±5 points ── */
@@ -134,13 +135,13 @@ function gates(el,r,mc,i25,o25){
   <div class="gate"><p class="eyebrow">2 · 25% in at least 24 of 47 counties</p>
     <div class="track">${door((24/47*100).toFixed(2)+'%',passA2||passB2,'24 counties')}${mk('inc',i25/47,'A '+i25)}${hasB?mk('opp',o25/47,'B '+o25):''}</div>
     <p class="gate-s">${[passA2&&'A is through',passB2&&'B is through'].filter(Boolean).join(' · ')||'Neither reaches 24'}</p></div>
-  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations).`:`Outright win chance: A ${p0(mc.iW)}, B ${p0(mc.oW)}.`}</span></p>`;
+  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations of this line-up).`:`Outright win in ${p0(mc.iW)} of simulations for A, ${p0(mc.oW)} for B.`}</span></p>`;
 }
 
 /* ── Run-off transfer flow (three columns) ── */
 function flow(el,r,dir){
   if(!el)return;
-  const nat=r.nat,ro=r2sim(r.ctyRes,nat,dir||'spl');
+  const nat=r.nat,ro=r2sim(r.ctyRes,nat,dir||'aff');
   const tot=r.ctyRes.reduce((s,c)=>s+c.tv,0)||1;
   const sh=k=>k==='inc'?nat.i:k==='opp'?nat.o:((nat.others||[]).find(o=>o.key===k)||{share:0}).share;
   const a=sh(ro.a),b=sh(ro.b),pool=Math.max(0,1-a-b);
@@ -162,7 +163,7 @@ function flow(el,r,dir){
     <text x="${x1+cw+8}" y="${RB.y+RB.h/2+4}" class="fl-l">${esc(blocName(ro.b,nat))} <tspan class="fl-v">${p1(ro.shareB)}</tspan></text>
     <text x="${x0+cw/2}" y="12" text-anchor="middle" class="ax-l">ROUND 1</text><text x="${x1+cw/2}" y="12" text-anchor="middle" class="ax-l">RUN-OFF</text>
   </svg>`;
-  el.innerHTML=svg+`<p class="mstrip-cap">${esc(blocName(ro.winner,nat))} wins round two with ${p1(Math.max(ro.shareA,ro.shareB))}. Everyone else's votes split ${dir==='toA'?`70/30 toward ${esc(blocName(ro.a,nat))}`:dir==='toB'?`70/30 toward ${esc(blocName(ro.b,nat))}`:'50/50'}.</p>`;
+  el.innerHTML=svg+`<p class="mstrip-cap">${esc(blocName(ro.winner,nat))} wins round two with ${p1(Math.max(ro.shareA,ro.shareB))}. Everyone else's votes ${dir==='aff'||!dir?`follow their candidates' loyalties: ${p0(toA/(pool||1))} go to ${esc(blocName(ro.a,nat))}`:'split '+(dir==='toA'?`70/30 toward ${esc(blocName(ro.a,nat))}`:dir==='toB'?`70/30 toward ${esc(blocName(ro.b,nat))}`:'50/50')}.</p>`;
 }
 
 /* ── Team A share in every county against the 25% line (Swing counties tab) ── */

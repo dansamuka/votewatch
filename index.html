@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=10.6">
-<link rel="stylesheet" href="css/app.css?v=10.6">
+<link rel="stylesheet" href="css/tokens.css?v=10.7">
+<link rel="stylesheet" href="css/app.css?v=10.7">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,6 +71,7 @@
       <div class="tm-chips" id="teamChips"></div>
       <p class="side-h tm-sub">Who joins which team</p>
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
+      <p class="hint">Average of validated polls (Mizani and Politrack are held out). <sup>*</sup> one poll, counted at half weight. <sup>†</sup> no validated poll yet. Hover a figure for the detail.</p>
       <p class="side-h tm-sub">Tickets</p>
       <div class="tk" id="ticketBox"></div>
       <div class="sl">
@@ -118,6 +119,11 @@
         <input type="range" id="sl-ys" list="vwZero" title="Double-click to reset" min="-5" max="18" step="1" value="0">
       </div>
       <div class="sl">
+        <label class="sl-top" for="sl-yg"><span>Young voters' gap against team A</span><output id="lv-yg">10pp</output></label>
+        <input type="range" id="sl-yg" list="vwYg" title="Double-click to reset" min="0" max="25" step="1" value="10">
+        <p class="hint">Points less support for team A among young voters than older ones. Infotrak (June 2026): Sifuna leads 18–26-year-olds with 20%, while Ruto polls 32% overall. Takes effect when youth turnout changes.</p>
+      </div>
+      <div class="sl">
         <label class="sl-top" for="sl-tf"><span>Protest vote</span><output id="lv-tf">0pp</output></label>
         <input type="range" id="sl-tf" list="vwZero" title="Double-click to reset" min="0" max="20" step="0.5" value="0">
       </div>
@@ -148,7 +154,7 @@
     </details>
     </div>
   </details>
-  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="65"></option></datalist><datalist id="vwOff"><option value="55"></option></datalist><datalist id="vwLh"><option value="30"></option></datalist><datalist id="vwLc"><option value="40"></option></datalist><datalist id="vwLe"><option value="30"></option></datalist>
+  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwYg"><option value="10"></option></datalist><datalist id="vwFollow"><option value="65"></option></datalist><datalist id="vwOff"><option value="55"></option></datalist><datalist id="vwLh"><option value="30"></option></datalist><datalist id="vwLc"><option value="40"></option></datalist><datalist id="vwLe"><option value="30"></option></datalist>
 </aside>
 
 <main id="main">
@@ -203,8 +209,9 @@
   <section class="pan mb16" aria-labelledby="flowT">
     <div class="pan-hdr"><h3 class="pan-t" id="flowT">How round one becomes round two</h3>
       <span class="vtoggle" role="group" aria-label="Where everyone else's voters go">
+        <button type="button" data-flow="aff" aria-pressed="true">By loyalty</button>
         <button type="button" data-flow="toA" aria-pressed="false" id="flowA">Lean to leader</button>
-        <button type="button" data-flow="spl" aria-pressed="true">Split evenly</button>
+        <button type="button" data-flow="spl" aria-pressed="false">Split evenly</button>
         <button type="button" data-flow="toB" aria-pressed="false" id="flowB">Lean to runner-up</button>
       </span></div>
     <div id="roFlow"></div>
@@ -274,7 +281,7 @@
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><h3 class="pan-t">Most influential wards</h3></div>
+    <div class="pan-hdr"><h3 class="pan-t">Most influential constituencies</h3></div>
     <div class="tscroll"><table class="tbl" id="sensTbl"></table></div>
   </div>
 </div>
@@ -302,7 +309,7 @@
       <div class="mphead"><b id="vmCtyH">County</b><label class="sr-only" for="vmSel">Choose a county</label><select class="sel" id="vmSel"></select></div>
       <div id="vmBody" aria-live="polite"></div>
       <div id="vmWards" hidden>
-        <div class="mphead mt12"><b id="vmWardsT">Wards</b><span class="fc g8"><input class="srch" id="wardSrch" placeholder="Search wards…" aria-label="Search wards"><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></span></div>
+        <div class="mphead mt12"><b id="vmWardsT">Constituencies</b><span class="fc g8"><input class="srch" id="wardSrch" placeholder="Search constituencies or wards…" aria-label="Search constituencies or wards"><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></span></div>
         <div class="tscroll cty-wards"><table class="tbl" id="wardTbl"></table></div>
       </div>
     </section>
@@ -419,14 +426,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=10.6"></script>
-<script defer src="data/counties.js?v=10.6"></script>
-<script defer src="data/transport.js?v=10.6"></script>
-<script defer src="data/context.js?v=10.6"></script>
-<script defer src="data/kenya-geo.js?v=10.6"></script>
-<script defer src="js/viz.js?v=10.6"></script>
-<script defer src="js/app.js?v=10.6"></script>
-<script defer src="js/enhance.js?v=10.6"></script>
-<script defer src="js/map.js?v=10.6"></script>
+<script defer src="data/wards.js?v=10.7"></script>
+<script defer src="data/counties.js?v=10.7"></script>
+<script defer src="data/transport.js?v=10.7"></script>
+<script defer src="data/context.js?v=10.7"></script>
+<script defer src="data/kenya-geo.js?v=10.7"></script>
+<script defer src="js/viz.js?v=10.7"></script>
+<script defer src="js/app.js?v=10.7"></script>
+<script defer src="js/enhance.js?v=10.7"></script>
+<script defer src="js/map.js?v=10.7"></script>
 </body>
 </html>

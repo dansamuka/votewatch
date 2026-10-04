@@ -119,7 +119,7 @@ function basis(name){
   return `<div class="cty-basis"><b>Basis</b>
     ${lab?`<p><span class="tag-g">${esc(lab)}</span> ${esc(GROUP_BASIS[g]||'')}</p>`:''}
     ${home.length?`<p>Home county of ${esc(home.join(' and '))}.</p>`:''}
-    <p class="hint">Candidate levels come from the national polling average; differences between counties in the same region follow 2022 results. Change teams to see how this county moves.</p></div>`;
+    <p class="hint">Candidate levels come from the average of validated national polls; differences between counties in the same region follow 2022 results. Shares are county estimates. Change teams to see how this county moves.</p></div>`;
 }
 function card(nat){
   const body=$('#vmBody'),sel=$('#vmSel');if(!body||!S.res)return;
@@ -138,6 +138,7 @@ function card(nat){
   const lead=cs[0],second=cs[1];
   body.innerHTML=`${outlineSVG(name)}
     <div class="cty-res">${cs.filter(x=>x.v>=0.005).slice(0,5).map(x=>`<div class="cty-bar"><span class="nm">${esc(x.name)}</span><span class="tr"><i style="width:${(x.v*100).toFixed(1)}%;background:${x.col}"></i></span><b>${p1(x.v)}</b></div>`).join('')}</div>
+    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[name];return q?`<p class="cty-range">In 80% of simulations: ${esc(S.cfg.teams[0])} ${p0r(q.iLo)}–${p0r(q.iHi)}${nat.B&&nat.B.members.length?`, ${esc(S.cfg.teams[1])} ${p0r(q.oLo)}–${p0r(q.oHi)}`:''}. ${esc(S.cfg.teams[0])} reaches 25% in ${p0r(q.p25)} of them.</p>`:'';})()}
     ${nat.B&&nat.B.members.length?marginGauge(c):''}
     <div class="cty-stats">
       <span>Leader <b>${esc(lead.name)}</b> by ${p1(lead.v-(second?second.v:0))}</span>
@@ -147,9 +148,10 @@ function card(nat){
       <span>${esc(S.cfg.teams[0])} 25%+ <b>${c.i>=0.25?'Yes':'No'}</b></span>
     </div>
     ${basis(name)}`;
-  if(wards){wards.hidden=false;const t=$('#vmWardsT');if(t)t.textContent=`Wards in ${name}`;}
+  if(wards){wards.hidden=false;const t=$('#vmWardsT');if(t)t.textContent=`Constituencies in ${name}`;}
 }
 
+const p0r=x=>Math.round(x*100)+'%';
 function render(){
   if(!S.res)return;
   if(!VM.built&&!build())return;

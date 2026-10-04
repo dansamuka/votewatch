@@ -9,6 +9,36 @@ the changes. With no shocks active, every national, county and ward figure
 is **bit-for-bit identical** to v4.6. Only runs that include shocks differ,
 because of fixes 1 and 2 below.
 
+## External review fixes (v10.7, 4 Oct 2026)
+
+All ten points from the external model review that were confirmed against the
+code are addressed:
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Same register growth everywhere | 2022→2027 growth by county: half the national rate, half in proportion to 2009→2019 census growth (KNBS via the Kenya Data Atlas; floored at zero because the 2009 north-east counts were inflated). Range 2.6% (Mandera) to 10.8% (Isiolo); national total unchanged. |
+| 2 | Ward results looked more precise than they are | Vote shares are only estimated per county. The county panel lists constituencies (IEBC register, estimated turnout, estimated votes) and states the county's shares once; "Most influential wards" became constituencies; ward CSV columns are labelled `_county_est` and include the IEBC 2022 register. |
+| 3 | Probabilities read as forecasts | Wording is now "if this line-up runs" or "of simulations of this line-up", with a note that this is not the chance the line-up forms. |
+| 4 | No range around county results | The Monte Carlo keeps every county's result in every run: the county card shows the 80% range for teams A and B and how often A reaches 25%; the swing-counties table adds "25%+ in" and the range. |
+| 5 | Polls: validated and held-out mixed | Model levels use validated polls only (`polling_average.json`); Mizani and Politrack stay visible but are held out. The all-polls figure is in each candidate's tooltip. |
+| 6 | One-poll candidates at full weight | Shrinkage: level = (n × poll + 1 × 1%) / (n + 1), n = effective validated polls (unvalidated-only candidates count half). Each team also gets its own poll error per simulation (members' 95% margins, half attributed to the candidate, half to the national swing already drawn). |
+| 7 | Run-off split 50/50 in the simulations | Each eliminated contestant's voters follow an assumed run-off loyalty (`gov` in `data/context.js`: share who would back Ruto's side), with a ±8-point national shift drawn per simulation. The lean-to-A / even / lean-to-B views remain for comparison. |
+| 8 | Same leak split for every candidate and region | The cross-over share is scaled per candidate by their loyalty to the side they would cross to (×0.2–1.8) and per ward by that side's local strength (×0.5–1.6, square root of local vs national). The rest goes to "someone else". |
+| 9 | Home boost ×1.5, untested | Tempered to ×1.25 (`HOME_BOOST`): regional strength already carries most of the home pull. |
+| 10 | No youth preference | Young voters back team A by `yg` points less than older voters (default 10; Infotrak, Jun 2026: Sifuna leads 18–26s at 20% while Ruto polls 32% overall). Polls already include the youth mix, so only a change in youth turnout moves the vote. |
+
+**Effect on the default line-up.** Round one: Broad-based government 37.7%,
+United opposition 36.1%, Third force 22.6% (was 44.5 / 36.0 / 19.5). The drop
+for team A comes mainly from item 5: Ruto's validated average is 28.7% against
+33.7% when the two held-out pollsters (45% and 39%) are included. Run-off:
+United opposition wins 95% of simulated run-offs (was 4%), because Third force
+voters mostly follow their opposition loyalty; with an even split team A would
+still edge it, 50.8%.
+
+Still not observed: 2022 presidential results by constituency or ward (Form
+34B/34C), so leanings remain county values; and an IEBC register update after
+2022.
+
 ## Fixed
 
 | # | Problem | Effect before | Fix |
@@ -78,7 +108,7 @@ Infotrak 13 Jul). Problems found under v7.0 and fixed:
 
 **Method change.** Strength is now set per county group (North, Kalenjin Rift,
 Mixed Rift, Luo Nyanza, Gusii, Western, Nairobi, Coast, Ukambani, Mt Kenya,
-Meru & Embu), calibrated to those regional figures, with home counties ×1.5. 2022
+Meru & Embu), calibrated to those regional figures, with home counties ×1.5 (×1.25 since v10.7). 2022
 results (square-rooted) only spread support between counties and wards within a
 group. National averages are unchanged, so headline results barely move
 (default: team A 38.2%, team B 46.6%).

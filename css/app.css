@@ -616,6 +616,8 @@ body:not(.public-mode) .more-cols{display:none}
 .mgauge text{font:11px var(--font-mono);fill:var(--ink-subtle)}
 .cty-stats{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-4);margin-top:var(--sp-3);font:var(--t-xs);color:var(--ink-muted)}
 .cty-stats b{color:var(--ink);font-weight:600}
+.cty-range{margin:var(--sp-2) 0 0;font:var(--t-xs);color:var(--ink-subtle)}
+.tbl-cap{caption-side:top;text-align:left;padding:0 0 var(--sp-2);font:var(--t-xs);color:var(--ink-subtle)}
 .cty-empty{font:var(--t-sm);color:var(--ink-muted)}
 .cty-wards{max-height:320px}
 .cty-card .srch{max-width:180px}

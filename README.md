@@ -10,7 +10,8 @@ Live: https://dansamuka.github.io/votewatch/
 ## Using it
 
 1. **Teams** (left, or the top panel on mobile): every candidate polling in
-   2026 is listed with their polling average. Put each one on team A (Ruto's
+   2026 is listed with their average across validated polls (* one poll,
+   counted at half weight; † no validated poll yet). Put each one on team A (Ruto's
    side), team B, an extra team (up to four), or Solo. Then adjust
    follow-through, swings, youth turnout, protest vote and turnout by region.
 
@@ -54,7 +55,19 @@ Live: https://dansamuka.github.io/votewatch/
 
    Eugene Wamalwa and Jeremiah Kioni have no published presidential polling,
    so they are not separate entries in the model.
-2. **Result** in the header: the most likely outcome and the run-off pairing.
+   **How the model treats polls and voters** (details in `docs/AUDIT.md`):
+   - levels come from validated polls only; one-poll figures are pulled toward
+     a 1% minor-candidate level; each team gets its own poll error per run
+   - supporters who don't follow cross sides according to their candidate's
+     loyalty and the other side's local strength
+   - in a run-off, everyone else's voters follow their candidates' assumed
+     loyalties (`gov` in `data/context.js`), uncertain by ±8 points per run
+   - young voters back team A 10 points less than older voters (adjustable);
+     this matters when youth turnout changes
+   - home counties get ×1.25
+2. **Result** in the header: the most likely outcome and the run-off pairing,
+   as a share of simulations **if this line-up runs** (not the chance that the
+   line-up forms).
 3. **Tabs**: Overview, Run-off, Swing counties, Scenarios (ready-made
    line-ups), Article 138, Map (click a county for its result and wards),
    Dispute risk, Signals (latest polls and key facts), Report.
@@ -142,15 +155,18 @@ node scripts/build-wards.mjs <path-to-kenya-data-atlas>
 - **Wards:** the official 1,450 wards and 290 constituencies (IEBC, 2012
   boundaries).
 - **Registered voters:** 2022 figures per ward from IEBC Gazette Notice 7290,
-  scaled by each county's register growth to 2027. 1,440 wards come straight
+  grown to 2027: the national total is shared out half evenly and half by
+  each county's 2009→2019 census growth (2.6% to 10.8%). 1,440 wards come straight
   from the gazette; the 10 Mandera East and Lafey wards are on a boundary hold
   in the atlas and share their constituency's official total equally.
 - **Turnout:** each county's turnout base, varied by constituency using 2022
   presidential Form 34B turnout (186 of 290 constituencies published;
   the rest keep the county base).
 - **Not observed:** 2022 presidential vote shares per ward are not in the
-  atlas, so ward leanings are county values. Read ward and constituency
-  results as estimates.
+  atlas, so leanings are county values. The county panel therefore lists
+  constituencies with observed registers and estimated turnout, and states
+  the vote shares once for the county. The ward CSV marks shares as county
+  estimates.
 
 ## Caveats
 
