@@ -470,7 +470,7 @@ function r2sim(ctyRes,nat,dir='spl'){
   const shareA=aV/((aV+bV)||1);
   // Art. 138(7): most votes wins the run-off; no county-spread test in round two.
   const winner=shareA>=0.5?a:b;
-  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,
+  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,votesA:aV,votesB:bV,
     r2iN:a==='inc'?shareA:b==='inc'?1-shareA:null};
 }
 
@@ -1530,7 +1530,8 @@ function movementFromBaselineRows(){
   const rows=(S.res?.ctyRes||[]).map(c=>{const base=CM.get(c.name)?.baseIncumbent2022??c.i;const tfBase=0.03;return {...c,incMove:c.i-base,tfMove:c.t-tfBase,a138Deterioration:0.25-c.i,runoffSensitivity:Math.max(0,0.5-Math.max(c.i,c.o))*100+Math.abs(c.i-0.25)*12};});
   return {gains:topRowsBy(rows,'incMove',5),losses:topRowsBy(rows,'incMove',5,true),tfSurge:topRowsBy(rows,'tfMove',5),a138:topRowsBy(rows,'a138Deterioration',5),runoff:topRowsBy(rows,'runoffSensitivity',5)};
 }
-function reportTable(rows,cols){return `<div class="tscroll"><table class="tbl"><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${typeof c[1]==='function'?c[1](r):(r[c[1]]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
+// cols: [header, key or fn, optional cell class e.g. "r" for numbers]
+function reportTable(rows,cols){return `<div class="tscroll"><table class="tbl"><thead><tr>${cols.map(c=>`<th${c[2]?` class="${c[2]}"`:''}>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td${c[2]?` class="${c[2]}"`:''}>${typeof c[1]==='function'?c[1](r):(r[c[1]]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
 // Report v2: briefing built from app components. Sections are numbered so the
 // printed page reads top-down: result → teams & tickets → running-mate scenarios →
 // what it means → where it is decided → assumptions (→ model checks, analyst only).
@@ -1576,52 +1577,65 @@ function renderExecutiveReport(){
   const pr2=r2pair(n),runoff=mc_.ro>=0.5;
   const verdict=runoff?`Run-off likely: ${blocName(pr2.a)} vs ${blocName(pr2.b)}`:mc_.iW>=mc_.oW?`${A} wins in round one`:`${B} wins in round one`;
   const vp=runoff?mc_.ro:Math.max(mc_.iW,mc_.oW);
-  const leadK=n.i>=n.o?'inc':'opp';
   const sur=x=>String(x||'').split(' ').slice(-1)[0];
   const winA=mc_.iW+mc_.ro*((mc_.r2Win||{}).inc||0),winB=mc_.oW+mc_.ro*((mc_.r2Win||{}).opp||0);
+  const runs=`${N.format(mc_.iterations||ITERS)} ${mc_.mode==='research'?'seeded ':''}simulations${S.mcPending?' (refining)':''}`;
+  const H=(num,t,sub)=>`<h4 class="pr-h"><span class="pr-n">${num}</span>${t}${sub?`<span class="pr-hs">${sub}</span>`:''}</h4>`;
+  const votesTxt=v=>`${fmtVotes(v)} votes`;
+  const ink=k=>VZ.ink(k),col=k=>VZ.col(k);
 
-  // 1 · first-round ribbon (same component as the Overview hero, without motion)
+  // first-round field (top four + everyone else)
   const field=[{k:'inc',l:A,v:n.i}].concat(n.B&&n.B.members.length?[{k:'opp',l:B,v:n.o}]:[]).concat((n.others||[]).map(o=>({k:o.key,l:o.name,v:o.share}))).sort((a,b)=>b.v-a.v);
   const top=field.slice(0,4),rest=field.slice(4).reduce((s,c)=>s+c.v,0);
-  let x=0;const segs=top.concat(rest>0.0005?[{k:'rest',l:'Everyone else',v:rest}]:[]).map(c=>{const s=`<i style="--x:${x};--w:${c.v};background:${c.k==='rest'?'var(--line-2)':VZ.col(c.k)}"></i>`;x+=c.v;return s;}).join('');
+  let x=0;const segs=top.concat(rest>0.0005?[{k:'rest',l:'Everyone else',v:rest}]:[]).map(c=>{const s=`<i style="--x:${x};--w:${c.v};background:${c.k==='rest'?'var(--line-2)':col(c.k)}"></i>`;x+=c.v;return s;}).join('');
+  const lead=field[0];
 
-  // 2 · teams and tickets
+  // run-off: default even split, plus the two lean variants
+  const ro=['toA','spl','toB'].map(d=>({d,res:r2sim(r.ctyRes,n,d)}));
+  const roS=ro[1].res,fa=roS.a,fb=roS.b,FA=blocName(fa),FB=blocName(fb);
+  const carriedA=roS.r2cty.filter(c=>c.r2lead===fa).length;
+  const r2w=mc_.r2Win||{},pWinA=r2w[fa]||0,pWinB=r2w[fb]||0;
+  const third=roS.e?blocName(roS.e):null,thirdSh=roS.e?(field.find(f=>f.k===roS.e)||{}).v:0;
+  const roLabel={toA:`Others lean to ${FA}`,spl:'Others split evenly (default)',toB:`Others lean to ${FB}`};
+
+  // teams and tickets
   const teamShare=ti=>{const k=ti===0?'inc':ti===1?'opp':'t'+ti;const o=(n.others||[]).find(z=>z.key===k);return ti===0?n.i:ti===1?n.o:(o?o.share:0);};
-  const team25=ti=>{const k='t'+ti,o=(n.others||[]).find(z=>z.key===k);return r.ctyRes.filter(c=>(ti===0?c.i:ti===1?c.o:(o&&c.oc?c.oc[o.idx]/(c.tv||1):0))>=0.25).length;};
+  const team25=ti=>{const o=(n.others||[]).find(z=>z.key==='t'+ti);return r.ctyRes.filter(c=>(ti===0?c.i:ti===1?c.o:(o&&c.oc?c.oc[o.idx]/(c.tv||1):0))>=0.25).length;};
   const avgOf=nm=>(CANDIDATES.find(c=>c.name===nm)||{}).avg;
   const person=(nm,note)=>`<span class="pr-p"><b>${mapEsc(nm)}</b>${avgOf(nm)!=null?` <em>${avgOf(nm).toFixed(1)}% in polls</em>`:''}${note?` <em>${note}</em>`:''}</span>`;
   const teams=S.cfg.teams.map((t,ti)=>{const k=ticketOf(S.cfg,ti);if(!k.members.length&&!k.pick)return '';
-    const def=S.cfg.defectors||[];
+    const def=S.cfg.defectors||[],c25=team25(ti);
     const rm=k.pick?person(k.pick.name,'outside the polls'):k.r?person(k.r,def.includes(k.r)&&ti===0?'crossed from the opposition':''):'<span class="pr-p u-meta">None</span>';
     return `<article class="pr-team no-break" style="--tc:var(${TEAM_VARS[ti]})">
-      <header class="pr-team-h"><b>${String.fromCharCode(65+ti)}</b><span>${mapEsc(t)}</span><span class="pr-team-v">${pct(teamShare(ti))}<small>${team25(ti)} count${team25(ti)===1?'y':'ies'} at 25%+</small></span></header>
+      <header class="pr-team-h"><b>${String.fromCharCode(65+ti)}</b><span>${mapEsc(t)}</span><span class="pr-team-v">${pct(teamShare(ti))}<small>${fmtVotes(teamShare(ti)*n.v)} · ${c25} count${c25===1?'y':'ies'} at 25%+</small></span></header>
       <dl class="pr-kv">
         <dt>President</dt><dd>${person(k.p)}</dd>
         <dt>Running mate</dt><dd>${rm}${k.pick?`<p class="pr-fine">${mapEsc(rmEffectText(k.pick))}</p>`:''}</dd>
         ${k.ally?`<dt>Backs the mate</dt><dd>${person(k.ally,'supporters follow as running mate')}</dd>`:''}
-        ${k.off.length?`<dt>Off the ticket</dt><dd>${k.off.map(nm=>person(nm,def.includes(nm)&&ti===0?'defector':'')).join('')}</dd>`:''}
+        ${k.off.length?`<dt>Off the ticket</dt><dd class="pr-off">${k.off.map(nm=>`<span>${mapEsc(nm)}${avgOf(nm)!=null?` <em>${avgOf(nm).toFixed(1)}%</em>`:''}${def.includes(nm)&&ti===0?' <em>defector</em>':''}</span>`).join('')}</dd>`:''}
       </dl></article>`;}).join('');
   const solos=(n.others||[]).filter(o=>o.key[0]==='s').sort((a,b)=>b.share-a.share);
 
-  // 3 · running-mate scenarios for team A (and team B when it has a choice)
+  // running-mate scenarios
   const scQueue=[];
-  const scTable=ti=>{
+  const scTable=(ti,num)=>{
     const opts=runningMateOptions(ti);if(opts.length<2)return '';
     const rows=opts.map(o=>({...o,res:ticketScenario(o.mod,ti)}));
     const base=(rows.find(o=>o.cur)||rows[0]).res,max=Math.max(...rows.map(o=>o.res.share));
     const name=S.cfg.teams[ti];
-    return `<section class="pr-section no-break"><h4 class="pr-h">${ti===0?'3 · ':''}Running mate for ${mapEsc(name)}</h4>
-      <div class="tscroll"><table class="tbl pr-sc"><thead><tr><th>Running mate</th><th>Type</th><th>${mapEsc(name)} share</th><th class="r">Change</th><th class="r">Counties at 25%+</th><th class="r">Run-off</th><th class="r">Wins overall</th></tr></thead>
+    return `<section class="pr-section">${H(num,`Running mate for ${mapEsc(name)}`,'each row re-runs the model with only the running mate changed')}
+      <div class="tscroll"><table class="tbl pr-sc"><thead><tr><th>Running mate</th><th>Type</th><th>First-round share</th><th class="r">Change</th><th class="r">Counties at 25%+</th><th class="r">Run-off</th><th class="r">Wins overall</th></tr></thead>
       <tbody>${rows.map((o,i)=>{const d=o.res.share-base.share;scQueue.push([o.res,ti,i]);return `<tr class="${o.cur?'is-cur':''}">
         <td class="u-strong">${mapEsc(o.label)}${o.cur?' <span class="b b-g">Current</span>':''}</td>
         <td class="c-muted">${o.kind}</td>
         <td><span class="pr-bar" style="--w:${(o.res.share/max*100).toFixed(1)}%;--tc:var(${TEAM_VARS[ti]})"><i></i><b>${pct(o.res.share)}</b></span></td>
         <td class="r u-mono12">${o.cur?'—':Math.abs(d)<0.0005?'±0.0':(d>0?'+':'−')+Math.abs(d*100).toFixed(1)}</td>
         <td class="r">${o.res.c25}</td><td class="r" data-sc-ro="${ti}:${i}">${o.res.ro!=null?pct(o.res.ro,0):'…'}</td><td class="r u-strong" data-sc-win="${ti}:${i}">${o.res.win!=null?pct(o.res.win,0):'…'}</td></tr>`;}).join('')}</tbody></table></div>
-      <p class="pr-fine">Each row re-runs the model with only the running mate changed; Run-off and Wins overall come from ${REPORT_SC_RUNS} ${S.mcMode==='research'?'seeded ':''}simulations per row. Picks outside the polls carry an assumed regional pull; defectors bring ${S.cfg.offFollow??LEAK_DEFAULT.off}% of their supporters.</p></section>`;
+      <p class="pr-fine">Run-off and Wins overall come from ${REPORT_SC_RUNS} ${S.mcMode==='research'?'seeded ':''}simulations per row. Picks outside the polls carry an assumed regional pull; defectors bring ${S.cfg.offFollow??LEAK_DEFAULT.off}% of their supporters.</p></section>`;
   };
+  const scHtml=S.cfg.teams.map((_,ti)=>scTable(ti,'4'+(ti?String.fromCharCode(96+ti):''))).join('');
 
-  // 6 · assumptions
+  // assumptions
   const lk=S.cfg.leak||LEAK_DEFAULT.leak,lt=(lk.home+lk.cross+lk.else)||1;
   const rtTxt=RT_REGIONS.filter(x=>S.rt[x.k]).map(x=>`${x.l} ${S.rt[x.k]>0?'+':'−'}${Math.abs(S.rt[x.k])}%`).join(', ')||'no regional changes';
   const sw=[S.si&&`swing to team A ${S.si>0?'+':''}${S.si} pts`,S.so&&`swing to team B ${S.so>0?'+':''}${S.so} pts`,S.ys&&`youth turnout ${S.ys>0?'+':''}${S.ys} pts`,S.tf&&`protest vote ${S.tf} pts`].filter(Boolean).join(', ')||'none';
@@ -1629,42 +1643,63 @@ function renderExecutiveReport(){
   const topTip=(S.tip||tipPts(r.ctyRes)).slice(0,8),topDis=dr.close.slice().sort((a,b)=>Math.abs(a.ls-0.5)-Math.abs(b.ls-0.5)).slice(0,8);
   const leadB=c=>`<span class="b ${badgeFor(c.lead==='tf'?'x':c.lead)}">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'}</span>`;
   const qa=technicalEngineQA(),mapQ=VW_MAP_STATE?.diagnostics||mapDiagnostics(VW_MAP_STATE?.rows||[]),move=movementFromBaselineRows();
+  const turnout=n.v/REG_TOTAL;
 
   el.innerHTML=`
   <header class="pr-cover no-break">
-    <div><p class="eyebrow">VoteWatch 2027 · scenario briefing</p><h3 class="pr-title">${mapEsc(verdict)}</h3>
-      <p class="pr-sub">${pct(vp,0)} of ${mc_.iterations||ITERS} ${mc_.mode==='research'?'seeded ':''}simulations${S.mcPending?' (refining)':''} · ${new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'})} · a scenario, not a prediction</p></div>
-    <p class="pr-stamp">${S.cfg.teams.map((t,i)=>{const k=ticketOf(S.cfg,i);return k.members.length?`<b>${mapEsc(t)}</b>: ${mapEsc(sur(k.p))}${k.rName?' – '+mapEsc(sur(k.rName)):''}`:'';}).filter(Boolean).join('<br>')}<span class="analyst-only"><br>Seed ${mapEsc(settings.seed)}</span></p>
+    <p class="eyebrow">VoteWatch 2027 · scenario briefing · ${new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'})}</p>
+    <h3 class="pr-title">${mapEsc(verdict)}</h3>
+    <p class="pr-sub">${pct(vp,0)} of ${runs}. A scenario built from current polls and stated assumptions, not a prediction.</p>
+    <div class="pr-bottom">
+      <div><span class="pr-l">First round</span><b style="color:${ink(lead.k)}">${pct(lead.v)}</b><em>${mapEsc(lead.l)} leads · ${votesTxt(lead.v*n.v)}</em></div>
+      <div><span class="pr-l">Run-off (even split)</span><b style="color:${ink(roS.winner)}">${pct(Math.max(roS.shareA,roS.shareB))}</b><em>${mapEsc(blocName(roS.winner))} · ${votesTxt(Math.max(roS.votesA,roS.votesB))}</em></div>
+      <div><span class="pr-l">Wins overall</span><b><span class="c-team-a">${pct(winA,0)}</span> · <span class="c-team-b">${pct(winB,0)}</span></b><em>A · B, including run-offs</em></div>
+      <div><span class="pr-l">Dispute risk</span><b class="${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}<small>/100</small></b><em>${dr.n} counties within 6 points</em></div>
+    </div>
   </header>
 
-  <section class="pr-section no-break" aria-label="First-round result">
-    <h4 class="pr-h">1 · First round</h4>
+  <section class="pr-section no-break">${H(1,'First round','decided voters')}
     <div class="pr-ribbon"><div class="rs-wrap"><div class="rs"><div class="rs-segs">${segs}</div></div><div class="rs-rule" aria-hidden="true"><i>50% + 1</i></div></div></div>
-    <p class="pr-legend">${top.map(c=>`<span style="--c:${VZ.col(c.k)}"><i></i>${mapEsc(c.l)} <b>${pct(c.v)}</b></span>`).join('')}${rest>0.0005?`<span style="--c:var(--line-2)"><i></i>Everyone else <b>${pct(rest)}</b></span>`:''}<span>Votes cast <b>${N.format(Math.round(n.v))}</b></span></p>
-    <div class="pr-grid">
-      <div class="pr-card"><div class="pr-l">Most likely ending</div><div class="pr-v ${runoff?'va':''}" style="${runoff?'':`color:${VZ.ink(mc_.iW>=mc_.oW?'inc':'opp')}`}">${runoff?'Run-off':'Round one'}</div><div class="pr-note">${pct(vp,0)} of simulations</div></div>
-      <div class="pr-card"><div class="pr-l">Wins overall</div><div class="pr-v"><span class="c-team-a">${pct(winA,0)}</span> · <span class="c-team-b">${pct(winB,0)}</span></div><div class="pr-note">${mapEsc(A)} · ${mapEsc(B)}, incl. run-offs</div></div>
-      <div class="pr-card"><div class="pr-l">25% in 24 counties</div><div class="pr-v"><span class="c-team-a">${i25}</span> · <span class="c-team-b">${o25}</span></div><div class="pr-note">counties of 47</div></div>
-      <div class="pr-card"><div class="pr-l">Dispute risk</div><div class="pr-v ${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}</div><div class="pr-note">${dr.n} counties within 6 points</div></div>
+    <ul class="pr-field">${top.map(c=>`<li style="--c:${col(c.k)}"><i></i><span>${mapEsc(c.l)}</span><b>${pct(c.v)}</b><em>${fmtVotes(c.v*n.v)}</em></li>`).join('')}${rest>0.0005?`<li style="--c:var(--line-2)"><i></i><span>Everyone else</span><b>${pct(rest)}</b><em>${fmtVotes(rest*n.v)}</em></li>`:''}</ul>
+    <div class="pr-facts">
+      <span><b>${N.format(Math.round(n.v))}</b> votes cast · turnout ${pct(turnout,0)}</span>
+      <span>25% in 24 counties: <b class="c-team-a">A ${i25}</b> ${i25>=24?'✓':'✗'} · <b class="c-team-b">B ${o25}</b> ${o25>=24?'✓':'✗'}</span>
+      <span>Outright win: A ${pct(mc_.iW,0)} · B ${pct(mc_.oW,0)} · run-off ${pct(mc_.ro,0)}</span>
     </div>
   </section>
 
-  <section class="pr-section"><h4 class="pr-h">2 · Teams and tickets</h4>
+  <section class="pr-section no-break">${H(2,'Run-off',runoff?`likely: ${pct(mc_.ro,0)} of simulations`:`if no one wins outright (${pct(mc_.ro,0)} of simulations)`)}
+    <div class="pr-h2h" role="img" aria-label="Run-off with an even split: ${mapEsc(FA)} ${pct(roS.shareA)}, ${mapEsc(FB)} ${pct(roS.shareB)}">
+      <div class="pr-h2h-bar"><i style="width:${(roS.shareA*100).toFixed(2)}%;background:${col(fa)}"></i><i style="width:${(roS.shareB*100).toFixed(2)}%;background:${col(fb)}"></i><span class="pr-h2h-mid"></span></div>
+      <div class="pr-fin">
+        ${[[fa,FA,roS.shareA,roS.votesA,carriedA,pWinA],[fb,FB,roS.shareB,roS.votesB,47-carriedA,pWinB]].map(([k,nm,sh,v,cc,pw],j)=>`<div class="pr-fin-c${j?' is-b':''}" style="--tc:${col(k)}">
+          <span class="pr-l">${mapEsc(nm)}${roS.winner===k?' · wins':''}</span><b style="color:${ink(k)}">${pct(sh)}</b>
+          <em>${N.format(Math.round(v))} votes · leads in ${cc} of 47 counties</em>
+          ${mc_.ro>0?`<em>Wins ${pct(pw,0)} of simulated run-offs</em>`:''}</div>`).join('')}
+      </div>
+    </div>
+    <div class="tscroll"><table class="tbl"><thead><tr><th>Where everyone else's voters go</th><th class="r">${mapEsc(FA)}</th><th class="r">Votes</th><th class="r">${mapEsc(FB)}</th><th class="r">Votes</th><th>Winner</th></tr></thead>
+      <tbody>${ro.map(({d,res})=>`<tr class="${d==='spl'?'is-cur':''}"><td class="u-strong">${roLabel[d]}</td><td class="r">${pct(res.shareA)}</td><td class="r u-mono12">${N.format(Math.round(res.votesA))}</td><td class="r">${pct(res.shareB)}</td><td class="r u-mono12">${N.format(Math.round(res.votesB))}</td><td class="pr-win" style="--c:${col(res.winner)};color:${ink(res.winner)}"><i></i>${mapEsc(blocName(res.winner))}</td></tr>`).join('')}</tbody></table></div>
+    <p class="pr-fine">Round two uses the round-one voters. ${third?`${mapEsc(third)} (${pct(thirdSh)}) and everyone else`:'Everyone else'} decide it: "lean" sends 70% of their votes to one finalist, "even" splits them 50/50. The run-off is won by most votes; there is no county test in round two.</p>
+  </section>
+
+  <section class="pr-section">${H(3,'Teams and tickets')}
     <div class="pr-teams">${teams}</div>
     ${solos.length?`<p class="pr-solo"><span class="pr-l">Running alone</span> ${solos.map(o=>`<span><b>${mapEsc(o.name)}</b> ${pct(o.share)}</span>`).join('')}</p>`:''}
   </section>
 
-  ${scTable(0)}
-  ${S.cfg.teams.slice(1).map((_,i)=>scTable(i+1)).join('')}
+  ${scHtml}
 
-  <section class="pr-section no-break"><h4 class="pr-h">4 · What this means</h4><ol class="pr-list">${implTxt(r,mc_).map(t=>`<li>${t}</li>`).join('')}</ol></section>
+  <section class="pr-section no-break">${H(5,'What this means')}<ol class="pr-list">${implTxt(r,mc_).map(t=>`<li>${t}</li>`).join('')}</ol></section>
 
-  <div class="pr-two">
-    <section class="pr-section no-break"><h4 class="pr-h">5 · Counties near the 25% line</h4>${reportTable(topTip,[['County','name'],[mapEsc(A),x=>`<span class="c-team-a">${pct(x.i)}</span>`],['Gap to 25%',x=>(x.ig>0?'+':'')+pct(x.ig)],['Region','cl']])}</section>
-    <section class="pr-section no-break"><h4 class="pr-h">Closest counties</h4>${reportTable(topDis,[['County','name'],['Lead',leadB],['Margin',x=>pct(Math.abs(x.ls-.5))],['Region','cluster']])}</section>
-  </div>
+  <section class="pr-section">${H(6,'Where it is decided')}
+    <div class="pr-two">
+      <div class="no-break"><p class="pr-sh">Counties near the 25% line</p>${reportTable(topTip,[['County','name'],['Team A',x=>`<span class="c-team-a">${pct(x.i)}</span>`,'r'],['Gap to 25%',x=>(x.ig>0?'+':'')+pct(x.ig),'r'],['Region','cl']])}</div>
+      <div class="no-break"><p class="pr-sh">Closest counties</p>${reportTable(topDis,[['County','name'],['Lead',leadB],['Margin',x=>pct(Math.abs(x.ls-.5)),'r'],['Region','cluster']])}</div>
+    </div>
+  </section>
 
-  <section class="pr-section no-break"><h4 class="pr-h">6 · Assumptions</h4>
+  <section class="pr-section no-break">${H(7,'Assumptions')}
     <dl class="pr-assume">
       <dt>Running mate's supporters who follow</dt><dd>${S.cfg.follow}%</dd>
       <dt>Off-ticket supporters who follow</dt><dd>${S.cfg.offFollow??LEAK_DEFAULT.off}%</dd>
@@ -1682,10 +1717,10 @@ function renderExecutiveReport(){
       <section class="pr-section no-break"><h4 class="pr-h">Model checks</h4>${reportTable(qa.checks,[['Check',x=>x[0]],['Status',x=>x[1]?'<span class="qa-pass">Pass</span>':'<span class="qa-warn">Check</span>'],['Detail',x=>x[2]]])}</section>
       <section class="pr-section no-break"><h4 class="pr-h">Map checks</h4><p class="pr-note">County data ${mapQ.count||0}/47 · boundaries ${mapQ.boundaryMatched||0}/47 · status <span class="${qaStatusClass(mapQ.status)}">${mapEsc(mapQ.status||'—')}</span></p></section>
     </div>
-    <section class="pr-section no-break"><h4 class="pr-h">Largest moves from 2022</h4><div class="pr-two"><div>${reportTable(move.gains,[[`${mapEsc(A)} gains`,'name'],['Change',x=>(x.incMove>0?'+':'')+pct(x.incMove)],['Now',x=>pct(x.i)]])}</div><div>${reportTable(move.losses,[[`${mapEsc(A)} losses`,'name'],['Change',x=>(x.incMove>0?'+':'')+pct(x.incMove)],['Now',x=>pct(x.i)]])}</div></div></section>
+    <section class="pr-section no-break"><h4 class="pr-h">Largest moves from 2022</h4><div class="pr-two"><div>${reportTable(move.gains,[[`Team A gains`,'name'],['Change',x=>(x.incMove>0?'+':'')+pct(x.incMove),'r'],['Now',x=>pct(x.i),'r']])}</div><div>${reportTable(move.losses,[[`Team A losses`,'name'],['Change',x=>(x.incMove>0?'+':'')+pct(x.incMove),'r'],['Now',x=>pct(x.i),'r']])}</div></div></section>
     <section class="pr-section no-break"><h4 class="pr-h">Known model risks</h4>${modelRiskRegisterHTML()}</section>
   </div>
-  <p class="pr-fine no-break">Not externally validated. For civic, academic, journalistic and analytical use only; not for voter suppression, deceptive persuasion, intimidation, unofficial result claims or microtargeting.</p>`;
+  <p class="pr-fine pr-foot no-break">Not externally validated. For civic, academic, journalistic and analytical use only; not for voter suppression, deceptive persuasion, intimidation, unofficial result claims or microtargeting.</p>`;
   const job=(S.reportJob=(S.reportJob||0)+1);
   renderExecutiveReport.done=new Promise(resolve=>{
     const next=()=>{if(job!==S.reportJob)return resolve();
