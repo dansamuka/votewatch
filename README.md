@@ -36,6 +36,16 @@ Live: https://dansamuka.github.io/votewatch/
    30% vote for someone else. These splits are assumptions, adjustable under
    "Where the others go"; the cross-over share varies ±25% between simulations.
 
+   **Ruto's running mate** can also be someone outside the presidential polls,
+   with a small assumed regional pull for team A: Kithure Kindiki (+3 Meru &
+   Embu, +1 Mt Kenya, +2 more in Tharaka-Nithi), Anne Waiguru (+2 Mt Kenya,
+   +1 Meru & Embu, +2 more in Kirinyaga), John Mbadi (+2 Luo Nyanza, +2 more in
+   Homa Bay) or Gladys Wanga (+2.5 Luo Nyanza, +2.5 more in Homa Bay). With
+   Mbadi or Wanga, Oburu Odinga's supporters follow as if he were on the
+   ticket. Or pick an opposition defector: they join team A, and because they
+   are crossing sides only the off-ticket share of their supporters (55%)
+   follows. Edit `RM_PICKS` in `js/app.js` to add names or change effects.
+
    Mudavadi, Wetang'ula, Eugene Wamalwa and Jeremiah Kioni have no published
    presidential polling, so they are not separate entries in the model.
 2. **Result** in the header: the most likely outcome and the run-off pairing.

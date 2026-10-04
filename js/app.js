@@ -53,13 +53,31 @@ function presetCfg(teams,groups,follow=85,tickets){
 // split between staying home, crossing to the other main side, and going elsewhere.
 const LEAK_DEFAULT={off:55,leak:{home:30,cross:40,else:30}};
 function teamMembers(cfg,ti){return CANDIDATES.filter(c=>cfg.assign[c.name]===ti).sort((a,b)=>b.avg-a.avg).map(c=>c.name);}
+// Running mates for Ruto's team who are not in the presidential polls. Their pull is an
+// assumed regional swing to team A (points), not measured: g = whole county groups,
+// home = extra in the home county. 'ally' = a team member whose supporters follow as if
+// they were the running mate (an ODM pick keeps ODM's base on side).
+const RM_PICKS={
+  kindiki:{name:'Kithure Kindiki',short:'Kindiki',desc:'Deputy President (UDA), Tharaka-Nithi',g:{MERU:3,MTK:1},home:{'Tharaka - Nithi':2}},
+  waiguru:{name:'Anne Waiguru',short:'Waiguru',desc:'Kirinyaga governor (UDA)',g:{MTK:2,MERU:1},home:{Kirinyaga:2}},
+  mbadi:{name:'John Mbadi',short:'Mbadi',desc:'Treasury Cabinet Secretary (ODM), Homa Bay',g:{LUO:2},home:{'Homa Bay':2},ally:'Oburu Odinga'},
+  wanga:{name:'Gladys Wanga',short:'Wanga',desc:'Homa Bay governor and ODM chair',g:{LUO:2.5},home:{'Homa Bay':2.5},ally:'Oburu Odinga'}
+};
+const rmPick=r=>typeof r==='string'&&r.startsWith('pick:')?RM_PICKS[r.slice(5)]||null:null;
+function rmEffectText(pk){
+  const parts=Object.entries(pk.g).map(([g,v])=>`+${v} in ${GROUP_LABEL[g]||g}`);
+  Object.entries(pk.home||{}).forEach(([c,v])=>parts.push(`+${v} more in ${c.replace(' - ','-')}`));
+  return `Assumed pull for team A: ${parts.join(', ')} (points).${pk.ally?` ${pk.ally.split(' ').slice(-1)[0]}'s supporters stay on side.`:''}`;
+}
 function ticketOf(cfg,ti){
   const m=teamMembers(cfg,ti),t=(cfg.tickets&&cfg.tickets[ti])||{};
   const p=ti===0&&m.includes('William Ruto')?'William Ruto':(m.includes(t.p)?t.p:m[0]||null);
-  let r;
+  let r,pick=null;
   if(t.r===null||t.r==='')r=null;
+  else if(ti===0&&rmPick(t.r)){r=t.r;pick=rmPick(t.r);}
   else r=(m.includes(t.r)&&t.r!==p)?t.r:(m.find(n=>n!==p)||null);
-  return {p,r,members:m,off:m.filter(n=>n!==p&&n!==r)};
+  const ally=pick&&pick.ally&&m.includes(pick.ally)?pick.ally:null;
+  return {p,r,pick,ally,rName:pick?pick.name:r,members:m,off:m.filter(n=>n!==p&&n!==r&&n!==ally)};
 }
 // Regional turnout: relative change per region (−12 = 12% fewer of its voters turn out)
 const RT_REGIONS=[
@@ -207,7 +225,9 @@ function fieldFor(cfg){
   all.forEach(g=>{
     g.members.forEach(ci=>{
       const nm=CAND.names[ci],tk=g.ticket;
-      const keep=!tk||nm===tk.p?1:nm===tk.r?follow:offF;
+      let keep=!tk||nm===tk.p?1:(nm===tk.r||nm===tk.ally)?follow:offF;
+      // a defector to Ruto's side brings fewer of their voters: at most the off-ticket rate
+      if(g.ti===0&&cfg.defectors&&cfg.defectors.includes(nm))keep=Math.min(keep,offF);
       const sh=CAND.share[ci];
       if(keep>=1){for(let i=0;i<nW;i++)g.base[i]+=sh[i];return;}
       if(!g.leakE)g.leakE=new Float64Array(nW);
@@ -237,7 +257,10 @@ function fieldFor(cfg){
   for(let i=0;i<nW;i++){let s=0;for(const g of others)s+=g.base[i];oBase[i]=s;}
   // each other contestant's fraction of the "others" pool in each ward
   others.forEach(g=>{g.frac=new Float64Array(nW);for(let i=0;i<nW;i++)g.frac[i]=oBase[i]>0?g.base[i]/oBase[i]:0;});
-  f={A,B,others,oBase,away,key};
+  // running-mate pull for team A (a pick from outside the polls), as a ward-level swing
+  const pk=ticketOf(cfg,0).pick,rmBoost=new Float64Array(nW);
+  if(pk)for(let i=0;i<nW;i++){const c=WARDS[i].county;rmBoost[i]=((pk.g[GROUP_OF[c]]||0)+((pk.home||{})[c]||0))/100;}
+  f={A,B,others,oBase,away,rmBoost,key};
   _cfgCache.set(key,f);
   return f;
 }
@@ -293,7 +316,7 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tn=noise?rng()*k.toSig:0;
 
     // Team A vs team B vs everyone else, from the fitted candidate field
-    let inc=F.A.base[wi]+F.A.cross[wi]*lkN+si+clNoise[w.cl]+ssh+csi+ns+natSwing;
+    let inc=F.A.base[wi]+F.A.cross[wi]*lkN+F.rmBoost[wi]+si+clNoise[w.cl]+ssh+csi+ns+natSwing;
     let opp=hasB?F.B.base[wi]+F.B.cross[wi]*lkN+so-clNoise[w.cl]*0.5-ns*0.4-natSwing:0;
     let tf_=F.oBase[wi]+tf+stf;
 
@@ -884,8 +907,8 @@ function renderTeams(){
 
   const rows=[...CANDIDATES].sort((a,b)=>b.avg-a.avg);
   const tks=cfg.teams.map((_,ti)=>ticketOf(cfg,ti));
-  const roleOf=n=>{const ti=cfg.assign[n];if(!(ti>=0))return '';const t=tks[ti];if(!t||t.members.length<2)return '';
-    return n===t.p?'<small class="tm-role is-p">President</small>':n===t.r?'<small class="tm-role is-r">Running mate</small>':'<small class="tm-role is-off">Off ticket</small>';};
+  const roleOf=n=>{const ti=cfg.assign[n];if(!(ti>=0))return '';const t=tks[ti];if(!t||(t.members.length<2&&!t.pick))return '';
+    return n===t.p?'<small class="tm-role is-p">President</small>':n===t.r?'<small class="tm-role is-r">Running mate</small>':n===t.ally?'<small class="tm-role is-r">Backs mate</small>':'<small class="tm-role is-off">Off ticket</small>';};
   grid.innerHTML=rows.map((c,ri)=>{
     const cur=cfg.assign[c.name];const fixed=c.name==='William Ruto';
     return `<div class="tm-row${ri>=8&&!renderTeams.all?' tm-more':''}" role="radiogroup" aria-labelledby="tmn${ri}">
@@ -904,16 +927,29 @@ function renderTickets(tks){
   const box=$('#ticketBox');if(!box)return;
   const cfg=S.cfg,L=i=>String.fromCharCode(65+i);
   const opt=(n,sel)=>`<option value="${mapEsc(n)}"${n===sel?' selected':''}>${mapEsc(n.split(' ').slice(-1)[0])}</option>`;
-  const rowsH=cfg.teams.map((t,ti)=>{const k=tks[ti];if(!k||k.members.length<2)return '';
+  // Ruto's running mate: team members, picks outside the polls, or an opposition defector
+  const rmOptsA=k=>{
+    const inTeam=k.members.filter(n=>n!==k.p);
+    const defectors=[...CANDIDATES].sort((a,b)=>b.avg-a.avg).map(c=>c.name).filter(n=>cfg.assign[n]!==0);
+    return `<option value=""${k.r?'':' selected'}>None</option>`+
+      (inTeam.length?`<optgroup label="On Ruto's team">${inTeam.map(n=>opt(n,k.r)).join('')}</optgroup>`:'')+
+      `<optgroup label="Not in the polls">${Object.entries(RM_PICKS).map(([id,p])=>`<option value="pick:${id}"${k.r==='pick:'+id?' selected':''}>${mapEsc(p.short)} · ${mapEsc(p.desc)}</option>`).join('')}</optgroup>`+
+      `<optgroup label="Opposition defector (joins Ruto's team)">${defectors.map(n=>`<option value="def:${mapEsc(n)}">${mapEsc(n)}</option>`).join('')}</optgroup>`;
+  };
+  const rowsH=cfg.teams.map((t,ti)=>{const k=tks[ti];if(!k||(k.members.length<2&&ti!==0))return '';
+    const rmSel=ti===0?rmOptsA(k):`<option value=""${k.r?'':' selected'}>None</option>${k.members.filter(n=>n!==k.p).map(n=>opt(n,k.r)).join('')}`;
     return `<div class="tk-row" style="--tc:var(${TEAM_VARS[ti]})"><p class="tk-h"><b>${L(ti)}</b>${mapEsc(t)}</p>
       <label class="tk-f"><span>President</span><select class="sel" data-tk="${ti}" data-role="p"${ti===0?' disabled title="Ruto leads team A"':''}>${k.members.map(n=>opt(n,k.p)).join('')}</select></label>
-      <label class="tk-f"><span>Running mate</span><select class="sel" data-tk="${ti}" data-role="r"><option value=""${k.r?'':' selected'}>None</option>${k.members.filter(n=>n!==k.p).map(n=>opt(n,k.r)).join('')}</select></label>
+      <label class="tk-f"><span>Running mate</span><select class="sel" data-tk="${ti}" data-role="r">${rmSel}</select></label>
+      ${k.pick?`<p class="hint tk-off"><b>${mapEsc(k.pick.name)}</b>: ${mapEsc(rmEffectText(k.pick))}</p>`:''}${ti===0&&k.r&&cfg.defectors&&cfg.defectors.includes(k.r)?`<p class="hint tk-off"><b>${mapEsc(k.r)}</b> crossed from the opposition: ${cfg.offFollow??LEAK_DEFAULT.off}% of their supporters follow; the rest split as set below.</p>`:''}
       ${k.off.length?`<p class="hint tk-off">Off the ticket: ${k.off.map(n=>mapEsc(n.split(' ').slice(-1)[0])).join(', ')}</p>`:''}</div>`;}).join('');
   box.innerHTML=rowsH||'<p class="hint">Put two or more candidates on a team to choose its ticket.</p>';
   box.querySelectorAll('select[data-tk]').forEach(sel=>sel.onchange=()=>{
     const ti=+sel.dataset.tk;cfg.tickets=cfg.tickets||[];const cur=ticketOf(cfg,ti);
     const t={p:cur.p,r:cur.r};
-    if(sel.dataset.role==='p'){t.p=sel.value;if(t.r===t.p)t.r=cur.p;}else t.r=sel.value||null;
+    if(sel.dataset.role==='p'){t.p=sel.value;if(t.r===t.p)t.r=cur.p;}
+    else if(sel.value.startsWith('def:')){const n=sel.value.slice(4);cfg.assign[n]=ti;t.r=n;cfg.defectors=[...new Set([...(cfg.defectors||[]),n])];}
+    else t.r=sel.value||null;
     cfg.tickets[ti]=t;renderTeams();rerenderTeams();
   });
   // leakage controls mirror the config
@@ -1492,7 +1528,7 @@ function renderExecutiveReport(){
   let x=0;const segs=top.concat(rest>0.0005?[{k:'rest',l:'Everyone else',v:rest}]:[]).map(c=>{const s=`<i style="--x:${x};--w:${c.v};background:${c.k==='rest'?'var(--line-2)':VZ.col(c.k)}"></i>`;x+=c.v;return s;}).join('');
   const sur=n=>n.split(' ').slice(-1)[0];
   const teamsLine=S.cfg.teams.map((t,i)=>{const k=ticketOf(S.cfg,i);if(!k.members.length)return '';
-    return `<b>${mapEsc(t)}</b>: ${mapEsc(sur(k.p))}${k.r?' – '+mapEsc(sur(k.r)):''}${k.off.length?` (with ${mapEsc(k.off.map(sur).join(', '))})`:''}`;}).filter(Boolean).join(' · ');
+    return `<b>${mapEsc(t)}</b>: ${mapEsc(sur(k.p))}${k.rName?' – '+mapEsc(sur(k.rName)):''}${k.off.length?` (with ${mapEsc(k.off.map(sur).join(', '))})`:''}`;}).filter(Boolean).join(' · ');
   const qa=technicalEngineQA(),mapQ=VW_MAP_STATE?.diagnostics||mapDiagnostics(VW_MAP_STATE?.rows||[]),move=movementFromBaselineRows();
   const topTip=(S.tip||tipPts(r.ctyRes)).slice(0,8),topDis=dr.close.slice().sort((a,b)=>Math.abs(a.ls-0.5)-Math.abs(b.ls-0.5)).slice(0,8);
   const leadB=c=>`<span class="b ${badgeFor(c.lead==='tf'?'x':c.lead)}">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'}</span>`;
