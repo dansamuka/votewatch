@@ -1,0 +1,250 @@
+<title>VoteWatch Scorecard Response</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column (~72ch) with full-width evidence tables; verdict chips encode accepted / contested / corrected */
+:root{
+  --bg:#F7F8F9; --surface:#FFFFFF; --ink:#16202A; --ink-2:#47535F; --line:#D9DEE3;
+  --accent:#0E6B5C; --accent-soft:#E2F1EE;
+  --ok:#1F7A3D; --ok-soft:#E3F3E8; --warn:#9A5B00; --warn-soft:#FBEFD9; --info:#2F5B8A; --info-soft:#E4EDF7;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161B; --surface:#182028; --ink:#E6EBEF; --ink-2:#A9B4BE; --line:#2C3741;
+  --accent:#5CC4B1; --accent-soft:#163A35;
+  --ok:#6FCB8C; --ok-soft:#173623; --warn:#F0B661; --warn-soft:#3B2C12; --info:#8FB5E0; --info-soft:#1A2B3E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161B; --surface:#182028; --ink:#E6EBEF; --ink-2:#A9B4BE; --line:#2C3741;
+  --accent:#5CC4B1; --accent-soft:#163A35;
+  --ok:#6FCB8C; --ok-soft:#173623; --warn:#F0B661; --warn-soft:#3B2C12; --info:#8FB5E0; --info-soft:#1A2B3E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.6 var(--f-body);padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:40px}
+.read{max-width:72ch}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4vw,38px);font-weight:600;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:600;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+.stack{display:grid;gap:14px}
+.eyebrow{font:500 12px/1.4 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.meta{color:var(--ink-2);font-size:14px}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+a{color:var(--accent)}
+.lede{font-size:17px}
+.figures{display:flex;flex-wrap:wrap;gap:12px}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px;min-width:0;flex:1 1 200px}
+.fig b{display:block;font:500 24px/1.2 var(--f-mono);font-variant-numeric:tabular-nums}
+.fig span{color:var(--ink-2);font-size:13px}
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font:500 12px/1.4 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--bg)}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{display:inline-block;font:500 11px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;padding:5px 7px;border-radius:999px;white-space:nowrap}
+.chip.contested{background:var(--warn-soft);color:var(--warn)}
+.chip.accepted{background:var(--ok-soft);color:var(--ok)}
+.chip.corrected{background:var(--info-soft);color:var(--info)}
+.claims{display:grid;gap:14px}
+.claim{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:grid;gap:10px;min-width:0}
+.claim header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;justify-content:space-between}
+.claim dl{display:grid;grid-template-columns:110px 1fr;gap:6px 14px;margin:0}
+.claim dt{font:500 12px/1.6 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2)}
+.claim dd{margin:0;min-width:0}
+@media (max-width:560px){.claim dl{grid-template-columns:1fr}.claim dt{margin-top:4px}}
+ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.delta{font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}
+.note{background:var(--accent-soft);border-radius:8px;padding:14px 16px}
+pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;font:400 13px/1.55 var(--f-mono)}
+</style>
+
+<div class="wrap">
+
+<header class="stack read">
+  <span class="eyebrow">VoteWatch 2027 · model review · 4 October 2026</span>
+  <h1>Response to the VoteWatch vs Vote2Watch scorecard</h1>
+  <p class="lede">We agree with the scorecard's conclusion that the two repositories should be merged, with VoteWatch as the base. We have done that. We disagree with seven of its findings. Two are material: the scorecard appears to have assessed VoteWatch before its 2022 results update, and it does not mention that Vote2Watch's 2022 baseline is wrong.</p>
+  <p class="meta">Every figure below was measured on the code named in "Versions compared" and can be reproduced with the commands at the end.</p>
+</header>
+
+<section class="figures" aria-label="Headline figures">
+  <div class="fig"><b>7.1 → 7.6</b><span>VoteWatch overall, before the merge (scorecard → our reading)</span></div>
+  <div class="fig"><b>8.4 → 8.0</b><span>Vote2Watch overall (scorecard → our reading)</span></div>
+  <div class="fig"><b>7 / 9</b><span>findings contested / accepted</span></div>
+  <div class="fig"><b>172</b><span>validation checks now gating every VoteWatch deploy</span></div>
+</section>
+
+<section class="stack">
+  <h2>Versions compared</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Repository</th><th>Commit</th><th>What it contains</th></tr></thead>
+    <tbody>
+      <tr><td>votewatch</td><td class="mono">b0d5431</td><td>The ten review fixes. The scorecard's VoteWatch figures (turnout for "186/290" constituencies, Luo Nyanza "~44%") match this version.</td></tr>
+      <tr><td>votewatch</td><td class="mono">d7c0602</td><td>Adds 2022 presidential results for all 290 constituencies and corrects the county 2022 shares. Pushed before the scorecard was written; not reflected in it.</td></tr>
+      <tr><td>votewatch</td><td class="mono">0dfa09d</td><td>The merge described below. Live at <a href="https://dansamuka.github.io/votewatch/">dansamuka.github.io/votewatch</a>.</td></tr>
+      <tr><td>vote2watch</td><td class="mono">fb3d63b</td><td>Vote2Watch v8: a fork of VoteWatch at d78cd4b plus one overhaul commit and a validation gate.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="stack">
+  <h2>Findings we contest</h2>
+  <div class="claims">
+
+    <article class="claim">
+      <header><h3>1. Ward preference inference and its disclosure</h3><span class="chip contested">Contested · material</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>Inference: VoteWatch 4.5, Vote2Watch 5.0 ("neither has genuine ward presidential preferences"). Disclosure: 9.5 vs 9.0.</dd>
+        <dt>Evidence</dt><dd>Vote2Watch's ward file carries the old county figures for 2022: Ruto at 74.2% in Mandera, 72.1% in Garissa and 10.8% in Kitui. The actual 2022 shares were 20.9%, 25.4% and 27.2% (IEBC Forms 34B; matches Wikipedia's Form 34C county table, e.g. Mandera 28,351 of 135,565 valid votes). The same value is copied to every ward in a county (0 of 47 counties vary internally), yet each row is labelled <code>constituency_imputed</code>. VoteWatch (d7c0602) uses actual results for all 290 constituencies. 224 of them match the official Form 34B totals read by the Kenya Data Atlas; 4 were swapped back to the right constituency and 17 rescaled to the official total. The national total is Ruto 50.45% against the declared 50.49%.</dd>
+        <dt>Requested</dt><dd>Inference: VoteWatch 7.5, Vote2Watch 3.5. Disclosure: Vote2Watch 6.5, because the label describes data the file does not contain.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>2. Turnout coverage</h3><span class="chip contested">Contested · out of date</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>VoteWatch uses Form 34B turnout for 186 of 290 constituencies (8.0 vs 6.5).</dd>
+        <dt>Evidence</dt><dd>Since d7c0602 all 290 constituencies have a 2022 turnout: official atlas reads for 186, the checked Form 34B tally for 104. Vote2Watch's turnout is flat within each county.</dd>
+        <dt>Requested</dt><dd>VoteWatch 8.5, Vote2Watch 6.0.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>3. Home-county treatment</h3><span class="chip contested">Contested · factual</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>Tie at 8.0: "both now reasonably cautious".</dd>
+        <dt>Evidence</dt><dd>Vote2Watch still multiplies home counties by 1.5 (<code>js/app.js:207</code>, <code>home.has(w.county)?1.5:1</code>). VoteWatch reduced it to 1.25 (<code>HOME_BOOST</code>).</dd>
+        <dt>Requested</dt><dd>Vote2Watch 6.5.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>4. Luo Nyanza calibration</h3><span class="chip contested">Contested · out of date</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>VoteWatch "still produces ~44% Team A regionally and 46–48% in Kisumu/Migori" (6.0 vs 8.0).</dd>
+        <dt>Evidence</dt><dd>At d7c0602, measured on the live site: Luo Nyanza 36.2%, Kisumu 36.5%, Migori 45.9%. Vote2Watch: Luo Nyanza 38.5%, Kisumu 42.1%, Migori 42.2%. Neither is clearly closer to the July 2026 polls (Ruto 30–40% in Nyanza).</dd>
+        <dt>Requested</dt><dd>7.5 each.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>5. "Automatic" project and service-delivery shocks</h3><span class="chip contested">Contested · overstated</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>VoteWatch "still contains automatic +1.4% style project/service-delivery vote shocks" (3.0 vs 9.0).</dd>
+        <dt>Evidence</dt><dd>The ±1.4% events exist in an event library, but they are only drawn in the opt-in Live simulation. Shocks start empty (<code>shocks:[]</code>) and the default result applies none. The underlying point stands: the effects are hard-coded rather than measured, and Vote2Watch's "signals only" design is better.</dd>
+        <dt>Requested</dt><dd>VoteWatch 6.0 for projects and 6.0 for rallies; Vote2Watch unchanged.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>6. Coalition support transfers</h3><span class="chip contested">Contested · gap overstated</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>VoteWatch 6.5 ("candidate loyalty × local rival strength"), Vote2Watch 8.5 ("explicit candidate × region priors").</dd>
+        <dt>Evidence</dt><dd>Both vary by candidate and region. VoteWatch derives its regional factor from the other side's fitted local strength. Vote2Watch sets about 30 numbers by hand, none of them sourced. It is more granular, not clearly more defensible.</dd>
+        <dt>Requested</dt><dd>VoteWatch 7.5, Vote2Watch 8.0.</dd>
+      </dl>
+    </article>
+
+    <article class="claim">
+      <header><h3>7. Run-off transfers: two omissions</h3><span class="chip contested">Contested · omission</span></header>
+      <dl>
+        <dt>Scorecard</dt><dd>Vote2Watch 8.5 vs 7.5; no weaknesses noted.</dd>
+        <dt>Evidence</dt><dd>
+          <ul>
+            <li><b>Lost votes in one case.</b> When every candidate is on team A or B and the protest-vote slider is on, Vote2Watch's run-off drops the protest votes. At 8 points, round two counts 14,221,398 votes against 15,355,478 in round one: 1,134,080 lost (7.4%). With third contestants present, as in the default line-up, nothing is lost. We overstated this in our first reply.</li>
+            <li><b>2022 lean as a stand-in.</b> When neither finalist is Ruto's side, Vote2Watch splits eliminated voters by their 2022 lean. That treats Gachagua's and Nyoro's voters as Ruto-leaning, which no longer holds.</li>
+          </ul></dd>
+        <dt>Requested</dt><dd>Vote2Watch 8.0.</dd>
+      </dl>
+    </article>
+
+  </div>
+</section>
+
+<section class="stack">
+  <h2>Findings we accept, and what we did</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Finding</th><th>Status</th><th>Action in 0dfa09d</th></tr></thead>
+    <tbody>
+      <tr><td>Register weighting (VoteWatch 4.0 vs 9.0)</td><td><span class="chip accepted">Accepted</span></td><td>Vote2Watch's register scenarios adopted: current proxy 25,039,048 (2022 register plus IEBC's 2,936,516 new registrations to 20 Aug 2026, shared by the 2,345,476 April 2026 county figures), 2022 certified, and the 28.5m target. We checked 11 county figures against press reports: 10 match, Nairobi differs by 30.</td></tr>
+      <tr><td>Poll weighting and the validated / all-polls separation</td><td><span class="chip accepted">Accepted</span></td><td>Recency, sample-size and pollster-quality weights adopted, with an "All published polls" sensitivity switch in the sidebar.</td></tr>
+      <tr><td>Shrinkage also pulled well-polled candidates</td><td><span class="chip accepted">Accepted</span></td><td>Replaced by count-based shrinkage: one poll keeps 55%, four or more 100%.</td></tr>
+      <tr><td>Gusii third force too high (~67%)</td><td><span class="chip accepted">Accepted</span></td><td>Matiang'i's Gusii strength reduced from 5.5 to 3.6; Kisii third force now 58.8%.</td></tr>
+      <tr><td>Structural uncertainty</td><td><span class="chip accepted">Accepted</span></td><td>Team A's spread across the six preset line-ups (35.7–39.3%) shown beside the 80% simulation range.</td></tr>
+      <tr><td>Events treated as signals</td><td><span class="chip accepted">Accepted</span></td><td>Salient events listed in Signals; never vote points.</td></tr>
+      <tr><td>Validation and deployment governance</td><td><span class="chip accepted">Accepted</span></td><td>Validator adopted and extended to 172 checks: 2022 results against the IEBC declaration, run-off vote conservation, seeded reproducibility. The Pages workflow runs it before the build (run 37212531220 passed).</td></tr>
+      <tr><td>Two-voter Mandera reconciliation error</td><td><span class="chip accepted">Accepted</span></td><td>The boundary-hold wards now split their constituency total exactly; the register reconciles to 22,102,532.</td></tr>
+      <tr><td>Geographic integrity (8.5 vs 9.0)</td><td><span class="chip corrected">Accepted, with more</span></td><td>The validator found a further VoteWatch error the scorecard did not: seven counties still carried 1,457-era ward counts. Fixed.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="stack">
+  <h2>Revised scores before the merge</h2>
+  <p class="meta read">Only rows we would change are listed. All other scorecard rows stand. As in the original, the overall figure is a judgement rather than an average.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Dimension</th><th class="n">Scorecard VW / V2W</th><th class="n">Revised VW / V2W</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr><td>Ward preference inference</td><td class="n">4.5 / 5.0</td><td class="n">7.5 / 3.5</td><td>Finding 1</td></tr>
+      <tr><td>Disclosure of ward limitations</td><td class="n">9.5 / 9.0</td><td class="n">9.5 / 6.5</td><td>Finding 1</td></tr>
+      <tr><td>Turnout modelling</td><td class="n">8.0 / 6.5</td><td class="n">8.5 / 6.0</td><td>Finding 2</td></tr>
+      <tr><td>Home-region treatment</td><td class="n">8.0 / 8.0</td><td class="n">8.0 / 6.5</td><td>Finding 3</td></tr>
+      <tr><td>Luo Nyanza calibration</td><td class="n">6.0 / 8.0</td><td class="n">7.5 / 7.5</td><td>Finding 4</td></tr>
+      <tr><td>Projects / government delivery</td><td class="n">3.0 / 9.0</td><td class="n">6.0 / 9.0</td><td>Finding 5</td></tr>
+      <tr><td>Rallies / hype / events</td><td class="n">5.0 / 9.0</td><td class="n">6.0 / 9.0</td><td>Finding 5</td></tr>
+      <tr><td>Coalition support transfers</td><td class="n">6.5 / 8.5</td><td class="n">7.5 / 8.0</td><td>Finding 6</td></tr>
+      <tr><td>Run-off transfer modelling</td><td class="n">7.5 / 8.5</td><td class="n">7.5 / 8.0</td><td>Finding 7</td></tr>
+      <tr><td>Political-science defensibility</td><td class="n">6.5 / 8.0</td><td class="n">7.0 / 7.0</td><td>A wrong 2022 baseline distorts every within-region spread</td></tr>
+      <tr><td>Research-readiness today</td><td class="n">7.0 / 8.2</td><td class="n">7.5 / 7.5</td><td>Findings 1–7</td></tr>
+      <tr><td><b>Overall</b></td><td class="n"><b>7.1 / 8.4</b></td><td class="n"><b>~7.6 / ~8.0</b></td><td>Vote2Watch keeps a small lead on modelling discipline; VoteWatch leads on data correctness</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="stack read">
+  <h2>The merged VoteWatch (0dfa09d)</h2>
+  <p>It keeps VoteWatch's 2022 constituency results, corrected county shares, 290-constituency turnout, KDA ward builder, county simulation ranges, running-mate scenarios and report. It adds Vote2Watch's register scenarios, poll weighting and sensitivity switch, transfer priors, per-contestant run-off shocks, structural range, event signals and validation gate.</p>
+  <p>We left out four things from Vote2Watch: its 2022 baseline, its flat turnout within counties, its ×1.5 home boost, and its unsourced youth coefficients.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Default line-up</th><th class="n">Merged VoteWatch</th><th class="n">Vote2Watch v8</th></tr></thead>
+    <tbody>
+      <tr><td>Round one: A / B / others</td><td class="n">38.4 / 37.6 / 24.0</td><td class="n">38.6 / 37.6 / 23.9</td></tr>
+      <tr><td>All-polls sensitivity: A / B / others</td><td class="n">40.1 / 36.8 / 23.1</td><td class="n">40.3 / 36.8 / 22.9</td></tr>
+      <tr><td>Structural range for A</td><td class="n">35.7–39.3%</td><td class="n">35.7–39.5%</td></tr>
+      <tr><td>Modelled run-off share for A</td><td class="n">43.6%</td><td class="n">44.8%</td></tr>
+      <tr><td>Kisii third force · Kisumu A · Migori A</td><td class="n">58.8 · 33.7 · 43.9%</td><td class="n">58.9 · 42.1 · 42.2%</td></tr>
+      <tr><td>Mandera A (2022 actual: 20.9%)</td><td class="n">65.2%</td><td class="n">76.3%</td></tr>
+    </tbody>
+  </table></div>
+  <p>Headline results now agree closely. The remaining differences come mostly from the 2022 baseline, as the Mandera row shows. We invite a re-score of 0dfa09d.</p>
+  <div class="note">
+    <p><b>Still open, in either repository:</b></p>
+    <ul>
+      <li>There is no back-test against 2022.</li>
+      <li>Transfer and run-off priors are judgement, not data.</li>
+      <li>45 constituency results have no official read to check against.</li>
+      <li>The 2013 and 2017 county history figures are unverified.</li>
+      <li>Removals from the register since 2022 are not netted out.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="stack">
+  <h2>How to verify</h2>
+  <pre>git clone https://github.com/dansamuka/votewatch &amp;&amp; cd votewatch
+node scripts/validate-model.mjs     # 172 checks, prints the default, sensitivity and run-off figures
+git show d7c0602 --stat             # 2022 results commit
+git show 0dfa09d --stat             # merge commit
+
+# Vote2Watch baseline (findings 1 and 3)
+git clone https://github.com/dansamuka/vote2watch &amp;&amp; cd vote2watch
+grep -o '"co":"Mandera"[^}]*"bi":[0-9.]*' data/wards.js | head -1   # bi 0.742
+grep -n "home.has(w.county)?1.5" js/app.js</pre>
+  <p class="meta">Sources for 2022: IEBC Forms 34B via the public tally by MapsBySifa on ArcGIS, checked against the Kenya Data Atlas's official Form 34B reads, and Wikipedia's county table from Form 34C. Register: IEBC releases on the April 2026 enhanced registration drive (2,345,476) and continuous registration to 20 Aug 2026 (2,936,516).</p>
+</section>
+
+</div>
