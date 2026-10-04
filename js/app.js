@@ -61,6 +61,8 @@ const RM_PICKS={
   kindiki:{name:'Kithure Kindiki',short:'Kindiki',desc:'Deputy President (UDA), Tharaka-Nithi',g:{MERU:3,MTK:1},home:{'Tharaka - Nithi':2}},
   waiguru:{name:'Anne Waiguru',short:'Waiguru',desc:'Kirinyaga governor (UDA)',g:{MTK:2,MERU:1},home:{Kirinyaga:2}},
   mbadi:{name:'John Mbadi',short:'Mbadi',desc:'Treasury Cabinet Secretary (ODM), Homa Bay',g:{LUO:2},home:{'Homa Bay':2},ally:'Oburu Odinga'},
+  mudavadi:{name:'Musalia Mudavadi',short:'Mudavadi',desc:'Prime Cabinet Secretary, Vihiga',g:{WEST:2},home:{Vihiga:2.5}},
+  wetangula:{name:"Moses Wetang'ula",short:"Wetang'ula",desc:'National Assembly Speaker (Ford-Kenya), Bungoma',g:{WEST:1.5},home:{Bungoma:3}},
   wanga:{name:'Gladys Wanga',short:'Wanga',desc:'Homa Bay governor and ODM chair',g:{LUO:2.5},home:{'Homa Bay':2.5},ally:'Oburu Odinga'}
 };
 const rmPick=r=>typeof r==='string'&&r.startsWith('pick:')?RM_PICKS[r.slice(5)]||null:null;

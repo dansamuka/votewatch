@@ -40,14 +40,16 @@ Live: https://dansamuka.github.io/votewatch/
    with a small assumed regional pull for team A: Kithure Kindiki (+3 Meru &
    Embu, +1 Mt Kenya, +2 more in Tharaka-Nithi), Anne Waiguru (+2 Mt Kenya,
    +1 Meru & Embu, +2 more in Kirinyaga), John Mbadi (+2 Luo Nyanza, +2 more in
-   Homa Bay) or Gladys Wanga (+2.5 Luo Nyanza, +2.5 more in Homa Bay). With
+   Homa Bay), Gladys Wanga (+2.5 Luo Nyanza, +2.5 more in Homa Bay), Musalia
+   Mudavadi (+2 Western, +2.5 more in Vihiga) or Moses Wetang'ula (+1.5 Western,
+   +3 more in Bungoma). With
    Mbadi or Wanga, Oburu Odinga's supporters follow as if he were on the
    ticket. Or pick an opposition defector: they join team A, and because they
    are crossing sides only the off-ticket share of their supporters (55%)
    follows. Edit `RM_PICKS` in `js/app.js` to add names or change effects.
 
-   Mudavadi, Wetang'ula, Eugene Wamalwa and Jeremiah Kioni have no published
-   presidential polling, so they are not separate entries in the model.
+   Eugene Wamalwa and Jeremiah Kioni have no published presidential polling,
+   so they are not separate entries in the model.
 2. **Result** in the header: the most likely outcome and the run-off pairing.
 3. **Tabs**: Overview, Run-off, Swing counties, Scenarios (ready-made
    line-ups), Article 138, Map (click a county for its result and wards),
