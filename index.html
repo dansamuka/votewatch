@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=10.8">
-<link rel="stylesheet" href="css/app.css?v=10.8">
+<link rel="stylesheet" href="css/tokens.css?v=10.9">
+<link rel="stylesheet" href="css/app.css?v=10.9">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -72,7 +72,7 @@
       <div class="tm-chips" id="teamChips"></div>
       <p class="side-h tm-sub">Who joins which team</p>
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
-      <p class="hint">Average of validated polls (Mizani and Politrack are held out). <sup>*</sup> one poll, counted at half weight. <sup>†</sup> no validated poll yet. Hover a figure for the detail.</p>
+      <p class="hint">Weighted average of validated polls (recency, sample, pollster). <sup>*</sup> one poll, pulled toward a small prior. <sup>†</sup> no validated poll yet. Hover a figure for the detail.</p>
       <p class="side-h tm-sub">Tickets</p>
       <div class="tk" id="ticketBox"></div>
       <div class="sl">
@@ -87,7 +87,7 @@
       </div>
       <details class="side-adv" open>
         <summary>Where the others go</summary>
-        <p class="hint">Voters who don't follow their candidate into a team. Shares are rescaled to add up to 100%. These are assumptions, not measured.</p>
+        <p class="hint">Voters who don't follow their candidate into a team. Each candidate has their own split by region (assumptions, not measured); these sliders scale those splits up or down.</p>
         <div class="side-sec">
       <div class="sl">
         <label class="sl-top" for="sl-lh"><span>Stay home</span><output id="lv-lh">30%</output></label>
@@ -104,6 +104,26 @@
       </div>
         </div>
       </details>
+    </section>
+    <section class="side-sec" aria-labelledby="secEv">
+      <h3 class="side-h" id="secEv">Evidence</h3>
+      <div class="sl">
+        <label class="sl-top" for="registerModeSelect"><span>Voter register</span></label>
+        <select class="gov-select w100" id="registerModeSelect">
+          <option value="current" selected>Current proxy · 25.04m (Aug 2026)</option>
+          <option value="target">IEBC 2027 target scenario · 28.5m</option>
+          <option value="base">2022 certified register · 22.10m</option>
+        </select>
+        <p class="hint">2022 register plus IEBC's 2.94m new registrations by 20 Aug 2026, shared out by its April 2026 county figures. Not a gazetted 2027 register.</p>
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="pollModeSelect"><span>Polls</span></label>
+        <select class="gov-select w100" id="pollModeSelect">
+          <option value="validated" selected>Validated polls (central case)</option>
+          <option value="all">All published polls · sensitivity</option>
+        </select>
+        <p class="hint">Mizani and Politrack are held out of the central case; choose "All published polls" to see what they change.</p>
+      </div>
     </section>
     <section class="side-sec" aria-labelledby="secAss">
       <h3 class="side-h" id="secAss">Adjust</h3>
@@ -427,15 +447,15 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=10.8"></script>
-<script defer src="data/counties.js?v=10.8"></script>
-<script defer src="data/results2022.js?v=10.8"></script>
-<script defer src="data/transport.js?v=10.8"></script>
-<script defer src="data/context.js?v=10.8"></script>
-<script defer src="data/kenya-geo.js?v=10.8"></script>
-<script defer src="js/viz.js?v=10.8"></script>
-<script defer src="js/app.js?v=10.8"></script>
-<script defer src="js/enhance.js?v=10.8"></script>
-<script defer src="js/map.js?v=10.8"></script>
+<script defer src="data/wards.js?v=10.9"></script>
+<script defer src="data/counties.js?v=10.9"></script>
+<script defer src="data/results2022.js?v=10.9"></script>
+<script defer src="data/transport.js?v=10.9"></script>
+<script defer src="data/context.js?v=10.9"></script>
+<script defer src="data/kenya-geo.js?v=10.9"></script>
+<script defer src="js/viz.js?v=10.9"></script>
+<script defer src="js/app.js?v=10.9"></script>
+<script defer src="js/enhance.js?v=10.9"></script>
+<script defer src="js/map.js?v=10.9"></script>
 </body>
 </html>

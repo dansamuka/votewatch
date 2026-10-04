@@ -9,6 +9,37 @@ the changes. With no shocks active, every national, county and ward figure
 is **bit-for-bit identical** to v4.6. Only runs that include shocks differ,
 because of fixes 1 and 2 below.
 
+## Merge with vote2watch v8 (v10.9, 4 Oct 2026)
+
+vote2watch (a fork of VoteWatch at d78cd4b) re-implemented the external review
+independently. Its stronger parts are merged here; VoteWatch's 2022 results,
+constituency turnout, ward builder and county ranges are kept.
+
+| From vote2watch | Notes |
+|---|---|
+| Register scenarios | 2022 certified 22,102,532; current proxy 25,039,048 (2022 + IEBC's 2,936,516 new registrations to 20 Aug 2026, shared by the 2,345,476 April 2026 ECVR county figures; 10 of 11 county figures checked against press reports match, Nairobi differs by 30); IEBC 28.5m target scenario. Replaces the census-trend proxy. Removals since 2022 are not netted out. |
+| Poll weighting | Recency (180-day), sample size and pollster-quality weights; validated polls in the central case, all polls as a sensitivity switch. Shrinkage by poll count (1 poll 55%, 2 75%, 3 90%, 4+ none) replaces the 1% prior that also pulled well-polled candidates. |
+| Off-ticket transfers | `TRANSFER_PRIORS` by candidate and county group; the sliders scale them. VoteWatch's local-strength factor for crossing is kept on top. |
+| Run-off transfers | `RUNOFF_INC_PRIORS` by candidate and county group, weighted by each member's national level, with a shock per eliminated contestant (SD 0.15). **Fixed while porting:** vote2watch dropped protest-slider votes from round two; they now split evenly, and the validator checks that round two keeps every round-one vote. When neither finalist is team A, eliminated voters split evenly instead of by 2022 lean (which would treat Gachagua's voters as Ruto-leaning). |
+| Structural range | Team A's spread across the preset line-ups, shown beside the 80% simulation range. |
+| Salient events | Listed in Signals; never vote points. |
+| Gusii calibration | Matiang'i's Gusii strength 5.5 → 3.6: Kisii third force 67.6% → 58.8%. |
+| Validator + deploy gate | `scripts/validate-model.mjs` (172 checks), run by the Pages workflow before the build. |
+
+Fixed while adding the validator: `wards` in `data/counties.js` still had the
+old 1,457-ward counts for seven counties (Busia, Kisumu, Homa Bay, Migori,
+Kisii, Nyamira, Nairobi); the builder now writes them from the IEBC registry.
+The 2022 ward register now reconciles exactly (the held Mandera wards split
+with the remainder assigned, instead of rounding).
+
+Default after the merge: 38.4 / 37.6 / 24.0 (all-polls sensitivity 40.1 / 36.8 /
+23.1); structural range for team A 35.7–39.3%; modelled run-off team A 43.6%,
+United opposition wins about 94% of simulated run-offs.
+
+Not taken from vote2watch: its 2022 baseline (wrong county figures copied to
+every ward), its flat within-county turnout, its home boost (×1.5) and its
+youth tilt of the candidate field (unsourced coefficients).
+
 ## 2022 presidential results by constituency (v10.8, 4 Oct 2026)
 
 **Source.** No official machine-readable table exists: IEBC publishes Forms 34B
@@ -53,14 +84,14 @@ code are addressed:
 
 | # | Issue | Fix |
 |---|---|---|
-| 1 | Same register growth everywhere | 2022→2027 growth by county: half the national rate, half in proportion to 2009→2019 census growth (KNBS via the Kenya Data Atlas; floored at zero because the 2009 north-east counts were inflated). Range 2.6% (Mandera) to 10.8% (Isiolo); national total unchanged. |
+| 1 | Same register growth everywhere | (Superseded in v10.9 by IEBC registration scenarios.) 2022→2027 growth by county: half the national rate, half in proportion to 2009→2019 census growth (KNBS via the Kenya Data Atlas; floored at zero because the 2009 north-east counts were inflated). Range 2.6% (Mandera) to 10.8% (Isiolo); national total unchanged. |
 | 2 | Ward results looked more precise than they are | (Superseded in v10.8: constituencies now carry their actual 2022 results.) Vote shares were only estimated per county. The county panel lists constituencies (IEBC register, estimated turnout, estimated votes) and states the county's shares once; "Most influential wards" became constituencies; ward CSV columns are labelled `_county_est` and include the IEBC 2022 register. |
 | 3 | Probabilities read as forecasts | Wording is now "if this line-up runs" or "of simulations of this line-up", with a note that this is not the chance the line-up forms. |
 | 4 | No range around county results | The Monte Carlo keeps every county's result in every run: the county card shows the 80% range for teams A and B and how often A reaches 25%; the swing-counties table adds "25%+ in" and the range. |
 | 5 | Polls: validated and held-out mixed | Model levels use validated polls only (`polling_average.json`); Mizani and Politrack stay visible but are held out. The all-polls figure is in each candidate's tooltip. |
-| 6 | One-poll candidates at full weight | Shrinkage: level = (n × poll + 1 × 1%) / (n + 1), n = effective validated polls (unvalidated-only candidates count half). Each team also gets its own poll error per simulation (members' 95% margins, half attributed to the candidate, half to the national swing already drawn). |
-| 7 | Run-off split 50/50 in the simulations | Each eliminated contestant's voters follow an assumed run-off loyalty (`gov` in `data/context.js`: share who would back Ruto's side), with a ±8-point national shift drawn per simulation. The lean-to-A / even / lean-to-B views remain for comparison. |
-| 8 | Same leak split for every candidate and region | The cross-over share is scaled per candidate by their loyalty to the side they would cross to (×0.2–1.8) and per ward by that side's local strength (×0.5–1.6, square root of local vs national). The rest goes to "someone else". |
+| 6 | One-poll candidates at full weight | (Superseded in v10.9 by weighted polls and count-based shrinkage.) Shrinkage: level = (n × poll + 1 × 1%) / (n + 1), n = effective validated polls (unvalidated-only candidates count half). Each team also gets its own poll error per simulation (members' 95% margins, half attributed to the candidate, half to the national swing already drawn). |
+| 7 | Run-off split 50/50 in the simulations | (Superseded in v10.9 by candidate × region priors with per-contestant shocks.) Each eliminated contestant's voters follow an assumed run-off loyalty (`gov` in `data/context.js`: share who would back Ruto's side), with a ±8-point national shift drawn per simulation. The lean-to-A / even / lean-to-B views remain for comparison. |
+| 8 | Same leak split for every candidate and region | (Superseded in v10.9 by candidate × region priors; the local-strength factor is kept.) The cross-over share is scaled per candidate by their loyalty to the side they would cross to (×0.2–1.8) and per ward by that side's local strength (×0.5–1.6, square root of local vs national). The rest goes to "someone else". |
 | 9 | Home boost ×1.5, untested | Tempered to ×1.25 (`HOME_BOOST`): regional strength already carries most of the home pull. |
 | 10 | No youth preference | Young voters back team A by `yg` points less than older voters (default 10; Infotrak, Jun 2026: Sifuna leads 18–26s at 20% while Ruto polls 32% overall). Polls already include the youth mix, so only a change in youth turnout moves the vote. |
 

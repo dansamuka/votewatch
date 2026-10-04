@@ -10,8 +10,8 @@ Live: https://dansamuka.github.io/votewatch/
 ## Using it
 
 1. **Teams** (left, or the top panel on mobile): every candidate polling in
-   2026 is listed with their average across validated polls (* one poll,
-   counted at half weight; † no validated poll yet). Put each one on team A (Ruto's
+   2026 is listed with their weighted average across validated polls (* one
+   poll, pulled toward a small prior; † no validated poll yet). Put each one on team A (Ruto's
    side), team B, an extra team (up to four), or Solo. Then adjust
    follow-through, swings, youth turnout, protest vote and turnout by region.
 
@@ -35,11 +35,13 @@ Live: https://dansamuka.github.io/votewatch/
 
    **Tickets.** Each team with two or more members has a presidential candidate
    and a running mate (Tickets, in the sidebar). Anyone else on the team is
-   "off the ticket": by default 55% of their supporters follow, and of the rest
-   30% stay home (lowering turnout where that candidate is strong), 40% cross
-   to the other main side (team A, or team B for team A's own members) and
-   30% vote for someone else. These splits are assumptions, adjustable under
-   "Where the others go"; the cross-over share varies ±25% between simulations.
+   "off the ticket": how many of their supporters follow, and how the rest
+   split between staying home, crossing to the other main side and voting for
+   someone else, are set per candidate and region (`TRANSFER_PRIORS` in
+   `data/context.js`; e.g. Kalonzo keeps 86% in Ukambani, 70% elsewhere).
+   Crossing rises where the other side is locally strong. The sliders under
+   "Where the others go" scale these priors; the cross-over share varies ±25%
+   between simulations.
 
    **Ruto's running mate** can also be someone outside the presidential polls,
    with a small assumed regional pull for team A: Kithure Kindiki (+3 Meru &
@@ -56,15 +58,23 @@ Live: https://dansamuka.github.io/votewatch/
    Eugene Wamalwa and Jeremiah Kioni have no published presidential polling,
    so they are not separate entries in the model.
    **How the model treats polls and voters** (details in `docs/AUDIT.md`):
-   - levels come from validated polls only; one-poll figures are pulled toward
-     a 1% minor-candidate level; each team gets its own poll error per run
-   - supporters who don't follow cross sides according to their candidate's
-     loyalty and the other side's local strength
-   - in a run-off, everyone else's voters follow their candidates' assumed
-     loyalties (`gov` in `data/context.js`), uncertain by ±8 points per run
+   - **Evidence** (sidebar): the voter register (current proxy 25.04m by
+     default, the 2022 certified register, or IEBC's 28.5m target scenario)
+     and the polls (validated only by default, or all published as a
+     sensitivity)
+   - polls are weighted by recency, sample size and pollster quality; one to
+     three polls are pulled toward a small prior; each team gets its own poll
+     error per run
+   - in a run-off, each eliminated candidate's voters split by
+     candidate-by-region priors (`RUNOFF_INC_PRIORS`), with a separate shock
+     for each candidate in every simulation; protest votes split evenly
    - young voters back team A 10 points less than older voters (adjustable);
      this matters when youth turnout changes
    - home counties get ×1.25
+   - events such as development tours are listed in Signals but never added
+     as vote points
+   - "What this means" gives two ranges: the 80% simulation range for this
+     line-up, and the spread across the preset line-ups (who runs together)
 2. **Result** in the header: the most likely outcome and the run-off pairing,
    as a share of simulations **if this line-up runs** (not the chance that the
    line-up forms).
@@ -121,6 +131,20 @@ docs/AUDIT.md           engine and data audit, method and calibration notes
 - **Touch.** On coarse pointers every control is at least 44px.
 - **Spacing and type** come from tokens (`--sp-*`, `--t-*`); avoid raw px.
 
+## Validation
+
+`scripts/validate-model.mjs` checks geography (47 / 290 / 1,450), the 2022
+register, register scenarios, the 2022 results against the IEBC national
+declaration and the county figures, poll separation, shares summing to 100%,
+calibration guards (Kisumu and Migori team A below 48%, Kisii and Nyamira
+third force 45–65%), run-off vote conservation, the structural range and
+seeded reproducibility. The Pages workflow runs it before the build, so a
+failing check blocks deployment.
+
+```bash
+node scripts/validate-model.mjs
+```
+
 ## Run locally
 
 No build step needed for development. Serve the folder:
@@ -154,9 +178,11 @@ node scripts/build-wards.mjs <path-to-kenya-data-atlas>
 
 - **Wards:** the official 1,450 wards and 290 constituencies (IEBC, 2012
   boundaries).
-- **Registered voters:** 2022 figures per ward from IEBC Gazette Notice 7290,
-  grown to 2027: the national total is shared out half evenly and half by
-  each county's 2009→2019 census growth (2.6% to 10.8%). 1,440 wards come straight
+- **Registered voters:** 2022 figures per ward from IEBC Gazette Notice 7290
+  (total 22,102,532), scaled in the app to the selected register scenario by
+  county: the current proxy adds IEBC's 2,936,516 new registrations to 20 Aug
+  2026, shared out by the 2,345,476 county figures of the April 2026 enhanced
+  registration drive. 1,440 wards come straight
   from the gazette; the 10 Mandera East and Lafey wards are on a boundary hold
   in the atlas and share their constituency's official total equally.
 - **Turnout:** each county's turnout base, varied by constituency using 2022

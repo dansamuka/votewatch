@@ -62,18 +62,15 @@ const CONTEXT_FACTS=[
 ];
 
 // ═══ CANDIDATE FIELD ═══
-// poll: average of VALIDATED national polls only (model-eligible pollsters), from
-//   kenya-election-intelligence-engine data/model/polling_average.json (2026-08-20).
-//   Candidates with no validated poll (val:false) use the all-polls figure from
-//   polling_average_all.json and count as half a poll.
-// all: average of all published polls incl. held-out ones (shown for comparison).
-// eff: effective poll count; me: 95% margin (points) from the same files.
-// avg (computed below): the level the model uses, the poll figure shrunk toward a
-//   minor-candidate prior (1%) by poll count, so a one-poll figure counts half.
-// gov: share of the candidate's supporters who would back Ruto's side over the
-//   opposition in a run-off once their own candidate is out. An assumption from
-//   each figure's 2026 alignment (ODM's government wing high, opposition
-//   principals low); varied by ±8 points between simulations.
+// Candidate levels are computed from POLLS above (merged from vote2watch v8):
+//   - each poll is weighted by recency (180-day exponential), sample size and a
+//     pollster-quality prior (POLLSTER_QUALITY);
+//   - the central baseline uses validated (model-eligible) polls only; "all polls"
+//     adds the held-out Mizani and Politrack polls as a sensitivity, never silently;
+//   - few polls shrink a figure toward a 0.5% prior: one poll keeps 55% of its
+//     value, two 75%, three 90%, four or more 100% (well-polled candidates are not shrunk).
+// me: 95% margin (points) from the engine repo's polling_average files; it sets each
+//   team's own poll error in the simulations.
 //
 // Where each candidate's support sits is set per COUNTY GROUP (g), as strength
 // relative to their national level, calibrated to the July 2026 regional cuts:
@@ -99,24 +96,102 @@ const COUNTY_GROUP={
 };
 const GROUP_LABEL={NE:'North',KAL:'Kalenjin Rift',RIFT:'Mixed Rift',LUO:'Luo Nyanza',GUSII:'Gusii',WEST:'Western',NBI:'Nairobi',COAST:'Coast',KAMBA:'Ukambani',MTK:'Mt Kenya',MERU:'Meru & Embu'};
 const CANDIDATES=[
-  {name:'William Ruto',      poll:28.65,all:33.69,eff:4.94,me:3.5,val:true,gov:1,lean:'bi',g:{NE:2.3,KAL:2.5,RIFT:1.45,LUO:1.3,GUSII:0.65,WEST:0.55,NBI:0.75,COAST:0.85,KAMBA:0.55,MTK:0.3,MERU:0.55},home:[]},
-  {name:'Kalonzo Musyoka',   poll:13.98,all:15.12,eff:4.94,me:6.59,val:true,gov:0.2,lean:'bo',g:{KAMBA:4.5,NBI:1.0,COAST:1.0,MTK:0.8,MERU:0.9,RIFT:0.7,WEST:0.55,LUO:0.45,GUSII:0.45,NE:0.5,KAL:0.2},home:['Kitui']},
-  {name:'Edwin Sifuna',      poll:11.92,all:13.79,eff:4.94,me:5.03,val:true,gov:0.25,lean:'bo',g:{WEST:1.8,NBI:1.5,COAST:1.7,LUO:1.0,GUSII:0.5,RIFT:0.8,KAMBA:0.4,MTK:0.3,MERU:0.3,NE:0.4,KAL:0.3},home:['Bungoma']},
-  {name:"Fred Matiang'i",    poll:13.12,all:11.05,eff:4.94,me:3.5,val:true,gov:0.25,lean:'bo',g:{GUSII:5.5,LUO:0.7,MTK:1.4,MERU:1.2,NBI:1.1,RIFT:0.9,WEST:0.5,COAST:0.5,KAMBA:0.5,NE:0.6,KAL:0.4},home:[]},
-  {name:'Babu Owino',        poll:7,all:7,eff:1,me:7.84,val:true,gov:0.3, lean:'bo',g:{LUO:3.6,NBI:1.6,WEST:0.8,COAST:0.7,GUSII:0.5,rest:0.3},home:[]},
-  {name:'Rigathi Gachagua',  poll:5.17,all:5.24,eff:4.94,me:3.5,val:true,gov:0.15,lean:'bi',g:{MTK:4.5,MERU:2.0,NBI:2.0,RIFT:1.2,rest:0.2},home:['Nyeri']},
-  {name:'Ndindi Nyoro',      poll:3.1,all:3.1,eff:1,me:7.84,val:false,gov:0.3, lean:'bi',g:{MTK:3.0,MERU:1.0,NBI:1.0,RIFT:0.8,rest:0.3},home:["Murang'A"]},
-  {name:'George Wajackoyah', poll:1.1,all:1.1,eff:1,me:7.84,val:false,gov:0.45, lean:'bo',g:{WEST:2.0,rest:0.8},home:['Kakamega']},
-  {name:'Oburu Odinga',      poll:1,all:1,eff:1,me:7.84,val:true,gov:0.75, lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
-  {name:'David Maraga',      poll:1.8,all:0.83,eff:2.98,me:3.5,val:true,gov:0.2, lean:'bo',g:{GUSII:4.0,rest:0.7},home:['Nyamira']},
-  {name:'Martha Karua',      poll:2,all:0.83,eff:1.99,me:3.5,val:true,gov:0.2, lean:'bi',g:{MTK:2.5,MERU:1.2,rest:0.7},home:['Kirinyaga']},
-  {name:'James Orengo',      poll:0.4,all:0.4,eff:1,me:7.84,val:false,gov:0.35, lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
-  {name:'Okiya Omtata',      poll:0.36,all:0.36,eff:1,me:7.84,val:true,gov:0.3, lean:'bo',g:{WEST:2.0,rest:0.8},home:['Busia']},
-  {name:'Jimi Wanjigi',      poll:0.3,all:0.3,eff:1,me:7.84,val:false,gov:0.25, lean:'bi',g:{MTK:2.0,rest:0.8},home:['Nyeri']},
+  {name:'William Ruto',      me:3.5,lean:'bi',g:{NE:2.3,KAL:2.5,RIFT:1.45,LUO:1.3,GUSII:0.65,WEST:0.55,NBI:0.75,COAST:0.85,KAMBA:0.55,MTK:0.3,MERU:0.55},home:[]},
+  {name:'Kalonzo Musyoka',   me:6.59,lean:'bo',g:{KAMBA:4.5,NBI:1.0,COAST:1.0,MTK:0.8,MERU:0.9,RIFT:0.7,WEST:0.55,LUO:0.45,GUSII:0.45,NE:0.5,KAL:0.2},home:['Kitui']},
+  {name:'Edwin Sifuna',      me:5.03,lean:'bo',g:{WEST:1.8,NBI:1.5,COAST:1.7,LUO:1.0,GUSII:0.5,RIFT:0.8,KAMBA:0.4,MTK:0.3,MERU:0.3,NE:0.4,KAL:0.3},home:['Bungoma']},
+  {name:"Fred Matiang'i",    me:3.5,lean:'bo',g:{GUSII:3.6,LUO:0.7,MTK:1.4,MERU:1.2,NBI:1.1,RIFT:0.9,WEST:0.5,COAST:0.5,KAMBA:0.5,NE:0.6,KAL:0.4},home:[]},
+  {name:'Babu Owino',        me:7.84,lean:'bo',g:{LUO:3.6,NBI:1.6,WEST:0.8,COAST:0.7,GUSII:0.5,rest:0.3},home:[]},
+  {name:'Rigathi Gachagua',  me:3.5,lean:'bi',g:{MTK:4.5,MERU:2.0,NBI:2.0,RIFT:1.2,rest:0.2},home:['Nyeri']},
+  {name:'Ndindi Nyoro',      me:7.84,lean:'bi',g:{MTK:3.0,MERU:1.0,NBI:1.0,RIFT:0.8,rest:0.3},home:["Murang'A"]},
+  {name:'George Wajackoyah', me:7.84,lean:'bo',g:{WEST:2.0,rest:0.8},home:['Kakamega']},
+  {name:'Oburu Odinga',      me:7.84,lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
+  {name:'David Maraga',      me:3.5,lean:'bo',g:{GUSII:4.0,rest:0.7},home:['Nyamira']},
+  {name:'Martha Karua',      me:3.5,lean:'bi',g:{MTK:2.5,MERU:1.2,rest:0.7},home:['Kirinyaga']},
+  {name:'James Orengo',      me:7.84,lean:'bo',g:{LUO:5.0,rest:0.2},home:['Siaya']},
+  {name:'Okiya Omtata',      me:7.84,lean:'bo',g:{WEST:2.0,rest:0.8},home:['Busia']},
+  {name:'Jimi Wanjigi',      me:7.84,lean:'bi',g:{MTK:2.0,rest:0.8},home:['Nyeri']},
 ];
-// Model level: shrink each poll figure toward a minor-candidate prior by poll count.
-const SHRINK_K=1,SHRINK_PRIOR=1.0;
-CANDIDATES.forEach(c=>{const n=c.val?c.eff:c.eff/2;c.avg=+((n*c.poll+SHRINK_K*SHRINK_PRIOR)/(n+SHRINK_K)).toFixed(2);});
+// Poll weighting (from vote2watch v8)
+const POLLSTER_QUALITY={
+  'TIFA Research':1.00,'Infotrak Research':1.00,'Swiss Poll International':0.82,
+  'Stats Kenya':0.55,'Politrack Africa':0.35,'Mizani Africa':0.30
+};
+function _pollWeight(p,includeHeld=false){
+  if(!p.eligible&&!includeHeld)return 0;
+  const asOf=new Date(CTX_AS_OF+'T00:00:00Z'),dt=new Date(p.date+'T00:00:00Z');
+  const days=Math.max(0,(asOf-dt)/86400000),rec=Math.exp(-days/180);
+  const sample=p.n?Math.min(1.20,Math.max(0.55,Math.sqrt(p.n/2000))):0.60;
+  const q=POLLSTER_QUALITY[p.pollster]??0.65;
+  return rec*sample*q;
+}
+function _shrinkReliability(n){return n>=4?1:n===3?0.90:n===2?0.75:n===1?0.55:0;}
+function candidatePollEstimate(name,includeHeld=false){
+  const rows=POLLS.filter(p=>p.r&&p.r[name]!==undefined&&(p.eligible||includeHeld));
+  let sw=0,sv=0;for(const p of rows){const w=_pollWeight(p,includeHeld);if(w>0){sw+=w;sv+=w*p.r[name];}}
+  const mean=sw?sv/sw:0.5,n=rows.length,rel=_shrinkReliability(n);
+  return{avg:rel*mean+(1-rel)*0.5,polls:n,mean};
+}
+// avgVal / avgAll: model levels for the two poll universes; poll / pollAll: weighted
+// poll means before shrinkage (shown in the Teams panel). avg is the active level.
+CANDIDATES.forEach(c=>{
+  const v=candidatePollEstimate(c.name,false),a=candidatePollEstimate(c.name,true);
+  Object.assign(c,{avgVal:+v.avg.toFixed(3),avgAll:+a.avg.toFixed(3),polls:v.polls,pollsAll:a.polls,
+    poll:v.polls?+v.mean.toFixed(2):null,pollAll:+a.mean.toFixed(2),val:v.polls>0,avg:+v.avg.toFixed(3)});
+});
+
+// Off-ticket follow-through by candidate and county group (from vote2watch v8;
+// judgemental priors, not measurements). keep: share of an off-ticket member's
+// supporters who follow the team; stay/cross/else: how the rest split before the
+// sidebar sliders scale them.
+const TRANSFER_PRIORS={
+  'Kalonzo Musyoka':{keep:.70,groups:{KAMBA:.86,NBI:.74},stay:.22,cross:.12,else:.66},
+  'Edwin Sifuna':{keep:.67,groups:{WEST:.78,NBI:.76,COAST:.72},stay:.20,cross:.10,else:.70},
+  "Fred Matiang'i":{keep:.64,groups:{GUSII:.80,MTK:.68,MERU:.68},stay:.20,cross:.12,else:.68},
+  'Babu Owino':{keep:.66,groups:{LUO:.76,NBI:.78},stay:.24,cross:.07,else:.69},
+  'Rigathi Gachagua':{keep:.62,groups:{MTK:.74,MERU:.68},stay:.22,cross:.18,else:.60},
+  'Ndindi Nyoro':{keep:.58,groups:{MTK:.70,MERU:.64},stay:.20,cross:.24,else:.56},
+  'Oburu Odinga':{keep:.30,groups:{LUO:.38},stay:.27,cross:.25,else:.48},
+  'David Maraga':{keep:.58,groups:{GUSII:.68},stay:.24,cross:.10,else:.66},
+  'Martha Karua':{keep:.54,groups:{MTK:.62},stay:.24,cross:.14,else:.62},
+  'James Orengo':{keep:.64,groups:{LUO:.74},stay:.24,cross:.07,else:.69},
+  'Okiya Omtata':{keep:.55,groups:{WEST:.63},stay:.23,cross:.09,else:.68},
+  'George Wajackoyah':{keep:.48,groups:{WEST:.56},stay:.25,cross:.22,else:.53},
+  'Jimi Wanjigi':{keep:.45,groups:{MTK:.52},stay:.25,cross:.25,else:.50}
+};
+const TRANSFER_DEFAULT={keep:.55,stay:.25,cross:.18,else:.57};
+function transferPrior(name,group){
+  const p=TRANSFER_PRIORS[name]||TRANSFER_DEFAULT;
+  return{keep:(p.groups&&p.groups[group])??p.keep,stay:p.stay,cross:p.cross,else:p.else};
+}
+
+// Run-off: expected share of each eliminated candidate's voters who back Ruto's
+// side against the main opposition, by county group (from vote2watch v8;
+// judgemental priors). Each simulation adds a shock per eliminated contestant
+// (SD 0.15), shared across all counties.
+const RUNOFF_INC_PRIORS={
+  'Kalonzo Musyoka':{base:.08,KAMBA:.05,NBI:.10},
+  'Edwin Sifuna':{base:.10,WEST:.08,NBI:.08,COAST:.10},
+  "Fred Matiang'i":{base:.20,GUSII:.15,MTK:.24,MERU:.24},
+  'Babu Owino':{base:.07,LUO:.05,NBI:.07},
+  'Rigathi Gachagua':{base:.22,MTK:.30,MERU:.28},
+  'Ndindi Nyoro':{base:.30,MTK:.36,MERU:.34},
+  'Oburu Odinga':{base:.35,LUO:.38},
+  'David Maraga':{base:.15,GUSII:.13},
+  'Martha Karua':{base:.18,MTK:.20},
+  'James Orengo':{base:.08,LUO:.06},
+  'Okiya Omtata':{base:.10,WEST:.08},
+  'George Wajackoyah':{base:.25,WEST:.22},
+  'Jimi Wanjigi':{base:.28,MTK:.30}
+};
+function runoffIncShare(name,group){const p=RUNOFF_INC_PRIORS[name];return p?(p[group]??p.base):0.2;}
+
+// High-salience events: shown in Signals, never turned into vote points
+// automatically (they would double-count visibility already in the polls).
+const SALIENT_EVENTS=[
+  {date:'2026-09-26',region:'Coast',type:'development',measured:false,title:'Coast development tour, title deeds and project launches',note:'Post-dates the latest model-eligible regional evidence; no automatic vote uplift.'},
+  {date:'2026-09',region:'Nyanza',type:'development',measured:false,title:'High-visibility Nyanza development programme',note:'Ruto gains in July regional polls are modelled; later project hype is only a signal until measured.'},
+  {date:'2026-09',region:'National',type:'economy',measured:true,title:'Cost-of-living pressure remains material',note:'September inflation 6.8%; food and transport pressures are treated as contextual risk, not a deterministic vote penalty.'}
+];
 // county name → group key
 const GROUP_OF={};Object.entries(COUNTY_GROUP).forEach(([g,list])=>list.forEach(n=>GROUP_OF[n]=g));
 

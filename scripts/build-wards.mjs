@@ -13,10 +13,11 @@
 //       rows whose total differs by more than 0.5% are rescaled to the official valid-vote total.
 //
 // What is real and what is modelled:
-//   v   2022 registered voters for the ward x the county's 2022→2027 register growth:
-//       the national 2027 total from data/counties.js; half shared evenly, half by each
-//       county's 2009→2019 census population growth (KNBS, IND-POPULATION). Ten Mandera East/Lafey wards are on a boundary hold in
-//       the atlas: they share their constituency's official total equally.
+//   v   2022 registered voters for the ward (IEBC Gazette Notice 7290). Ten Mandera
+//       East/Lafey wards are on a boundary hold in the atlas: they share their
+//       constituency's official total (exactly, remainder to the first wards).
+//       The app scales v to the selected register scenario by county
+//       (REGISTER_META in data/counties.js).
 //   tb  the county's turnout base, scaled by the constituency's 2022 turnout relative
 //       to the county's registered-weighted mean (atlas Form 34B turnout where it has
 //       one, else the tally's (valid + rejected) / registered).
@@ -88,14 +89,7 @@ for (const [gc, x] of res) {
 // constituency turnout: atlas official where it has one, else the tally
 const turnC = new Map([...res].map(([gc, x]) => [gc, turn.has(gc) ? turn.get(gc) : (sumC(x) + x.rej) / (x.reg || 1)]));
 
-// Register growth 2022→2027 by county: the national total stays at the counties.js
-// projection, shared out in proportion to each county's population growth between
-// the 2009 and 2019 censuses (KNBS, via the atlas), over five years.
-const pop = ind('IND-POPULATION.json').filter(o => o.geo_code.split('-').length === 2);
-const p09 = new Map(pop.filter(o => /2009/.test(o.period_label)).map(o => [+o.geo_code.slice(5), o.value]));
-const p19 = new Map(pop.filter(o => /2019/.test(o.period_label)).map(o => [+o.geo_code.slice(5), o.value]));
-const G = new Map(CO.map(c => [c.code, Math.pow(p19.get(c.code) / p09.get(c.code), 0.5)]));
-if ([...G.values()].some(g => !isFinite(g))) throw new Error('census growth missing for a county');
+
 const wards = geo.filter(g => g.level === 'ward');
 const cons = geo.filter(g => g.level === 'constituency');
 if (wards.length !== 1450 || cons.length !== 290) throw new Error(`registry: ${wards.length} wards, ${cons.length} constituencies`);
@@ -110,7 +104,9 @@ for (const c of cons) {
   const known = ws.reduce((a, w) => a + (wardV.get(w.geo_code) || 0), 0);
   const tot = consV.get(c.geo_code);
   if (tot == null) throw new Error('no constituency total for ' + c.geo_code);
-  miss.forEach(w => held.set(w.geo_code, Math.round((tot - known) / miss.length)));
+  // exact split: the remainder goes one voter at a time to the first wards
+  const rest = tot - known, each = Math.floor(rest / miss.length);
+  miss.forEach((w, i) => held.set(w.geo_code, each + (i < rest - each * miss.length ? 1 : 0)));
 }
 
 // County mean Form 34B turnout (registered-weighted, published constituencies only)
@@ -125,16 +121,6 @@ const norm = s => String(s).toLowerCase().replace(/[^a-z]/g, '');
 const oldDn = new Map(OLD.map(w => [w.co + '|' + norm(w.w), w.dn]));
 const tidy = s => s.replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
 
-// county 2022 register from the ward rows, then the growth scale k that hits the national total
-const r22 = new Map();
-wards.forEach(w => { const k = +w.county_code; r22.set(k, (r22.get(k) || 0) + (wardV.has(w.geo_code) ? wardV.get(w.geo_code) : held.get(w.geo_code))); });
-const T = CO.reduce((a, c) => a + c.projectedVoters2027, 0), R = [...r22.values()].reduce((a, b) => a + b, 0);
-// Half the national rate everywhere plus half in proportion to census growth (floored
-// at zero: the 2009 counts for parts of the north-east were inflated, so Mandera,
-// Wajir and Turkana show falls). Register growth is not population growth, hence the blend.
-const U = (T - R) / R, g = new Map(CO.map(c => [c.code, Math.max(0, G.get(c.code) - 1)]));
-const gBar = CO.reduce((a, c) => a + r22.get(c.code) * g.get(c.code), 0) / R;
-const UP = new Map(CO.map(c => [c.code, 1 + U * (0.5 + 0.5 * g.get(c.code) / gBar)]));
 
 let dnHit = 0, tbReal = 0;
 const out = wards.map(w => {
@@ -142,14 +128,13 @@ const out = wards.map(w => {
   if (!co) throw new Error('county ' + w.county_code);
   const cg = consOf(w), cRow = byCode.get(cg);
   const v22 = wardV.has(w.geo_code) ? wardV.get(w.geo_code) : held.get(w.geo_code);
-  const up = UP.get(co.code);
   let tb = co.turnoutBase;
   const m = cMean.get(co.code);
   if (turnC.has(cg) && m && m.w) { tb = co.turnoutBase * turnC.get(cg) / (m.s / m.w); if (turn.has(cg)) tbReal++; }
   const rx = res.get(cg);
   if (!rx) throw new Error('no 2022 result for ' + cg);
   const rt = sumC(rx) || 1;
-  const v = Math.round(v22 * up);
+  const v = v22;
   let dn = oldDn.get(co.name + '|' + norm(w.name));
   if (dn) dnHit++; else dn = v > 30000 ? 'high' : v > 15000 ? 'medium' : 'low';
   const tmpl = OLD.find(o => o.co === co.name);
@@ -163,15 +148,14 @@ const out = wards.map(w => {
 
 const tot22 = out.reduce((a, w) => a + w.v22, 0);
 const head = `// Generated by scripts/build-wards.mjs from the Kenya Data Atlas — do not edit by hand.
-// 1,450 IEBC wards; v = 2022 registered voters (IEBC Gazette Notice 7290) x county growth to 2027 (census trend);
+// 1,450 IEBC wards; v = 2022 registered voters (IEBC Gazette Notice 7290), scaled by register scenario in the app;
 // v22 = 2022 register; src g = gazetted ward row, h = boundary hold (constituency total split equally);
 // tb = county turnout base scaled by the constituency's 2022 turnout;
 // bi / bo = 2022 Ruto / Odinga share of the constituency's candidate votes (see data/results2022.js).
 `;
 fs.writeFileSync(path.join(root, 'data/wards.js'), head + 'const WD=' + JSON.stringify(out) + ';\n');
 console.log(`wards ${out.length} · gazetted ${out.filter(w => w.src === 'g').length} · held ${held.size}`);
-console.log(`2022 register ${tot22.toLocaleString()} · 2027 ${out.reduce((a, w) => a + w.v, 0).toLocaleString()}`);
-console.log(`county growth 2022→2027: ${((Math.min(...UP.values())-1)*100).toFixed(1)}% to ${((Math.max(...UP.values())-1)*100).toFixed(1)}%`);
+console.log(`2022 register ${tot22.toLocaleString()}`);
 console.log(`turnout from Form 34B: ${tbReal} wards in ${[...cons].filter(c => turn.has(c.geo_code)).length} constituencies · dn carried ${dnHit}`);
 
 // data/results2022.js: one row per constituency
@@ -188,7 +172,10 @@ const R22=` + JSON.stringify(R22) + ';\n');
 // correct the county 2022 shares in data/counties.js
 const cAgg = new Map();
 R22.forEach(x => { const k = x.co, a = cAgg.get(k) || { ru: 0, ra: 0, t: 0 }; a.ru += x.ru; a.ra += x.ra; a.t += x.ru + x.ra + x.wj + x.mw; cAgg.set(k, a); });
-const CO2 = CO.map(c => { const a = cAgg.get(c.name); return { ...c, baseIncumbent2022: +(a.ru / a.t).toFixed(3), baseOpposition2022: +(a.ra / a.t).toFixed(3) }; });
-fs.writeFileSync(path.join(root, 'data/counties.js'), 'const CO=' + JSON.stringify(CO2) + ';\n');
+const wCount = new Map(); out.forEach(w => wCount.set(w.co, (wCount.get(w.co) || 0) + 1));
+// ward counts come from the IEBC registry (the old file still had the 1,457-ward counts)
+const CO2 = CO.map(c => { const a = cAgg.get(c.name); return { ...c, wards: wCount.get(c.name), baseIncumbent2022: +(a.ru / a.t).toFixed(3), baseOpposition2022: +(a.ra / a.t).toFixed(3) }; });
+const coSrc = fs.readFileSync(path.join(root, 'data/counties.js'), 'utf8'), coHead = coSrc.slice(0, coSrc.indexOf('const CO='));
+fs.writeFileSync(path.join(root, 'data/counties.js'), coHead + 'const CO=' + JSON.stringify(CO2) + ';\n');
 console.log(`2022 results: ${R22.length} constituencies · matched official ${nOk} · rescaled ${nRes} · swapped back ${swapped.size} · unchecked ${R22.filter(x => x.src === 'u').length}`);
 console.log(`2022 national: Ruto ${N('ru')} Odinga ${N('ra')} · Ruto share ${(N('ru') / (N('ru') + N('ra') + N('wj') + N('mw')) * 100).toFixed(2)}%`);
