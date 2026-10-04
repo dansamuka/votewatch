@@ -119,7 +119,7 @@ function basis(name){
   return `<div class="cty-basis"><b>Basis</b>
     ${lab?`<p><span class="tag-g">${esc(lab)}</span> ${esc(GROUP_BASIS[g]||'')}</p>`:''}
     ${home.length?`<p>Home county of ${esc(home.join(' and '))}.</p>`:''}
-    <p class="hint">Candidate levels come from the average of validated national polls; differences between counties in the same region follow 2022 results. Shares are county estimates. Change teams to see how this county moves.</p></div>`;
+    <p class="hint">Candidate levels come from the average of validated national polls; differences between counties and constituencies in the same region follow the 2022 presidential results. Change teams to see how this county moves.</p></div>`;
 }
 function card(nat){
   const body=$('#vmBody'),sel=$('#vmSel');if(!body||!S.res)return;

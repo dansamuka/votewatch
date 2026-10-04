@@ -5,18 +5,27 @@
 //   data/geography/registry/geographies.csv            official 1,450 wards / 290 constituencies
 //   IND-REGISTERED-VOTERS  "2022 registered voters"     ward rows (Gazette Notice 7290) + constituency rows
 //   IND-TURNOUT-HISTORY    2022 presidential, Form 34B  constituency turnout (186 of 290 published)
+//   data/p23/form34b-*-source-verification.json         official Form 34B TOTAL rows read by the atlas (valid votes)
+// and, in this repo:
+//   data/source/pres2022-constituency-tally.csv          2022 presidential votes for all 290 constituencies, a public
+//       tally of IEBC Forms 34B ("MapsBySifa", ArcGIS: Constituency_Results_gdb). Unverified as published, so it
+//       is checked against the atlas's official reads: rows swapped between constituencies are swapped back and
+//       rows whose total differs by more than 0.5% are rescaled to the official valid-vote total.
 //
 // What is real and what is modelled:
 //   v   2022 registered voters for the ward x the county's 2022→2027 register growth:
 //       the national 2027 total from data/counties.js; half shared evenly, half by each
 //       county's 2009→2019 census population growth (KNBS, IND-POPULATION). Ten Mandera East/Lafey wards are on a boundary hold in
 //       the atlas: they share their constituency's official total equally.
-//   tb  the county's turnout base, scaled by the constituency's 2022 Form 34B
-//       turnout relative to the county's registered-weighted mean. Constituencies
-//       without a published Form 34B keep the county base.
-//   bi, bo, cl, dq, vl, yr  county values (2022 presidential results by ward are not
-//       in the atlas); dn carried over from the previous ward file by name where it
-//       matches, else derived from the ward's register size.
+//   tb  the county's turnout base, scaled by the constituency's 2022 turnout relative
+//       to the county's registered-weighted mean (atlas Form 34B turnout where it has
+//       one, else the tally's (valid + rejected) / registered).
+//   bi, bo  2022 Ruto and Odinga shares of the constituency's candidate votes (wards
+//       share their constituency's result: IEBC publishes no ward-level presidential totals).
+//   cl, dq, vl, yr  county values; dn carried over from the previous ward file by name
+//       where it matches, else derived from the ward's register size.
+// Also writes data/results2022.js (constituency results) and corrects the 2022 county
+// shares (baseIncumbent2022 / baseOpposition2022) in data/counties.js from the same totals.
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -44,6 +53,40 @@ const turn = new Map(ind('IND-TURNOUT-HISTORY.json')
   .map(o => [o.geo_code, o.value / 100]));
 
 const coByCode = new Map(CO.map(c => [c.code, c]));
+
+// ── 2022 presidential results by constituency (public Form 34B tally, checked against the atlas)
+const tl = fs.readFileSync(path.join(root, 'data/source/pres2022-constituency-tally.csv'), 'utf8').trim().split(/\r?\n/);
+const th = csvRow(tl[0]);
+const res = new Map(tl.slice(1).map(l => { const o = Object.fromEntries(csvRow(l).map((v, i) => [th[i], v]));
+  const gc = 'KEN-C' + o.pcode.slice(2, 5) + '-CON' + o.pcode.slice(5);
+  return [gc, { reg: +o.registered, ra: +o.raila, ru: +o.ruto, mw: +o.mwaure || 0, wj: +o.wajackoyah || 0, rej: +o.rejected || 0, src: 'u' }]; }));
+const sumC = x => x.ra + x.ru + x.mw + x.wj;
+const P23 = path.join(KDA, 'data/p23');
+const offV = new Map();
+for (const f of fs.readdirSync(P23).filter(f => /^form34b-.*-source-verification\.json$/.test(f))) {
+  const j = JSON.parse(fs.readFileSync(path.join(P23, f), 'utf8')), v = j.field_evidence?.total_valid_votes?.verified_value;
+  if (v != null) offV.set(j.sample.geo_code, v);
+}
+const near = (a, b) => Math.abs(a - b) <= Math.max(50, b * 0.002);
+// rows recorded under each other's constituency: swap the vote fields back
+const swapped = new Set();
+for (const [a, va] of offV) for (const [b, vb] of offV) {
+  if (a >= b || swapped.has(a) || swapped.has(b)) continue;
+  const A = res.get(a), B = res.get(b);
+  if (A && B && !near(sumC(A), va) && near(sumC(A), vb) && near(sumC(B), va)) {
+    for (const k of ['ra', 'ru', 'mw', 'wj', 'rej']) [A[k], B[k]] = [B[k], A[k]];
+    A.src = B.src = 's'; swapped.add(a); swapped.add(b);
+  }
+}
+let nRes = 0, nOk = 0;
+for (const [gc, x] of res) {
+  const v = offV.get(gc); if (v == null) continue;
+  const t = sumC(x);
+  if (Math.abs(t - v) / v > 0.005) { const f = v / t; for (const k of ['ra', 'ru', 'mw', 'wj']) x[k] = Math.round(x[k] * f); if (x.src !== 's') x.src = 'r'; nRes++; }
+  else if (x.src === 'u') { x.src = 'v'; nOk++; }
+}
+// constituency turnout: atlas official where it has one, else the tally
+const turnC = new Map([...res].map(([gc, x]) => [gc, turn.has(gc) ? turn.get(gc) : (sumC(x) + x.rej) / (x.reg || 1)]));
 
 // Register growth 2022→2027 by county: the national total stays at the counties.js
 // projection, shared out in proportion to each county's population growth between
@@ -73,9 +116,9 @@ for (const c of cons) {
 // County mean Form 34B turnout (registered-weighted, published constituencies only)
 const cMean = new Map();
 for (const c of cons) {
-  if (!turn.has(c.geo_code)) continue;
+  if (!turnC.has(c.geo_code)) continue;
   const k = +c.county_code, m = cMean.get(k) || { s: 0, w: 0 }, w = consV.get(c.geo_code) || 0;
-  m.s += turn.get(c.geo_code) * w; m.w += w; cMean.set(k, m);
+  m.s += turnC.get(c.geo_code) * w; m.w += w; cMean.set(k, m);
 }
 
 const norm = s => String(s).toLowerCase().replace(/[^a-z]/g, '');
@@ -102,7 +145,10 @@ const out = wards.map(w => {
   const up = UP.get(co.code);
   let tb = co.turnoutBase;
   const m = cMean.get(co.code);
-  if (turn.has(cg) && m && m.w) { tb = co.turnoutBase * turn.get(cg) / (m.s / m.w); tbReal++; }
+  if (turnC.has(cg) && m && m.w) { tb = co.turnoutBase * turnC.get(cg) / (m.s / m.w); if (turn.has(cg)) tbReal++; }
+  const rx = res.get(cg);
+  if (!rx) throw new Error('no 2022 result for ' + cg);
+  const rt = sumC(rx) || 1;
   const v = Math.round(v22 * up);
   let dn = oldDn.get(co.name + '|' + norm(w.name));
   if (dn) dnHit++; else dn = v > 30000 ? 'high' : v > 15000 ? 'medium' : 'low';
@@ -111,7 +157,7 @@ const out = wards.map(w => {
     id: w.geo_code, co: co.name, cs: tidy(cRow.name), w: tidy(w.name), v,
     v22, src: wardV.has(w.geo_code) ? 'g' : 'h',
     tb: +Math.min(0.85, Math.max(0.3, tb)).toFixed(3),
-    bi: tmpl.bi, bo: tmpl.bo, cl: tmpl.cl, dq: tmpl.dq, vl: tmpl.vl, yr: tmpl.yr, dn
+    bi: +(rx.ru / rt).toFixed(4), bo: +(rx.ra / rt).toFixed(4), cl: tmpl.cl, dq: tmpl.dq, vl: tmpl.vl, yr: tmpl.yr, dn
   };
 });
 
@@ -119,10 +165,30 @@ const tot22 = out.reduce((a, w) => a + w.v22, 0);
 const head = `// Generated by scripts/build-wards.mjs from the Kenya Data Atlas — do not edit by hand.
 // 1,450 IEBC wards; v = 2022 registered voters (IEBC Gazette Notice 7290) x county growth to 2027 (census trend);
 // v22 = 2022 register; src g = gazetted ward row, h = boundary hold (constituency total split equally);
-// tb = county turnout base scaled by the constituency's 2022 Form 34B turnout where published.
+// tb = county turnout base scaled by the constituency's 2022 turnout;
+// bi / bo = 2022 Ruto / Odinga share of the constituency's candidate votes (see data/results2022.js).
 `;
 fs.writeFileSync(path.join(root, 'data/wards.js'), head + 'const WD=' + JSON.stringify(out) + ';\n');
 console.log(`wards ${out.length} · gazetted ${out.filter(w => w.src === 'g').length} · held ${held.size}`);
 console.log(`2022 register ${tot22.toLocaleString()} · 2027 ${out.reduce((a, w) => a + w.v, 0).toLocaleString()}`);
 console.log(`county growth 2022→2027: ${((Math.min(...UP.values())-1)*100).toFixed(1)}% to ${((Math.max(...UP.values())-1)*100).toFixed(1)}%`);
 console.log(`turnout from Form 34B: ${tbReal} wards in ${[...cons].filter(c => turn.has(c.geo_code)).length} constituencies · dn carried ${dnHit}`);
+
+// data/results2022.js: one row per constituency
+const R22 = cons.map(c => { const x = res.get(c.geo_code), co = coByCode.get(+c.county_code);
+  return { g: c.geo_code, co: co.name, cs: tidy(c.name), reg: x.reg, ra: x.ra, ru: x.ru, wj: x.wj, mw: x.mw, rej: x.rej, src: x.src }; });
+const N = k => R22.reduce((a, x) => a + x[k], 0);
+fs.writeFileSync(path.join(root, 'data/results2022.js'), `// Generated by scripts/build-wards.mjs — do not edit by hand.
+// 2022 presidential election, votes by constituency (290). Source: public tally of IEBC Forms 34B
+// (data/source/pres2022-constituency-tally.csv), checked against the Kenya Data Atlas's official Form 34B reads.
+// src: v = matches the official valid-vote total (within 0.5%); r = rescaled to the official total;
+//      s = row had been recorded under another constituency, swapped back; u = no official read to check against.
+// National: Ruto ${N('ru').toLocaleString('en-US')}, Odinga ${N('ra').toLocaleString('en-US')} (IEBC declared 7,176,141 and 6,942,930 incl. diaspora and prisons).
+const R22=` + JSON.stringify(R22) + ';\n');
+// correct the county 2022 shares in data/counties.js
+const cAgg = new Map();
+R22.forEach(x => { const k = x.co, a = cAgg.get(k) || { ru: 0, ra: 0, t: 0 }; a.ru += x.ru; a.ra += x.ra; a.t += x.ru + x.ra + x.wj + x.mw; cAgg.set(k, a); });
+const CO2 = CO.map(c => { const a = cAgg.get(c.name); return { ...c, baseIncumbent2022: +(a.ru / a.t).toFixed(3), baseOpposition2022: +(a.ra / a.t).toFixed(3) }; });
+fs.writeFileSync(path.join(root, 'data/counties.js'), 'const CO=' + JSON.stringify(CO2) + ';\n');
+console.log(`2022 results: ${R22.length} constituencies · matched official ${nOk} · rescaled ${nRes} · swapped back ${swapped.size} · unchecked ${R22.filter(x => x.src === 'u').length}`);
+console.log(`2022 national: Ruto ${N('ru')} Odinga ${N('ra')} · Ruto share ${(N('ru') / (N('ru') + N('ra') + N('wj') + N('mw')) * 100).toFixed(2)}%`);

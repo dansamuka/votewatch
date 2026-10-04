@@ -9,6 +9,43 @@ the changes. With no shocks active, every national, county and ward figure
 is **bit-for-bit identical** to v4.6. Only runs that include shocks differ,
 because of fixes 1 and 2 below.
 
+## 2022 presidential results by constituency (v10.8, 4 Oct 2026)
+
+**Source.** No official machine-readable table exists: IEBC publishes Forms 34B
+(one scanned PDF per constituency) and Form 34C, and the forms portal was not
+reachable. The Kenya Data Atlas read the official Form 34B TOTAL rows for 245
+constituencies but recorded only registered, valid and rejected votes. Candidate
+votes for all 290 come from a public tally of the Forms 34B published on ArcGIS
+by MapsBySifa (`Constituency_Results_gdb`), saved as
+`data/source/pres2022-constituency-tally.csv`.
+
+**Checks.**
+- Against the atlas's 245 official valid-vote totals: 224 within 0.5%. Two
+  pairs had been entered under each other's constituency (Kajiado East/West,
+  Maara/Chuka-Igambang'ombe) and are swapped back; 17 others differ by more
+  (e.g. Juja +10%) and are rescaled to the official total, keeping their
+  shares. 45 constituencies have no official read to check against.
+- Against Wikipedia's county table (Form 34C): 41 of 47 counties within one
+  point. In 5 of the other 6, Wikipedia's own candidate columns don't add up
+  to its valid-vote total while the tally does; Narok's Wikipedia row has more
+  valid votes than registered voters.
+- National: Ruto 7,164,119 (50.45%), Odinga 6,942,662; IEBC declared
+  7,176,141 (50.49%) and 6,942,930, which include diaspora and prisons.
+
+**What changed in the model.**
+- Each ward's 2022 lean (`bi` Ruto, `bo` Odinga) is now its constituency's
+  actual result instead of a county value. Within a region, candidates are
+  spread across counties and constituencies by these results.
+- Constituency turnout uses the tally where the atlas has no official figure
+  (290 of 290 covered, up from 186).
+- `baseIncumbent2022` / `baseOpposition2022` in `data/counties.js` were
+  wrong for most counties (Mandera Ruto 74% vs 21% actual; Kitui 11% vs 27%;
+  Garissa 72% vs 25%) and are replaced from the same totals. They feed the
+  "Past results" chart and the 2017→2022 column; `hist13` and `hist17` were
+  not re-checked.
+- The county panel shows each constituency's 2022 result beside the 2027
+  estimate; Export adds "2022 results by constituency (CSV)".
+
 ## External review fixes (v10.7, 4 Oct 2026)
 
 All ten points from the external model review that were confirmed against the
@@ -17,7 +54,7 @@ code are addressed:
 | # | Issue | Fix |
 |---|---|---|
 | 1 | Same register growth everywhere | 2022→2027 growth by county: half the national rate, half in proportion to 2009→2019 census growth (KNBS via the Kenya Data Atlas; floored at zero because the 2009 north-east counts were inflated). Range 2.6% (Mandera) to 10.8% (Isiolo); national total unchanged. |
-| 2 | Ward results looked more precise than they are | Vote shares are only estimated per county. The county panel lists constituencies (IEBC register, estimated turnout, estimated votes) and states the county's shares once; "Most influential wards" became constituencies; ward CSV columns are labelled `_county_est` and include the IEBC 2022 register. |
+| 2 | Ward results looked more precise than they are | (Superseded in v10.8: constituencies now carry their actual 2022 results.) Vote shares were only estimated per county. The county panel lists constituencies (IEBC register, estimated turnout, estimated votes) and states the county's shares once; "Most influential wards" became constituencies; ward CSV columns are labelled `_county_est` and include the IEBC 2022 register. |
 | 3 | Probabilities read as forecasts | Wording is now "if this line-up runs" or "of simulations of this line-up", with a note that this is not the chance the line-up forms. |
 | 4 | No range around county results | The Monte Carlo keeps every county's result in every run: the county card shows the 80% range for teams A and B and how often A reaches 25%; the swing-counties table adds "25%+ in" and the range. |
 | 5 | Polls: validated and held-out mixed | Model levels use validated polls only (`polling_average.json`); Mizani and Politrack stay visible but are held out. The all-polls figure is in each candidate's tooltip. |
@@ -35,9 +72,8 @@ United opposition wins 95% of simulated run-offs (was 4%), because Third force
 voters mostly follow their opposition loyalty; with an even split team A would
 still edge it, 50.8%.
 
-Still not observed: 2022 presidential results by constituency or ward (Form
-34B/34C), so leanings remain county values; and an IEBC register update after
-2022.
+Still not observed: an IEBC register update after 2022. (2022 results by
+constituency were added in v10.8, above.)
 
 ## Fixed
 

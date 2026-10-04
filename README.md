@@ -162,14 +162,22 @@ node scripts/build-wards.mjs <path-to-kenya-data-atlas>
 - **Turnout:** each county's turnout base, varied by constituency using 2022
   presidential Form 34B turnout (186 of 290 constituencies published;
   the rest keep the county base).
-- **Not observed:** 2022 presidential vote shares per ward are not in the
-  atlas, so leanings are county values. The county panel therefore lists
-  constituencies with observed registers and estimated turnout, and states
-  the vote shares once for the county. The ward CSV marks shares as county
-  estimates.
+- **2022 presidential results:** votes for all 290 constituencies from a
+  public tally of IEBC Forms 34B (`data/source/pres2022-constituency-tally.csv`),
+  checked against the atlas's official Form 34B reads: 224 match, 17 were
+  rescaled to the official total, 4 had been recorded under the wrong
+  constituency and are swapped back, 45 have no official read to check
+  against. National total: Ruto 50.45% (IEBC declared 50.49% with diaspora
+  and prisons). Written to `data/results2022.js`; they also replace the
+  county 2022 shares in `data/counties.js`, which were wrong (e.g. Mandera
+  had Ruto at 74%; he won 21%).
+- **Wards** share their constituency's 2022 result: IEBC publishes no
+  ward-level presidential totals. The county panel lists constituencies with
+  the actual 2022 result beside the 2027 estimate; Export has the 2022
+  results as a CSV.
 
 ## Caveats
 
-Ward patterns come from 2022 results and assumed regional profiles; national
+Constituency patterns come from the 2022 presidential results and assumed regional profiles; national
 levels come from published polls, some with undisclosed methods. Treat output
 as scenario analysis, not a forecast. See `docs/AUDIT.md`.

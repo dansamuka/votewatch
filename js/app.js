@@ -7,6 +7,9 @@ const WARDS=WD.map(w=>({id:w.id,county:w.co,constituency:w.cs,ward:w.w,
   voters:w.v,toBase:w.tb,bi:w.bi,bo:w.bo,cl:w.cl,dq:w.dq,vl:w.vl,yr:w.yr,dn:w.dn}));
 CO.forEach(c=>{const v=WD.filter(w=>w.co===c.name).reduce((a,w)=>a+w.v,0);if(v)c.projectedVoters2027=v;});
 const CM=new Map(CO.map(c=>[c.name,c]));
+// 2022 presidential result by constituency, keyed "County|Constituency"
+const R22M=new Map((typeof R22!=='undefined'?R22:[]).map(x=>[x.co+'|'+x.cs,x]));
+const r22Share=x=>{const t=x.ru+x.ra+x.wj+x.mw||1;return{ru:x.ru/t,ra:x.ra/t};};
 const WBC=new Map();
 WARDS.forEach(w=>{if(!WBC.has(w.county))WBC.set(w.county,[]);WBC.get(w.county).push(w);});
 
@@ -581,14 +584,17 @@ function disRisk(ctyRes){
 }
 
 // Influence by constituency: size of the register plus how close the county is to
-// team A's 25% line. Vote shares are county estimates (not split below county).
+// team A's 25% line; team A's estimate follows the constituency's 2022 pattern.
 function sensRows(ctyRes){
   const cm=new Map(ctyRes.map(c=>[c.name,c])),by=new Map();
   WARDS.forEach(w=>{const k=w.county+'|'+w.constituency;const x=by.get(k)||{county:w.county,constituency:w.constituency,voters:0,wards:0,dq:w.dq};x.voters+=w.voters;x.wards++;by.set(k,x);});
+  // team A estimate per constituency from the ward results, when they are available
+  const cEst=S.wards&&new Map();if(cEst)S.wards.forEach(w=>{const k=w.county+'|'+w.constituency,v=w.voters*w.to,e=cEst.get(k)||{v:0,i:0};e.v+=v;e.i+=v*w.inc;cEst.set(k,e);});
   return [...by.values()].map(x=>{
     const c=cm.get(x.county);if(!c)return null;
     const ig=Math.abs(c.i-0.25);
-    return{...x,inf:(x.voters/1e6)*24+(1/(ig+0.03))*4,cis:c.i};
+    const e=cEst&&cEst.get(x.county+'|'+x.constituency);
+    return{...x,inf:(x.voters/1e6)*24+(1/(ig+0.03))*4,cis:e?e.i/(e.v||1):c.i};
   }).filter(Boolean).sort((a,b)=>b.inf-a.inf).slice(0,60);
 }
 
@@ -1113,13 +1119,14 @@ function rConst(r,mc_){
 
 function rSens(){
   const rows=S.sens||[];
-  $('#sensTbl').innerHTML=`<thead><tr><th>Constituency</th><th>County</th><th class="r">Wards</th><th class="r">Registered</th><th>Influence</th><th title="County estimate: vote shares are not split below county level">Team A (county est.)</th><th class="opt">DQ</th></tr></thead>
+  $('#sensTbl').innerHTML=`<thead><tr><th>Constituency</th><th>County</th><th class="r">Wards</th><th class="r">Registered</th><th>Influence</th><th>Team A (est.)</th><th class="r opt" title="2022 actual">Ruto 2022</th><th class="opt">DQ</th></tr></thead>
   <tbody>${rows.slice(0,40).map(w=>`<tr>
     <td class="u-strong">${w.constituency}</td><td>${w.county}</td>
     <td class="r u-mono12">${w.wards}</td>
     <td class="r u-mono12">${N.format(w.voters)}</td>
     <td><div class="pbar pbar-sm"><div class="pf p-g" style="width:${Math.min(100,w.inf*2)}%"></div></div></td>
     <td style="color:${iCol(w.cis)}">${pct(w.cis)}</td>
+    <td class="r opt">${(r=>r?pct(r22Share(r).ru):'—')(R22M.get(w.county+'|'+w.constituency))}</td>
     <td class="opt"><span class="b ${w.dq==='high'?'b-gr':w.dq==='medium'?'b-m':'b-a'}">${w.dq}</span></td>
   </tr>`).join('')}</tbody>`;
 }
@@ -1295,23 +1302,26 @@ function selCounty(name){
 function rWardDrill(wardRes){
   if(!$('#wardTbl'))return;
   const s=($('#wardSrch')?.value||'').toLowerCase();
-  // One row per constituency. Registered voters (IEBC 2022, grown to 2027) and
-  // turnout (2022 Form 34B pattern) vary; vote shares are only estimated for the
-  // county as a whole, so they are stated once instead of repeated per row.
+  // One row per constituency: the actual 2022 result (Forms 34B) beside the 2027
+  // estimate. Wards share their constituency's 2022 pattern (no ward-level results).
   const by=new Map();
-  wardRes.filter(w=>w.county===S.selCty).forEach(w=>{const x=by.get(w.constituency)||{cs:w.constituency,wards:[],reg:0,votes:0};x.wards.push(w.ward);x.reg+=w.voters;x.votes+=w.voters*w.to;by.set(w.constituency,x);});
+  wardRes.filter(w=>w.county===S.selCty).forEach(w=>{const x=by.get(w.constituency)||{cs:w.constituency,wards:[],reg:0,votes:0,inc:0,opp:0};
+    const v=w.voters*w.to;x.wards.push(w.ward);x.reg+=w.voters;x.votes+=v;x.inc+=v*w.inc;x.opp+=v*w.opp;by.set(w.constituency,x);});
   const rows=[...by.values()].filter(x=>!s||x.cs.toLowerCase().includes(s)||x.wards.some(n=>n.toLowerCase().includes(s)));
-  const c=S.res&&S.res.ctyRes.find(x=>x.name===S.selCty);
-  $('#wardTbl').innerHTML=`<caption class="tbl-cap">Registered voters: IEBC 2022 register (Gazette Notice 7290), grown to 2027. Turnout follows each constituency's 2022 turnout where IEBC published it. ${c?`Vote shares are estimated for the county as a whole (${mapEsc(S.cfg.teams[0])} ${pct(c.i)}, ${mapEsc(S.cfg.teams[1]||'B')} ${pct(c.o)}) and are not split by constituency.`:''}</caption>
-  <thead><tr><th>Constituency</th><th class="r">Wards</th><th class="r">Registered</th><th class="r">Turnout (est.)</th><th class="r">Votes (est.)</th><th class="opt">Wards</th></tr></thead>
-  <tbody>${rows.map(x=>`<tr>
+  const A=mapEsc(S.cfg.teams[0]),B=mapEsc(S.cfg.teams[1]||'B');
+  $('#wardTbl').innerHTML=`<caption class="tbl-cap">2022: actual presidential result (IEBC Forms 34B). 2027: this scenario's estimate, which follows each constituency's 2022 pattern within the county. Registered: IEBC 2022 register grown to 2027.</caption>
+  <thead><tr><th>Constituency</th><th class="r" title="2022 actual, share of candidate votes">Ruto 2022</th><th class="r" title="2022 actual, share of candidate votes">Odinga 2022</th><th class="r">${A} est.</th><th class="r">${B} est.</th><th class="r">Registered</th><th class="r opt">Turnout (est.)</th><th class="r opt">Votes (est.)</th><th class="opt">Wards</th></tr></thead>
+  <tbody>${rows.map(x=>{const r=R22M.get(S.selCty+'|'+x.cs),q=r?r22Share(r):null,vv=x.votes||1;return`<tr>
     <td class="u-strong">${mapEsc(x.cs)}</td>
-    <td class="r u-mono12">${x.wards.length}</td>
+    <td class="r">${q?pct(q.ru):'—'}</td>
+    <td class="r">${q?pct(q.ra):'—'}</td>
+    <td class="r c-team-a">${pct(x.inc/vv)}</td>
+    <td class="r c-team-b">${pct(x.opp/vv)}</td>
     <td class="r u-mono12">${fmtVotes(x.reg)}</td>
-    <td class="r">${pct(x.votes/(x.reg||1))}</td>
-    <td class="r u-mono12">${fmtVotes(x.votes)}</td>
+    <td class="r opt">${pct(x.votes/(x.reg||1))}</td>
+    <td class="r u-mono12 opt">${fmtVotes(x.votes)}</td>
     <td class="u-meta opt">${x.wards.map(mapEsc).join(', ')}</td>
-  </tr>`).join('')}</tbody>`;
+  </tr>`;}).join('')}</tbody>`;
 }
 
 // Poll trend: team A and team B across every poll, oldest to newest; held-out polls hollow
@@ -1369,7 +1379,7 @@ function rIntel(){
     <div class="u-meta u-lh-snug">${r.e}</div>
   </div>`).join('');
 
-  $('#methNotes').innerHTML=`<strong>How it works</strong><br>Each candidate's support comes from the average of validated national polls (a candidate with only one poll counts half, pulled toward a typical minor-candidate level) and is spread across Kenya's 1,450 IEBC wards, weighted by each ward's 2022 register (IEBC Gazette Notice 7290) and each constituency's 2022 turnout (Form 34B, where published), using their home regions and 2022 county voting patterns. Supporters who don't follow their candidate cross sides according to that candidate's loyalties and the other side's local strength. In a run-off, everyone else's voters follow their candidates' loyalties, with that uncertain in every simulation. Young voters back team A less than older voters, which matters when youth turnout changes. Teams add up their members' support, minus supporters who don't follow. The model then runs the election hundreds of times with random polling error. An outright win needs over 50% nationally and 25% in 24 counties; otherwise the top two go to a run-off, won by most votes. This is a scenario tool, not a forecast.`;
+  $('#methNotes').innerHTML=`<strong>How it works</strong><br>Each candidate's support comes from the average of validated national polls (a candidate with only one poll counts half, pulled toward a typical minor-candidate level) and is spread across Kenya's 1,450 IEBC wards, weighted by each ward's 2022 register (IEBC Gazette Notice 7290) and each constituency's 2022 turnout, using their home regions and each constituency's 2022 presidential result (IEBC Forms 34B). Supporters who don't follow their candidate cross sides according to that candidate's loyalties and the other side's local strength. In a run-off, everyone else's voters follow their candidates' loyalties, with that uncertain in every simulation. Young voters back team A less than older voters, which matters when youth turnout changes. Teams add up their members' support, minus supporters who don't follow. The model then runs the election hundreds of times with random polling error. An outright win needs over 50% nationally and 25% in 24 counties; otherwise the top two go to a run-off, won by most votes. This is a scenario tool, not a forecast.`;
 
   // small multiples: one bar per poll, split by the current teams
   const sm=$('#pollsSM');
@@ -1403,9 +1413,13 @@ function dlCSV(kind){
     rows=[['County','Cluster','Voters','Turnout','Inc','Inc≥25','Opp','TF','DQ']];
     r.ctyRes.forEach(c=>rows.push([c.name,c.cluster,Math.round(c.tv),pct(c.to),pct(c.i),c.ia,pct(c.o),pct(c.t),c.dq]));
   }else if(kind==='ward'){
-    rows=[['County','Constituency','Ward','Registered2027','Registered2022_IEBC','Turnout_est','Inc_county_est','Opp_county_est','TF_county_est','DQ']];
+    rows=[['County','Constituency','Ward','Registered2027','Registered2022_IEBC','Ruto2022_constituency','Odinga2022_constituency','Turnout_est','Inc_est','Opp_est','TF_est','DQ']];
     const v22=new Map(WD.map(w=>[w.co+'|'+w.cs+'|'+w.w,w.v22]));
-    (S.wards||[]).forEach(w=>rows.push([w.county,w.constituency,w.ward,Math.round(w.voters),v22.get(w.county+'|'+w.constituency+'|'+w.ward)??'',pct(w.to),pct(w.inc),pct(w.opp),pct(w.tf),w.dq]));
+    (S.wards||[]).forEach(w=>{const r=R22M.get(w.county+'|'+w.constituency),q=r?r22Share(r):null;rows.push([w.county,w.constituency,w.ward,Math.round(w.voters),v22.get(w.county+'|'+w.constituency+'|'+w.ward)??'',q?pct(q.ru):'',q?pct(q.ra):'',pct(w.to),pct(w.inc),pct(w.opp),pct(w.tf),w.dq]);});
+  }else if(kind==='results2022'){
+    rows=[['County','Constituency','Registered2022','Odinga','Ruto','Wajackoyah','Mwaure','Rejected','Check']];
+    const lab={v:'matches official Form 34B total',r:'rescaled to official total',s:'swapped back to correct constituency',u:'not checked'};
+    R22.forEach(x=>rows.push([x.co,x.cs,x.reg,x.ra,x.ru,x.wj,x.mw,x.rej,lab[x.src]||x.src]));
   }else if(kind==='tipping'){
     rows=[['County','Cluster','IncShare','Gap','VotesNeeded','OppShare','TFShare','DQ']];
     (S.tip||[]).forEach(t=>rows.push([t.name,t.cl,pct(t.i),pct(t.ig),t.vn,pct(t.o),pct(t.t),t.dq]));
