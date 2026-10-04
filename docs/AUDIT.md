@@ -172,8 +172,12 @@ the data roadmap is to replace them with regional cuts from published polls.
 
 ## Data notes
 
-- All 1,457 ward baselines are imputed from 2022 constituency aggregates
-  (`dq`, `vl` and `dn` are model attributes, not observations).
+- Wards: the official 1,450 IEBC wards. Registered voters are observed (2022,
+  IEBC Gazette Notice 7290; 10 Mandera wards split from their constituency
+  total) and scaled to 2027 by county. Turnout bases vary by constituency where
+  2022 Form 34B turnout is published (186/290). Vote leanings (`bi`, `bo`)
+  and `dq`, `vl`, `yr` are county values; `dn` is a model attribute.
+  Built by `scripts/build-wards.mjs` from the Kenya Data Atlas.
 - The transport network in `data/transport.js` is marked `source: "synthetic"`.
 - County geometry has 38 source polygons and 9 proxy polygons (shown in the
   Map tab's diagnostics).

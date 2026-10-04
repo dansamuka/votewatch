@@ -1289,7 +1289,7 @@ function rIntel(){
     <div class="u-meta u-lh-snug">${r.e}</div>
   </div>`).join('');
 
-  $('#methNotes').innerHTML=`<strong>How it works</strong><br>Each candidate's support comes from the national polling average and is spread across 1,457 wards using their home regions and 2022 voting patterns. Teams add up their members' support, minus supporters who don't follow. The model then runs the election hundreds of times with random polling error. An outright win needs over 50% nationally and 25% in 24 counties; otherwise the top two go to a run-off, won by most votes. This is a scenario tool, not a forecast.`;
+  $('#methNotes').innerHTML=`<strong>How it works</strong><br>Each candidate's support comes from the national polling average and is spread across Kenya's 1,450 IEBC wards, weighted by each ward's 2022 register (IEBC Gazette Notice 7290) and each constituency's 2022 turnout (Form 34B, where published), using their home regions and 2022 county voting patterns. Teams add up their members' support, minus supporters who don't follow. The model then runs the election hundreds of times with random polling error. An outright win needs over 50% nationally and 25% in 24 counties; otherwise the top two go to a run-off, won by most votes. This is a scenario tool, not a forecast.`;
 
   // small multiples: one bar per poll, split by the current teams
   const sm=$('#pollsSM');
@@ -1519,9 +1519,9 @@ function currentScenarioSettings(){
 }
 function qaStatusClass(status){return status==='PASS'?'qa-pass':status==='FAIL'?'qa-fail':'qa-warn';}
 function technicalEngineQA(){
-  const r=S.res||sim({},false,true,true);const mapQ=VW_MAP_STATE?.diagnostics||mapDiagnostics(VW_MAP_STATE?.rows||[]);const sharesOk=r.ctyRes.every(c=>Math.abs((c.i+c.o+c.t)-1)<0.002);const ctyOk=r.ctyRes.length===47;const wardOk=(S.wards||r.wardRes||[]).length>=1400;const pollOk=!!S.cfg&&Array.isArray(S.cfg.teams);
+  const r=S.res||sim({},false,true,true);const mapQ=VW_MAP_STATE?.diagnostics||mapDiagnostics(VW_MAP_STATE?.rows||[]);const sharesOk=r.ctyRes.every(c=>Math.abs((c.i+c.o+c.t)-1)<0.002);const ctyOk=r.ctyRes.length===47;const wardOk=(S.wards||r.wardRes||[]).length===WARDS.length;const pollOk=!!S.cfg&&Array.isArray(S.cfg.teams);
   const checks=[
-    ['County result count',ctyOk,`${r.ctyRes.length}/47`],['Ward drilldown rows',wardOk,`${(S.wards||r.wardRes||[]).length}/1,457`],['Shares normalize to 100%',sharesOk,sharesOk?'within tolerance':'check county sums'],['Article 138 uses county vote share',true,'candidate share ≥25%, not turnout'],['Teams configured',pollOk,`${S.cfg.teams.length} teams`],['MC mode configured',!!MC_MODES[S.mcMode],`${S.mcMode} · ${ITERS}`],['Map county data match',(mapQ.count||0)===47,`${mapQ.count||0}/47`],['Map geometry match',(mapQ.boundaryMatched||0)>=45,`${mapQ.boundaryMatched||0}/47`]
+    ['County result count',ctyOk,`${r.ctyRes.length}/47`],['Ward drilldown rows',wardOk,`${(S.wards||r.wardRes||[]).length}/${N.format(WARDS.length)}`],['Shares normalize to 100%',sharesOk,sharesOk?'within tolerance':'check county sums'],['Article 138 uses county vote share',true,'candidate share ≥25%, not turnout'],['Teams configured',pollOk,`${S.cfg.teams.length} teams`],['MC mode configured',!!MC_MODES[S.mcMode],`${S.mcMode} · ${ITERS}`],['Map county data match',(mapQ.count||0)===47,`${mapQ.count||0}/47`],['Map geometry match',(mapQ.boundaryMatched||0)>=45,`${mapQ.boundaryMatched||0}/47`]
   ];
   const fails=checks.filter(x=>!x[1]).length;return {checks,status:fails?'WARNING':'PASS'};
 }
