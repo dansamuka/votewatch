@@ -1633,7 +1633,7 @@ function renderExecutiveReport(){
     const rows=opts.map(o=>({...o,res:ticketScenario(o.mod,ti)}));
     const base=(rows.find(o=>o.cur)||rows[0]).res,max=Math.max(...rows.map(o=>o.res.share)),key=keyOf(ti);
     return `<article class="rd-tile rd-opts" style="--tc:${col(key)}"><header class="rd-th"><h4>Running mate for ${mapEsc(S.cfg.teams[ti])}</h4><span>${rows.length} options</span></header>
-      <table class="rd-tbl"><thead><tr><th>Running mate</th><th>First round</th><th class="r">Change</th><th class="r">25%+</th><th class="r">Run-off</th><th class="r">Wins</th></tr></thead>
+      <table class="rd-tbl"><thead><tr><th>Running mate</th><th>Round 1</th><th class="r">Change</th><th class="r">25%+</th><th class="r">Run-off</th><th class="r">Wins</th></tr></thead>
       <tbody>${rows.map((o,i)=>{const d=o.res.share-base.share;scQueue.push([o.res,ti,i]);return `<tr class="${o.cur?'is-cur':''}">
         <td><b>${mapEsc(o.label)}</b>${o.cur?' <span class="rd-cur">Current</span>':''}${o.kind?`<em>${o.kind}</em>`:''}</td>
         <td><span class="rd-bar"><i style="width:${(o.res.share/max*100).toFixed(1)}%"></i></span><span class="rd-num">${pct(o.res.share)}</span></td>
