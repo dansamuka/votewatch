@@ -20,14 +20,17 @@ const TO_SIG={
 // Team A is Ruto's side (Ruto is fixed there); team B is the main challenger
 // slot; teams C/D and solo candidates make up "others".
 // Default line-up (Oct 2026 testing baseline): the broad-based government
-// (Ruto + ODM's government wing) vs the United opposition led by Kalonzo, with
-// everyone else (Gachagua included) running alone; 72% follow-through because
-// ODM and UDA bases were rivals for a decade.
+// (Ruto–Kindiki, with Oburu Odinga's ODM wing on the team but off the ticket) vs
+// a United opposition of Sifuna–Kalonzo with Matiang'i, Babu Owino, Gachagua,
+// Nyoro, Maraga, Karua, Orengo and Omtata behind it; Wajackoyah and Wanjigi run
+// alone. 72% of a running mate's supporters follow (ODM and UDA bases were
+// rivals for a decade).
 const MAX_TEAMS=4;
 function defaultCfg(){
   return presetCfg(['Broad-based government','United opposition'],
-    [['William Ruto','Oburu Odinga'],['Kalonzo Musyoka']],72,
-    [{p:'William Ruto',r:'Oburu Odinga'},{p:'Kalonzo Musyoka',r:null}]);
+    [['William Ruto','Oburu Odinga'],
+     ['Edwin Sifuna','Kalonzo Musyoka',"Fred Matiang'i",'Babu Owino','Rigathi Gachagua','Ndindi Nyoro','David Maraga','Martha Karua','James Orengo','Okiya Omtata']],72,
+    [{p:'William Ruto',r:'pick:kindiki'},{p:'Edwin Sifuna',r:'Kalonzo Musyoka'}]);
 }
 // Ruto vs the four highest-polling challengers (the engine dashboard default)
 function topFourCfg(){
@@ -90,8 +93,8 @@ const RT_REGIONS=[
 const RT_ZERO=Object.fromEntries(RT_REGIONS.map(r=>[r.k,0]));
 const RT_DEFAULT={mtk:-12,rift:2,nyz:-3,kmb:4,cst:-5,wst:-5,nbi:0,ne:0};
 const SCENS=[
-  {id:'s0',tier:'Fractured field',c:'#b86a10',t:'Default: broad-based government vs the United opposition',
-    d:'Ruto and ODM\'s government wing against the United opposition led by Kalonzo, with everyone else, Gachagua included, running alone. 72% of the running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
+  {id:'s0',tier:'Fractured field',c:'#b86a10',t:'Default: Ruto–Kindiki vs a Sifuna–Kalonzo United opposition',
+    d:'Ruto runs with Kindiki; Oburu Odinga\'s ODM wing backs him from off the ticket. Sifuna heads a broad United opposition with Kalonzo as running mate, backed by Matiang\'i, Babu Owino, Gachagua, Nyoro, Maraga, Karua, Orengo and Omtata; Wajackoyah and Wanjigi run alone. 72% of the running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
     cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
   {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
     d:'The four highest-polling challengers combine; Gachagua and the rest run solo. Matches the engine dashboard defaults.',
