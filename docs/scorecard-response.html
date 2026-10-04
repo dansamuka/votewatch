@@ -75,7 +75,7 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
   <div class="fig"><b>7.1 → 7.6</b><span>VoteWatch overall, before the merge (scorecard → our reading)</span></div>
   <div class="fig"><b>8.4 → 8.0</b><span>Vote2Watch overall (scorecard → our reading)</span></div>
   <div class="fig"><b>7 / 9</b><span>findings contested / accepted</span></div>
-  <div class="fig"><b>172</b><span>validation checks now gating every VoteWatch deploy</span></div>
+  <div class="fig"><b>183 + 6</b><span>integrity checks and labelled sanity bounds gating every VoteWatch deploy</span></div>
 </section>
 
 <section class="stack">
@@ -86,6 +86,7 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
       <tr><td>votewatch</td><td class="mono">b0d5431</td><td>The ten review fixes. The scorecard's VoteWatch figures (turnout for "186/290" constituencies, Luo Nyanza "~44%") match this version.</td></tr>
       <tr><td>votewatch</td><td class="mono">d7c0602</td><td>Adds 2022 presidential results for all 290 constituencies and corrects the county 2022 shares. Pushed before the scorecard was written; not reflected in it.</td></tr>
       <tr><td>votewatch</td><td class="mono">0dfa09d</td><td>The merge described below. Live at <a href="https://dansamuka.github.io/votewatch/">dansamuka.github.io/votewatch</a>.</td></tr>
+      <tr><td>votewatch</td><td class="mono">c9058f5, ff881f5</td><td>Validation and calibration after this response: poll-error record, 2022 back-test with the regional layer, calibrated county error, county check of the 2022 candidate splits. See "Since this response" below.</td></tr>
       <tr><td>vote2watch</td><td class="mono">fb3d63b</td><td>Vote2Watch v8: a fork of VoteWatch at d78cd4b plus one overhaul commit and a validation gate.</td></tr>
     </tbody>
   </table></div>
@@ -176,7 +177,7 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
       <tr><td>Gusii third force too high (~67%)</td><td><span class="chip accepted">Accepted</span></td><td>Matiang'i's Gusii strength reduced from 5.5 to 3.6; Kisii third force now 58.8%.</td></tr>
       <tr><td>Structural uncertainty</td><td><span class="chip accepted">Accepted</span></td><td>Team A's spread across the six preset line-ups (35.7–39.3%) shown beside the 80% simulation range.</td></tr>
       <tr><td>Events treated as signals</td><td><span class="chip accepted">Accepted</span></td><td>Salient events listed in Signals; never vote points.</td></tr>
-      <tr><td>Validation and deployment governance</td><td><span class="chip accepted">Accepted</span></td><td>Validator adopted and extended to 172 checks: 2022 results against the IEBC declaration, run-off vote conservation, seeded reproducibility. The Pages workflow runs it before the build (run 37212531220 passed).</td></tr>
+      <tr><td>Validation and deployment governance</td><td><span class="chip accepted">Accepted</span></td><td>Validator adopted and extended: 2022 results against the IEBC declaration, run-off vote conservation, seeded reproducibility. The Pages workflow runs it before the build. It now reports 183 integrity checks and, separately, 6 judgement-based sanity bounds, so passing the bounds is not presented as validation.</td></tr>
       <tr><td>Two-voter Mandera reconciliation error</td><td><span class="chip accepted">Accepted</span></td><td>The boundary-hold wards now split their constituency total exactly; the register reconciles to 22,102,532.</td></tr>
       <tr><td>Geographic integrity (8.5 vs 9.0)</td><td><span class="chip corrected">Accepted, with more</span></td><td>The validator found a further VoteWatch error the scorecard did not: seven counties still carried 1,457-era ward counts. Fixed.</td></tr>
     </tbody>
@@ -221,14 +222,39 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
     </tbody>
   </table></div>
   <p>Headline results now agree closely. The remaining differences come mostly from the 2022 baseline, as the Mandera row shows. We invite a re-score of 0dfa09d.</p>
+</section>
+
+<section class="stack read">
+  <h2>Since this response (v11.1, commits c9058f5 and ff881f5)</h2>
+  <p>The scorecard's follow-up review asked for a validation and calibration phase. This is what was done.</p>
+  <ul>
+    <li><b>Poll-error record.</b> In 2013, 2017 and 2022 the final validated polls underestimated the Kenyatta/Ruto side's two-way share by 3.9, 3.8 and 4.6 points. The simulations' national error is calibrated to that record (4.1 points RMS). An optional correction for the bias is available, off by default.</li>
+    <li><b>2022 back-test.</b> It uses only pre-election information: the final polls, TIFA's 29 July 2022 regional poll (nine zones), the 2017 county pattern and the 2013/2017 error record.
+      <ul>
+        <li>The bias correction cuts the national miss from 4.6 to 0.7 points.</li>
+        <li>The regional layer lowers county RMSE from 12.8 to 12.0.</li>
+        <li>With the earlier noise, county 80% ranges held in only 49% of counties. The model now adds 9.9 points of county-level error, read from the back-test, which brings coverage to 81%.</li>
+      </ul></li>
+    <li><b>2022 candidate splits.</b> The tally's Ruto and Odinga totals agree with two independent compilations of IEBC county results (ELOG, and Wikipedia's Form 34C table where it adds up) in all 47 counties. That covers the 45 constituencies without an official total read. Two rescaled rows were re-split from county figures, and the national Ruto share is now exactly the declared 50.49%.</li>
+    <li><b>History.</b> The 2017 county figures were wrong in 39 of 47 counties and now come from the ELOG compilation of IEBC results. The 2013 figures contradicted the 2013 winner in 9 counties and were removed.</li>
+    <li><b>Engine hygiene.</b>
+      <ul>
+        <li>Failed simulation draws are counted, excluded and reported.</li>
+        <li>Register scenarios reconcile exactly to every county.</li>
+        <li>Live events became a labelled hypothetical sandbox.</li>
+        <li>The audit file separates the current method from the archived history.</li>
+        <li>Undecided voters are modelled by region (20% nationally, 26% in Mt Kenya).</li>
+      </ul></li>
+  </ul>
+  <p>Default line-up today: 38.4 / 37.6 / 24.0; the United opposition wins about 93% of simulated run-offs. With the poll-bias correction on: 41.5 / 34.5 / 24.0.</p>
   <div class="note">
-    <p><b>Still open, in either repository:</b></p>
+    <p><b>Still open:</b></p>
     <ul>
-      <li>There is no back-test against 2022.</li>
-      <li>Transfer and run-off priors are judgement, not data.</li>
-      <li>45 constituency results have no official read to check against.</li>
-      <li>The 2013 and 2017 county history figures are unverified.</li>
-      <li>Removals from the register since 2022 are not netted out.</li>
+      <li>Candidate splits are checked by county, not constituency by constituency. That needs IEBC's forms portal, which was unreachable.</li>
+      <li>Transfer, run-off and running-mate priors are judgement, not data.</li>
+      <li>The register adds new registrations but does not net out removals.</li>
+      <li>Run-off turnout reuses round one.</li>
+      <li>Pollster house effects need more than the six validated polls available.</li>
     </ul>
   </div>
 </section>
@@ -236,7 +262,9 @@ pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radiu
 <section class="stack">
   <h2>How to verify</h2>
   <pre>git clone https://github.com/dansamuka/votewatch &amp;&amp; cd votewatch
-node scripts/validate-model.mjs     # 172 checks, prints the default, sensitivity and run-off figures
+node scripts/validate-model.mjs     # 183 integrity checks + 6 sanity bounds; prints the main figures
+node scripts/backtest-2022.mjs      # 2022 back-test and county-error calibration
+node scripts/check-2022.mjs         # county check of the 2022 candidate splits
 git show d7c0602 --stat             # 2022 results commit
 git show 0dfa09d --stat             # merge commit
 
