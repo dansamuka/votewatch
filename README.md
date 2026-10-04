@@ -55,7 +55,12 @@ docs/AUDIT.md           engine and data audit, method and calibration notes
   state (risk, passes, watch) and never identify a side. Blue accent marks
   interactive and selected things only.
 - **Public vs analyst view.** Technical columns carry `class="opt"` and method
-  notes `class="analyst-only"`; both are hidden in public view.
+  notes `class="analyst-only"`; both are hidden in public view. A "More
+  columns" button (`data-more`) reveals one table's extra columns.
+- **Cascade layers.** tokens < base < components < utilities < overrides
+  (reduced motion, touch targets, print). Add new component rules inside
+  `@layer components`.
+- **Touch.** On coarse pointers every control is at least 44px.
 - **Spacing and type** come from tokens (`--sp-*`, `--t-*`); avoid raw px.
 
 ## Run locally

@@ -6,6 +6,7 @@
    D violet, others slate) and never mean good or bad. Lifecycle hues mean
    state (red = risk/blocked, green = passes/ok, amber = watch) and never
    identify a side. Accent means interactive or selected only. */
+@layer tokens{
 :root{
   color-scheme:light;
   /* surfaces: light depth comes from shadow, dark depth from lightness */
@@ -98,4 +99,5 @@
     --ring:0 0 0 1px var(--line);--shadow-1:none;--shadow-2:none;--shadow-3:none;--hi:none;
   }
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 }

@@ -131,7 +131,18 @@ function initShell(){
   if(typeof setLive==='function')setLive(false);
 }
 
+/* ── Tables: "More columns" shows the analyst-only columns for one table in public view ── */
+function initMoreCols(){
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-more]');if(!b)return;
+    const box=b.closest('.pan,#vmWards');if(!box)return;
+    const on=box.classList.toggle('show-opt');
+    b.setAttribute('aria-pressed',String(on));b.textContent=on?'Fewer columns':'More columns';
+  });
+}
+
 /* ── boot ── */
+initMoreCols();
 wrapKPIs();
 initTabs();initShell();initDock();labelControls();
 let lblQueued=false;

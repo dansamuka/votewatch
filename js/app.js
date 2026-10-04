@@ -1407,6 +1407,12 @@ function paintRange(el){
   const mn=+el.min||0,mx=+el.max||100,p=v=>((v-mn)/(mx-mn)*100).toFixed(2)+'%';
   el.style.setProperty('--v',p(+el.value));
   const d=el.list&&el.list.options[0];if(d)el.style.setProperty('--def',p(+d.value));
+  // value bubble that rides on the thumb while dragging (text mirrors the label's output)
+  const sl=el.closest('.sl');if(!sl)return;
+  let b=el.nextElementSibling;
+  if(!b||!b.classList.contains('sl-bub')){b=document.createElement('span');b.className='sl-bub';b.setAttribute('aria-hidden','true');el.after(b);}
+  sl.style.setProperty('--p',((+el.value-mn)/(mx-mn)).toFixed(4));
+  const out=el.id&&document.querySelector(`label[for="${el.id}"] output`);b.textContent=out?out.textContent:el.value;
 }
 function paintRanges(){document.querySelectorAll('input[type=range]').forEach(paintRange);}
 document.addEventListener('input',e=>{if(e.target.type==='range')paintRange(e.target);});

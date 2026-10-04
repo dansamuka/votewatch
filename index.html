@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=9.0">
-<link rel="stylesheet" href="css/app.css?v=9.0">
+<link rel="stylesheet" href="css/tokens.css?v=9.1">
+<link rel="stylesheet" href="css/app.css?v=9.1">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -200,7 +200,7 @@
     <div id="p24"></div>
   </section>
   <div class="pan mb12">
-    <div class="pan-hdr"><h3 class="pan-t">Counties near the 25% line <span class="pan-s">closest first</span></h3></div>
+    <div class="pan-hdr"><h3 class="pan-t">Counties near the 25% line <span class="pan-s">closest first</span></h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
     <div class="tscroll"><table class="tbl" id="tipTbl"></table></div>
   </div>
   <div class="pan">
@@ -271,7 +271,7 @@
       <div class="mphead"><b id="vmCtyH">County</b><label class="sr-only" for="vmSel">Choose a county</label><select class="sel" id="vmSel"></select></div>
       <div id="vmBody" aria-live="polite"></div>
       <div id="vmWards" hidden>
-        <div class="mphead mt12"><b id="vmWardsT">Wards</b><input class="srch" id="wardSrch" placeholder="Search wards…" aria-label="Search wards"></div>
+        <div class="mphead mt12"><b id="vmWardsT">Wards</b><span class="fc g8"><input class="srch" id="wardSrch" placeholder="Search wards…" aria-label="Search wards"><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></span></div>
         <div class="tscroll cty-wards"><table class="tbl" id="wardTbl"></table></div>
       </div>
     </section>
@@ -296,7 +296,7 @@
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><h3 class="pan-t">All counties: dispute risk</h3></div>
+    <div class="pan-hdr"><h3 class="pan-t">All counties: dispute risk</h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
     <div class="tscroll"><table class="tbl" id="disTbl"></table></div>
   </div>
 </div>
@@ -388,14 +388,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=9.0"></script>
-<script defer src="data/counties.js?v=9.0"></script>
-<script defer src="data/transport.js?v=9.0"></script>
-<script defer src="data/context.js?v=9.0"></script>
-<script defer src="data/kenya-geo.js?v=9.0"></script>
-<script defer src="js/viz.js?v=9.0"></script>
-<script defer src="js/app.js?v=9.0"></script>
-<script defer src="js/enhance.js?v=9.0"></script>
-<script defer src="js/map.js?v=9.0"></script>
+<script defer src="data/wards.js?v=9.1"></script>
+<script defer src="data/counties.js?v=9.1"></script>
+<script defer src="data/transport.js?v=9.1"></script>
+<script defer src="data/context.js?v=9.1"></script>
+<script defer src="data/kenya-geo.js?v=9.1"></script>
+<script defer src="js/viz.js?v=9.1"></script>
+<script defer src="js/app.js?v=9.1"></script>
+<script defer src="js/enhance.js?v=9.1"></script>
+<script defer src="js/map.js?v=9.1"></script>
 </body>
 </html>
