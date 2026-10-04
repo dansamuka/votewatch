@@ -1572,6 +1572,8 @@ function renderExecutiveReport(){
   const el=$('#printReport'); if(!el)return;
   if(!S.res)renderAll();
   const r=S.res,n=r.nat,mc_=S.mc||mc({},ITERS),dr=disRisk(r.ctyRes),w=mc_.r2Win||{};
+  if(!VW_MAP_STATE.rows||!VW_MAP_STATE.rows.length)rMap(r.ctyRes);
+  const cn=s=>String(s||'').replace("Murang'A","Murang'a").replace('Tharaka - Nithi','Tharaka-Nithi').replace('Elgeyo/Marakwet','Elgeyo-Marakwet');
   const settings=currentScenarioSettings();
   const pr2=r2pair(n),runoff=mc_.ro>=0.5;
   const nm=k=>blocName(k);
@@ -1679,8 +1681,8 @@ function renderExecutiveReport(){
       <ol class="rd-means">${implTxt(r,mc_).map(t=>`<li>${t}</li>`).join('')}</ol></article>
     <article class="rd-tile"><header class="rd-th"><h4>Where it is decided</h4></header>
       <div class="rd-two">
-        <div><p class="rd-sub">Near the 25% line · team A</p><ul class="rd-list">${topTip.map(t=>`<li><span>${mapEsc(t.name)}</span><b>${pct(t.i)}</b></li>`).join('')}</ul></div>
-        <div><p class="rd-sub">Closest counties</p><ul class="rd-list">${topDis.map(c=>`<li><span>${mapEsc(c.name)}</span><b style="color:${ink(leadK(c))}">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'} +${(Math.abs(c.ls-0.5)*100).toFixed(1)}</b></li>`).join('')}</ul></div>
+        <div><p class="rd-sub">Near the 25% line · team A</p><ul class="rd-list">${topTip.map(t=>`<li><span>${mapEsc(cn(t.name))}</span><b>${pct(t.i)}</b></li>`).join('')}</ul></div>
+        <div><p class="rd-sub">Closest counties</p><ul class="rd-list">${topDis.map(c=>`<li><span>${mapEsc(cn(c.name))}</span><b style="color:${ink(leadK(c))}">${c.lead==='inc'?'A':c.lead==='opp'?'B':'Other'} +${(Math.abs(c.ls-0.5)*100).toFixed(1)}</b></li>`).join('')}</ul></div>
       </div></article>
   </section>
 
@@ -1700,7 +1702,7 @@ function renderExecutiveReport(){
     </article>
     <div class="analyst-only rd-grid2">
       <article class="rd-tile"><header class="rd-th"><h4>Model checks</h4></header>${reportTable(qa.checks,[['Check',q=>q[0]],['Status',q=>q[1]?'<span class="qa-pass">Pass</span>':'<span class="qa-warn">Check</span>'],['Detail',q=>q[2]]])}</article>
-      <article class="rd-tile"><header class="rd-th"><h4>Largest moves from 2022</h4></header>${reportTable(move.gains.slice(0,4).concat(move.losses.slice(0,4)),[['County','name'],['Change',q=>(q.incMove>0?'+':'')+pct(q.incMove),'r'],['Team A now',q=>pct(q.i),'r']])}</article>
+      <article class="rd-tile"><header class="rd-th"><h4>Largest moves from 2022</h4></header>${reportTable(move.gains.slice(0,4).concat(move.losses.slice(0,4)),[['County',q=>mapEsc(cn(q.name))],['Change since 2022',q=>(q.incMove>0?'+':'−')+Math.abs(q.incMove*100).toFixed(1)+' pts','r'],['Team A now',q=>pct(q.i),'r']])}</article>
     </div>
   </section>
   </div>`;
@@ -1715,8 +1717,10 @@ function renderExecutiveReport(){
     setTimeout(next,0);
   });
 }
-function printExecutiveReport(){renderExecutiveReport();openVwTab('report');(renderExecutiveReport.done||Promise.resolve()).then(()=>setTimeout(()=>window.print(),120));}
-function downloadReportHTML(){renderExecutiveReport();(renderExecutiveReport.done||Promise.resolve()).then(()=>{const html=`<!doctype html><html><head><meta charset="utf-8"><title>VoteWatch 2027 scenario report</title><style>${Array.from(document.styleSheets).map(ss=>{try{return Array.from(ss.cssRules).map(r=>r.cssText).join('\n')}catch(e){return ''}}).join('\n')}</style></head><body><section class="print-report">${$('#printReport')?.innerHTML||''}</section></body></html>`;dlBlob(html,'votewatch2027_report.html','text/html');});}
+// Export waits for the full simulation (not the quick estimate) and the running-mate table
+function reportReady(){return new Promise(res=>{const c=()=>S.mcPending?setTimeout(c,100):res();c();}).then(()=>{renderExecutiveReport();return renderExecutiveReport.done||Promise.resolve();});}
+function printExecutiveReport(){openVwTab('report');reportReady().then(()=>setTimeout(()=>window.print(),150));}
+function downloadReportHTML(){reportReady().then(()=>{const html=`<!doctype html><html><head><meta charset="utf-8"><title>VoteWatch 2027 scenario report</title><style>${Array.from(document.styleSheets).map(ss=>{try{return Array.from(ss.cssRules).map(r=>r.cssText).join('\n')}catch(e){return ''}}).join('\n')}</style></head><body><section class="print-report">${$('#printReport')?.innerHTML||''}</section></body></html>`;dlBlob(html,'votewatch2027_report.html','text/html');});}
 // Range sliders: --v = filled track up to the value, --def = tick at the default (from the datalist)
 function paintRange(el){
   const mn=+el.min||0,mx=+el.max||100,p=v=>((v-mn)/(mx-mn)*100).toFixed(2)+'%';
