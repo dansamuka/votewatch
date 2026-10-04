@@ -54,7 +54,11 @@ Live: https://dansamuka.github.io/votewatch/
 3. **Tabs**: Overview, Run-off, Swing counties, Scenarios (ready-made
    line-ups), Article 138, Map (click a county for its result and wards),
    Dispute risk, Signals (latest polls and key facts), Report.
-4. **Export**: print or save a PDF, report HTML, and CSVs.
+4. **Report** (and Export): a briefing with the first-round result, each
+   team's ticket and members, a running-mate table that re-runs the model for
+   every option (share, counties at 25%+, run-off and overall win chance), what
+   it means, the counties that decide it and every assumption. Print or save
+   as PDF or HTML; CSVs from Export.
 
 Header buttons switch between public and analyst wording and between the light
 and dark themes (light and public are the defaults; the choice is remembered).
