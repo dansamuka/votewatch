@@ -141,5 +141,21 @@ function flow(el,r,dir){
   el.innerHTML=svg+`<p class="mstrip-cap">${esc(blocName(ro.winner,nat))} wins round two with ${p1(Math.max(ro.shareA,ro.shareB))}. Everyone else's votes split ${dir==='toA'?`70/30 toward ${esc(blocName(ro.a,nat))}`:dir==='toB'?`70/30 toward ${esc(blocName(ro.b,nat))}`:'50/50'}.</p>`;
 }
 
-window.VZ={race,outcomes,margins,gates,flow,col,ink};
+/* ── Team A share in every county against the 25% line (Swing counties tab) ── */
+function threshold(el,ctyRes){
+  if(!el)return;
+  const W=760,H=96,R=5,pad=14,max=0.95,X=v=>pad+Math.min(max,Math.max(0,v))/max*(W-2*pad);
+  const pts=ctyRes.map(c=>({n:c.name,v:c.i})).sort((a,b)=>a.v-b.v);
+  const placed=[];pts.forEach(p=>{p.x=X(p.v);let l=0;while(placed.some(q=>q.l===l&&Math.abs(q.x-p.x)<R*2+1))l++;p.l=l;placed.push(p);});
+  const mid=H/2-8,yOf=l=>mid+(l%2?1:-1)*Math.ceil(l/2)*(R*2+1);
+  const near=pts.filter(p=>Math.abs(p.v-0.25)<0.08).length,pass=pts.filter(p=>p.v>=0.25).length;
+  el.innerHTML=`<svg class="mstrip" viewBox="0 0 ${W} ${H}" role="img" aria-label="${pass} of 47 counties give team A 25% or more; ${near} are within 8 points of the line">
+    <rect class="zone" x="${X(0.17)}" y="4" width="${X(0.33)-X(0.17)}" height="${H-28}" rx="3" style="fill:color-mix(in oklab,var(--c-amber) 12%,transparent)"/>
+    <line class="axis" x1="${pad}" x2="${W-pad}" y1="${mid}" y2="${mid}"/><line class="zero" x1="${X(0.25)}" x2="${X(0.25)}" y1="2" y2="${H-24}" style="stroke-dasharray:none;stroke-width:2"/>
+    ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${yOf(p.l).toFixed(1)}" r="${Math.abs(p.v-0.25)<0.08?R+1:R}" style="fill:${p.v>=0.25?'var(--team-a)':'var(--team-b)'}"><title>${esc(p.n)}: team A ${p1(p.v)}</title></circle>`).join('')}
+    ${[0,0.25,0.5,0.95].map(t=>`<text x="${X(t)}" y="${H-6}" class="ax-l" text-anchor="${t===0?'start':t===0.95?'end':'middle'}">${Math.round(t*100)}%</text>`).join('')}
+  </svg><p class="mstrip-cap"><b>${pass}</b> of 47 counties give team A 25% or more (needs 24). <b>${near}</b> sit in the shaded band within 8 points of the line.</p>`;
+}
+
+window.VZ={race,outcomes,margins,gates,flow,threshold,col,ink};
 })();

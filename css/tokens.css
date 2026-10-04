@@ -41,7 +41,7 @@
   --bdr:var(--line);--bdr2:var(--line-2);--bdr3:var(--line-strong);
   --txt:var(--ink);--muted:var(--text-3);--dim:var(--text-3);
   --gold:var(--accent);--gold2:#0F4AA8;--gdim:rgb(21 88 196 / .35);
-  --blbr:var(--team-a-ink);--red2:var(--team-b);--gbr:var(--c-green);--amb2:var(--c-amber);
+  --blbr:var(--team-a-ink);--red2:var(--c-red);--gbr:var(--c-green);--amb2:var(--c-amber);
   --red:#B42318;--rdim:#FBE9E7;--grn:#15803D;--gdark:#E7F4EC;--amb:#B45309;--ambd:#FDF0E1;--blu:#1558C4;--bld:#E8EFFB;
   --pur:#6D28D9;--purbr:#6D28D9;
   --mono:var(--font-mono);--sans:var(--font-sans);--disp:var(--font-sans);
@@ -62,4 +62,17 @@
   --s3:#20252C;--gold2:#B3CEFF;--gdim:rgb(138 182 255 / .35);
   --red:#F87171;--rdim:#3a1214;--grn:#4ADE80;--gdark:#0b3520;--amb:#F0A93B;--ambd:#3d2008;--blu:#8AB6FF;--bld:#0a1e30;
   --pur:#C4A7F5;--purbr:#C4A7F5;
+}
+/* Print: ink on white whatever the screen theme; team colours keep their meaning */
+@media print{
+  :root,:root[data-theme="dark"]{
+    color-scheme:light;
+    --canvas:#FFFFFF;--canvas-sunken:#F3F3F3;--surface:#FFFFFF;--surface-raised:#FFFFFF;--overlay:#FFFFFF;
+    --ink:#111111;--ink-2:#222222;--text-2:#333333;--text-3:#555555;
+    --line:rgb(0 0 0 / .18);--line-2:rgb(0 0 0 / .3);
+    --accent:#1558C4;--team-a:#D97706;--team-a-ink:#A15C07;--team-b:#1558C4;--team-c:#0E7C66;--team-d:#6D28D9;--others:#5B6470;
+    --c-red:#B42318;--c-green:#15803D;--c-amber:#B45309;
+    --shadow-1:none;--shadow-2:none;--hi:none;
+  }
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }

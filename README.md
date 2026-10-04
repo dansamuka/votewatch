@@ -44,17 +44,19 @@ docs/AUDIT.md           engine and data audit, method and calibration notes
 
 ## Run locally
 
-No build step. Serve the folder:
+No build step needed for development. Serve the folder:
 
 ```bash
 python -m http.server 8000
 ```
 
-html2canvas loads from a CDN. Asset URLs carry `?v=` stamps; bump them in
-`index.html` when you change a CSS or JS file, so visitors don't mix cached old
-files with new ones.
+## Deploy
 
-Deployed by GitHub Pages (`.github/workflows/static.yml`) on every push to `main`.
+GitHub Pages runs `.github/workflows/static.yml` on every push to `main`. It
+runs `node scripts/build.mjs`, which bundles and minifies the stylesheets and
+scripts listed in `index.html` into two content-hashed files in `_site/`
+(1 CSS + 1 JS instead of 11 requests) and publishes that folder. To preview
+the production build locally, run the same command and serve `_site/`.
 
 ## Updating
 

@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <script>/* apply the saved theme before first paint */try{if(localStorage.getItem("vw-theme")==="dark")document.documentElement.dataset.theme="dark";}catch(e){}</script>
-<link rel="stylesheet" href="css/tokens.css?v=8.0">
-<link rel="stylesheet" href="css/app.css?v=8.0">
+<link rel="stylesheet" href="css/tokens.css?v=8.1">
+<link rel="stylesheet" href="css/app.css?v=8.1">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -68,7 +68,7 @@
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
       <div class="sl">
         <label class="sl-top" for="sl-follow"><span>Supporters who follow into a team</span><output id="lv-follow">85%</output></label>
-        <input type="range" id="sl-follow" min="50" max="100" step="5" value="85">
+        <input type="range" id="sl-follow" list="vwFollow" title="Double-click to reset" min="50" max="100" step="5" value="85">
         <p class="hint">Real coalitions leak; 80–90% is typical.</p>
       </div>
     </section>
@@ -76,19 +76,19 @@
       <h3 class="side-h" id="secAss">Adjust</h3>
       <div class="sl">
         <label class="sl-top" for="sl-si"><span>Swing to team A</span><output id="lv-si">±0pp</output></label>
-        <input type="range" id="sl-si" min="-12" max="12" step="0.5" value="0">
+        <input type="range" id="sl-si" list="vwZero" title="Double-click to reset" min="-12" max="12" step="0.5" value="0">
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-so"><span>Swing to team B</span><output id="lv-so">±0pp</output></label>
-        <input type="range" id="sl-so" min="-12" max="12" step="0.5" value="0">
+        <input type="range" id="sl-so" list="vwZero" title="Double-click to reset" min="-12" max="12" step="0.5" value="0">
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-ys"><span>Youth turnout</span><output id="lv-ys">+0pp</output></label>
-        <input type="range" id="sl-ys" min="-5" max="18" step="1" value="0">
+        <input type="range" id="sl-ys" list="vwZero" title="Double-click to reset" min="-5" max="18" step="1" value="0">
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-tf"><span>Protest vote</span><output id="lv-tf">0pp</output></label>
-        <input type="range" id="sl-tf" min="0" max="20" step="0.5" value="0">
+        <input type="range" id="sl-tf" list="vwZero" title="Double-click to reset" min="0" max="20" step="0.5" value="0">
       </div>
       <div class="reg-row">
         <button type="button" class="switch" role="switch" aria-checked="true" data-reg="uda" onclick="regime('uda',this.getAttribute('aria-checked')!=='true')"><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span><span class="reg-lbl">Ruto holds the Rift Valley</span></button>
@@ -112,6 +112,7 @@
     </details>
     </div>
   </details>
+  <datalist id="vwZero"><option value="0"></option></datalist><datalist id="vwFollow"><option value="85"></option></datalist>
 </aside>
 
 <main id="main">
@@ -128,8 +129,8 @@
   </ol>
   <section class="race card mb16" id="raceStrip" aria-labelledby="raceT"></section>
   <div class="cards2 mb16" id="kpiRow"></div>
-  <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">Every county <span class="pan-s">team A share by region · click one for detail</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel" style="height:220px"></div></div></section>
-  <div class="impl-box mb12" id="implBox"><div class="impl-hdr">What this means</div><div class="loading" style="height:80px;"></div></div>
+  <section class="hero pan mb12" aria-labelledby="heroT"><div class="pan-hdr"><span class="pan-t" id="heroT">Who leads each county <span class="pan-s">grouped by region · tap one for detail</span></span><span class="hero-leg" id="heroLeg"></span></div><div id="heroBody" class="hero-body"><div class="skel skel-56"></div></div></section>
+  <div class="impl-box mb12" id="implBox"><div class="impl-hdr">What this means</div><div class="loading skel-80"></div></div>
   <div class="g2 mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">National result by region</span></div>
@@ -188,12 +189,13 @@
 <div class="tpane" id="t-tip" role="tabpanel" aria-labelledby="tab-tip">
   <h2 class="sr-only">Swing counties</h2>
   <p class="pane-intro"><strong>Counties near the 25% line.</strong> Team A needs 25% in 24 counties; these could go either way.</p>
+  <section class="pan mb16" aria-labelledby="tipStripT"><div class="pan-hdr"><span class="pan-t" id="tipStripT">Every county against the 25% line <span class="pan-s">team A share</span></span></div><div id="tipStrip"></div></section>
   <div class="g2 mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Vote needed to force a run-off</span></div>
       <div class="flex g12 mt8" id="ffBoxes"></div>
       <div class="divider"></div>
-      <div id="ffNarr" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;"></div>
+      <div id="ffNarr" class="u-meta u-lh-relaxed"></div>
     </div>
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">The 24-county test</span></div>
@@ -268,6 +270,7 @@
       <div class="mbar" id="vmLegend"></div>
     </figure>
     <section class="plate cty-card" aria-labelledby="vmCtyH">
+      <button type="button" class="sheet-handle" id="vmSheetBtn" aria-label="Expand or collapse county details"><i></i></button>
       <div class="mphead"><b id="vmCtyH">County</b><label class="sr-only" for="vmSel">Choose a county</label><select class="sel" id="vmSel"></select></div>
       <div id="vmBody" aria-live="polite"></div>
       <div id="vmWards" hidden>
@@ -288,7 +291,7 @@
       <div class="pan-hdr"><span class="pan-t">How close each county is <span class="pan-s">team A minus team B</span></span></div>
       <div id="disStrip"></div>
       <div class="divider"></div>
-      <div id="disNarr" style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;"></div>
+      <div id="disNarr" class="u-meta u-lh-relaxed"></div>
     </div>
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Close counties by region</span></div>
@@ -308,7 +311,8 @@
   <div class="polls-grid mb12">
     <div class="pan">
       <div class="pan-hdr"><span class="pan-t">Latest national polls <span class="pan-s">decided voters, grouped by your teams</span></span></div>
-      <div class="tscroll"><table class="tbl" id="pollsTbl"></table></div>
+      <div class="psm" id="pollsSM"></div>
+      <details class="fold mt12"><summary class="u-fs12 c-muted">Show as a table</summary><div class="tscroll mt8"><table class="tbl" id="pollsTbl"></table></div></details>
       <p class="hint mt8">"Held out" polls haven't published their method.</p>
     </div>
     <div class="pan">
@@ -375,7 +379,7 @@
       <div class="pan-t">Printable report</div>
       <div class="pan-s">One-page briefing pack generated from the current VOTEWATCH scenario state.</div>
     </div>
-    <div class="btn-grp" style="margin-top:0">
+    <div class="btn-grp u-mt0">
       <button class="btn btn-p" onclick="printExecutiveReport()">Print / Save PDF</button>
       <button class="btn" onclick="downloadReportHTML()">Download HTML</button>
       <button class="btn" onclick="renderExecutiveReport()">Refresh Report</button>
@@ -387,14 +391,14 @@
 </main>
 </div>
 
-<script defer src="data/wards.js?v=8.0"></script>
-<script defer src="data/counties.js?v=8.0"></script>
-<script defer src="data/transport.js?v=8.0"></script>
-<script defer src="data/context.js?v=8.0"></script>
-<script defer src="data/kenya-geo.js?v=8.0"></script>
-<script defer src="js/viz.js?v=8.0"></script>
-<script defer src="js/app.js?v=8.0"></script>
-<script defer src="js/enhance.js?v=8.0"></script>
-<script defer src="js/map.js?v=8.0"></script>
+<script defer src="data/wards.js?v=8.1"></script>
+<script defer src="data/counties.js?v=8.1"></script>
+<script defer src="data/transport.js?v=8.1"></script>
+<script defer src="data/context.js?v=8.1"></script>
+<script defer src="data/kenya-geo.js?v=8.1"></script>
+<script defer src="js/viz.js?v=8.1"></script>
+<script defer src="js/app.js?v=8.1"></script>
+<script defer src="js/enhance.js?v=8.1"></script>
+<script defer src="js/map.js?v=8.1"></script>
 </body>
 </html>

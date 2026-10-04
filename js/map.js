@@ -63,6 +63,7 @@ function build(){
   svg.addEventListener('mouseleave',()=>{tip.hidden=true;tip.dataset.c='';});
   svg.addEventListener('focusin',e=>{const p=e.target.closest('.vm-c');if(!p)return;tip.dataset.c=p.dataset.county;show(p);const b=p.getBoundingClientRect();place(b.left+b.width/2,b.top);});
   svg.addEventListener('focusout',()=>{tip.hidden=true;});
+  const sb=$('#vmSheetBtn');if(sb)sb.onclick=()=>sb.closest('.cty-card').classList.toggle('open');
   const sel=$('#vmSel');
   if(sel){
     sel.innerHTML='<option value="">Choose a county…</option>'+[...CO].map(c=>c.name).sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -108,6 +109,8 @@ function card(nat){
   const body=$('#vmBody'),sel=$('#vmSel');if(!body||!S.res)return;
   const name=S.selCty,c=name&&S.res.ctyRes.find(x=>x.name===name);
   if(sel)sel.value=c?name:'';
+  // phones: the county panel is a bottom sheet, opened when a county is chosen
+  const cardEl=body.closest('.cty-card');if(cardEl)cardEl.classList.toggle('open',!!c);
   document.querySelectorAll('#vmMap .vm-c').forEach(p=>p.classList.toggle('on',!!c&&p.dataset.county===name));
   const wards=$('#vmWards');
   if(!c){
