@@ -18,11 +18,18 @@ const TO_SIG={
 // ═══ TEAMS (v7) ═══
 // Every candidate in data/context.js is on exactly one team or runs solo.
 // Team A is Ruto's side (Ruto is fixed there); team B is the main challenger
-// slot; teams C/D and solo candidates make up "others". Defaults mirror the
-// kenya-election-intelligence-engine coalition builder: Ruto vs the four
-// highest-polling challengers, everyone else solo, 85% follow-through.
+// slot; teams C/D and solo candidates make up "others".
+// Default line-up (Oct 2026 testing baseline): the broad-based government
+// (Ruto + ODM's government wing) vs a Kalonzo-led opposition, with the Mt Kenya
+// breakaway as a separate third team and everyone else unaligned; 72%
+// follow-through because ODM and UDA bases were rivals for a decade.
 const MAX_TEAMS=4;
 function defaultCfg(){
+  return presetCfg(['Broad-based government','Kalonzo bloc','Mt Kenya breakaway'],
+    [['William Ruto','Oburu Odinga'],['Kalonzo Musyoka'],['Rigathi Gachagua']],72);
+}
+// Ruto vs the four highest-polling challengers (the engine dashboard default)
+function topFourCfg(){
   const assign={};let n=0;
   [...CANDIDATES].sort((a,b)=>b.avg-a.avg).forEach(c=>{
     if(c.name==='William Ruto')assign[c.name]=0;
@@ -37,39 +44,51 @@ function presetCfg(teams,groups,follow=85){
   groups.forEach((g,i)=>g.forEach(n=>assign[n]=i));
   return {teams,assign,follow};
 }
+// Regional turnout: relative change per region (−12 = 12% fewer of its voters turn out)
+const RT_REGIONS=[
+  {k:'mtk',l:'Mt Kenya',g:['MTK','MERU']},{k:'rift',l:'Rift Valley',g:['KAL','RIFT']},
+  {k:'nyz',l:'Nyanza',g:['LUO','GUSII']},{k:'kmb',l:'Ukambani',g:['KAMBA']},
+  {k:'cst',l:'Coast',g:['COAST']},{k:'wst',l:'Western',g:['WEST']},
+  {k:'nbi',l:'Nairobi',g:['NBI']},{k:'ne',l:'North',g:['NE']}];
+const RT_ZERO=Object.fromEntries(RT_REGIONS.map(r=>[r.k,0]));
+const RT_DEFAULT={mtk:-12,rift:2,nyz:-3,kmb:4,cst:-5,wst:-5,nbi:0,ne:0};
 const SCENS=[
-  {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Default: Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
+  {id:'s0',tier:'Fractured field',c:'#b86a10',t:'Default: broad-based government vs Kalonzo bloc, Mt Kenya on its own',
+    d:'Ruto and ODM\'s government wing against a Kalonzo-led opposition, with Gachagua\'s Mt Kenya breakaway as a third team and everyone else unaligned. 72% follow-through; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
+    cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
+  {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
     d:'The four highest-polling challengers combine; Gachagua and the rest run solo. Matches the engine dashboard defaults.',
-    cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0}},
+    cfg:topFourCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_ZERO}}},
   {id:'s2',tier:'Grand opposition',c:'#b83232',t:'Everyone but Ruto and ODM on one ticket',
     d:'The Muriu coalition formula works: Kalonzo, Sifuna, Matiang\'i, Gachagua, Babu Owino, Karua and Maraga back one candidate; Oburu\'s ODM stays with Ruto.',
-    cfg:presetCfg(['Ruto’s side','United opposition'],[['William Ruto','Oburu Odinga'],['Kalonzo Musyoka','Edwin Sifuna',"Fred Matiang'i",'Babu Owino','Rigathi Gachagua','Martha Karua','David Maraga']]),p:{tf:0,si:0,so:0,ys:4}},
+    cfg:presetCfg(['Ruto’s side','United opposition'],[['William Ruto','Oburu Odinga'],['Kalonzo Musyoka','Edwin Sifuna',"Fred Matiang'i",'Babu Owino','Rigathi Gachagua','Martha Karua','David Maraga']]),p:{tf:0,si:0,so:0,ys:4,rt:{...RT_ZERO}}},
   {id:'s3',tier:'Three-way race',c:'#1b7a4a',t:'Linda Mwananchi runs its own ticket',
     d:'Sifuna, Babu Owino and Orengo form a third team; Kalonzo, Matiang\'i, Gachagua and Karua stay together; ODM stays with Ruto.',
-    cfg:presetCfg(['Ruto’s side','United opposition','Linda Mwananchi'],[['William Ruto','Oburu Odinga'],['Kalonzo Musyoka',"Fred Matiang'i",'Rigathi Gachagua','Martha Karua'],['Edwin Sifuna','Babu Owino','James Orengo']]),p:{tf:0,si:0,so:0,ys:0}},
+    cfg:presetCfg(['Ruto’s side','United opposition','Linda Mwananchi'],[['William Ruto','Oburu Odinga'],['Kalonzo Musyoka',"Fred Matiang'i",'Rigathi Gachagua','Martha Karua'],['Edwin Sifuna','Babu Owino','James Orengo']]),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_ZERO}}},
   {id:'s4',tier:'Fragmented field',c:'#b83232',t:'Talks fail: Kalonzo–Matiang\'i ticket, everyone else solo',
     d:'No single flagbearer: Kalonzo and Matiang\'i pair up, while Sifuna, Gachagua and Babu Owino all run separately.',
-    cfg:presetCfg(['Ruto’s side','Kalonzo–Matiang\'i'],[['William Ruto'],['Kalonzo Musyoka',"Fred Matiang'i"]]),p:{tf:0,si:0,so:0,ys:0}}
+    cfg:presetCfg(['Ruto’s side','Kalonzo–Matiang\'i'],[['William Ruto'],['Kalonzo Musyoka',"Fred Matiang'i"]]),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_ZERO}}}
 ];
 // Default assumptions. RAW integers: engine divides by 100.
-const DEFAULTS={tf:0,si:0,so:0,ys:0,reg:{uda:true}};
+const DEFAULTS={tf:0,si:0,so:0,ys:0,reg:{uda:true},rt:{...RT_DEFAULT}};
 // Coalition display lists (Article 138 tab)
 const FK=['Bungoma','Kakamega','Vihiga','Busia','Trans Nzoia'];
 const OLG=['Mombasa','Kilifi','Kwale','Lamu','Tana River'];
 const MC_MODES={preview:400,standard:1000,research:5000};
-let ITERS=MC_MODES.preview;
+let ITERS;
 const CTY_N=24;
 
 // ═══ STATE — all raw integers, engine divides ═══
 const S={
   tf:DEFAULTS.tf,si:DEFAULTS.si,so:DEFAULTS.so,ys:DEFAULTS.ys,  // RAW pp; engine does /100
-  reg:{...DEFAULTS.reg},
+  reg:{...DEFAULTS.reg},rt:{...DEFAULTS.rt},
   cfg:defaultCfg(),
   selCty:'Nairobi City',
   shocks:[],shLog:[],timer:30,live:false,
   res:null,wards:null,sens:null,tip:null,mc:null,
-  seed:'2027-baseline-001',mcMode:'preview',viewMode:pref('vw-view','public'),theme:pref('vw-theme','light')
+  seed:'2027-baseline-001',mcMode:'research',viewMode:pref('vw-view','public'),theme:pref('vw-theme','light')
 };
+ITERS=MC_MODES[S.mcMode];
 // Remembered per-viewer display preferences (wording and theme)
 function pref(k,d){try{return localStorage.getItem(k)||d;}catch(e){return d;}}
 function savePref(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -185,6 +204,9 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const so  =(params.so  !==undefined?params.so  :S.so )  /100;
   const ys  =(params.ys  !==undefined?params.ys  :S.ys )  /100;
   const reg={...S.reg,...(params.reg||{})};
+  const rt=params.rt||S.rt||RT_ZERO;
+  // county → turnout factor from the regional sliders
+  const rtc={};RT_REGIONS.forEach(r=>{const f=1+(rt[r.k]||0)/100;r.g.forEach(g=>(COUNTY_GROUP[g]||[]).forEach(n=>rtc[n]=f));});
   const F=fieldFor(params.cfg||S.cfg);
   const nO=F.others.length;
 
@@ -231,7 +253,7 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tot=Math.max(inc,0)+Math.max(opp,0)+Math.max(tf_,0)||1;
     const si_=Math.max(inc,0)/tot,so_=Math.max(opp,0)/tot,st_=Math.max(tf_,0)/tot;
 
-    const to=clamp(w.toBase+(w.yr||0.42)*ys+sto+tn,0.24,0.87);
+    const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)+tn,0.24,0.87);
     const vs=w.voters*to;
     const a=k.ci>=0?agg[k.ci]:null;
     if(a){
@@ -260,42 +282,59 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   return{ctyRes,nat,wardRes};
 }
 
-function mc(params={},n=ITERS){
-  let iW=0,oW=0,ro=0,iJ=0,oJ=0;
+// Monte Carlo as a resumable stepper. Research mode owns a seeded generator, so
+// running it in chunks (with other work in between) gives exactly the same
+// result as running it in one go.
+function mcCore(params,n){
+  let i=0,iW=0,oW=0,ro=0,iJ=0,oJ=0;
   const iA=[],oA=[],tA=[],pairs={},r2Win={};
-  const prevRng=RNG_SOURCE;
-  if(S.mcMode==='research'){
-    RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${JSON.stringify(S.reg)}|${JSON.stringify(S.cfg)}`));
-  }
-  try{
-    for(let i=0;i<n;i++){
+  const gen=S.mcMode==='research'?mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${JSON.stringify(S.reg)}|${JSON.stringify(S.rt)}|${JSON.stringify(S.cfg)}`)):null;
+  const mode=S.mcMode,seed=S.seed;
+  return {
+    step(k){
+      const prevRng=RNG_SOURCE;if(gen)RNG_SOURCE=gen;
       try{
-        const r=sim(params,true,true,false);
-        const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
-        const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
-        const iP=r.nat.i>0.50&&i25>=CTY_N;
-        const oP=r.nat.o>0.50&&o25>=CTY_N;
-        if(iP)iW++;else if(oP)oW++;else{
-          ro++;
-          // which two finish top in this draw, and who wins round two (even split)
-          const r2=r2sim(r.ctyRes,r.nat,'spl');
-          const key=[r2.a,r2.b].sort().join('|');
-          pairs[key]=(pairs[key]||0)+1;
-          r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;
+        for(const end=Math.min(n,i+k);i<end;i++){
+          try{
+            const r=sim(params,true,true,false);
+            const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
+            const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
+            const iP=r.nat.i>0.50&&i25>=CTY_N;
+            const oP=r.nat.o>0.50&&o25>=CTY_N;
+            if(iP)iW++;else if(oP)oW++;else{
+              ro++;
+              // which two finish top in this draw, and who wins round two (even split)
+              const r2=r2sim(r.ctyRes,r.nat,'spl');
+              const key=[r2.a,r2.b].sort().join('|');
+              pairs[key]=(pairs[key]||0)+1;
+              r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;
+            }
+            if(iP)iJ++;if(oP)oJ++;
+            iA.push(r.nat.i);oA.push(r.nat.o);tA.push(r.nat.t);
+          }catch(e){}
         }
-        if(iP)iJ++;if(oP)oJ++;
-        iA.push(r.nat.i);oA.push(r.nat.o);tA.push(r.nat.t);
-      }catch(e){}
+      }finally{RNG_SOURCE=prevRng;}
+      return i>=n;
+    },
+    result(){
+      // pairs / r2Win are shares of the run-off draws only
+      const norm=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,ro?v/ro:0]));
+      return{iW:iW/n,oW:oW/n,ro:ro/n,iJ:iJ/n,oJ:oJ/n,pairs:norm(pairs),r2Win:norm(r2Win),
+        iMed:qntl(iA,.5),oMed:qntl(oA,.5),tMed:qntl(tA,.5),
+        iLo:qntl(iA,.1),iHi:qntl(iA,.9),oLo:qntl(oA,.1),oHi:qntl(oA,.9),
+        iterations:n,mode,seed:mode==='research'?seed:null};
     }
-  }finally{
-    RNG_SOURCE=prevRng;
-  }
-  // pairs / r2Win are shares of the run-off draws only
-  const norm=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,ro?v/ro:0]));
-  return{iW:iW/n,oW:oW/n,ro:ro/n,iJ:iJ/n,oJ:oJ/n,pairs:norm(pairs),r2Win:norm(r2Win),
-    iMed:qntl(iA,.5),oMed:qntl(oA,.5),tMed:qntl(tA,.5),
-    iLo:qntl(iA,.1),iHi:qntl(iA,.9),oLo:qntl(oA,.1),oHi:qntl(oA,.9),
-    iterations:n,mode:S.mcMode,seed:S.mcMode==='research'?S.seed:null};
+  };
+}
+function mc(params={},n=ITERS){const m=mcCore(params,n);m.step(n);return m.result();}
+// Large runs: show a quick 400-run estimate now, finish the full run in
+// ~100-run slices between frames, then redraw. A newer render cancels older jobs.
+const MC_QUICK=400,MC_SLICE=100;
+function mcProgressive(onDone){
+  const job=(S.mcJob=(S.mcJob||0)+1),m=mcCore({},ITERS);
+  const tick=()=>{if(job!==S.mcJob)return;
+    if(m.step(MC_SLICE)){S.mcPending=false;onDone(m.result());}else setTimeout(tick,0);};
+  setTimeout(tick,0);
 }
 
 // Display name for a contestant key: 'inc' (team A), 'opp' (team B), or an
@@ -488,8 +527,9 @@ function renderAll(){
     S.res=r;S.wards=r.wardRes;
     S.sens=sensRows(r.ctyRes);
     S.tip=tipPts(r.ctyRes);
-    const mc_=mc({},ITERS);
-    S.mc=mc_;
+    const big=ITERS>MC_QUICK*2;
+    const mc_=big?mc({},MC_QUICK):mc({},ITERS);
+    S.mc=mc_;S.mcPending=big;if(!big)S.mcJob=(S.mcJob||0)+1;
     const dr=disRisk(r.ctyRes);
     const f=ff(r.nat);
     const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
@@ -502,6 +542,13 @@ function renderAll(){
     const open=document.querySelector('.tbtn.act')?.dataset.t||'cmd';
     renderPane(open);
     rShockLog();
+    if(big)mcProgressive(full=>{
+      // swap in the full run and redraw what depends on it
+      S.mc=full;S.ctx.mc=full;
+      rHeadline(S.ctx.r,full,S.ctx.i25);
+      S.dirty=new Set(Object.keys(PANE_RENDER));
+      renderPane(document.querySelector('.tbtn.act')?.dataset.t||'cmd');
+    });
   }catch(err){
     console.error('renderAll error:',err);
   }
@@ -721,7 +768,7 @@ function rScen(){
     const outcome=iW/N_SC>=0.5?['b-ta',`${sc.cfg.teams[0]} wins outright`]:oW/N_SC>=0.5?['b-tb',`${sc.cfg.teams[1]} wins outright`]:['b-a','Run-off'];
     return{...sc,r,i25,o25,n:r.nat,iW:iW/N_SC,oW:oW/N_SC,ro,outcome};
   }));
-  const active=SCENS.find(sc=>JSON.stringify(sc.cfg)===JSON.stringify(S.cfg)&&Object.entries(sc.p).every(([k,v])=>S[k]===v));
+  const active=SCENS.find(sc=>JSON.stringify(sc.cfg)===JSON.stringify(S.cfg)&&Object.entries(sc.p).every(([k,v])=>JSON.stringify(S[k])===JSON.stringify(v)));
   const ps=$('#presetSelect');
   if(ps){
     if(!ps.options.length)ps.innerHTML=SCENS.map(s=>`<option value="${s.id}">${s.tier}</option>`).join('')+'<option value="">Custom (your own settings)</option>';
@@ -803,8 +850,10 @@ function renderTeams(){
 // Copy a preset into the live settings (sliders + political context)
 function applyScenario(id){
   const sc=SCENS.find(s=>s.id===id);if(!sc)return;
-  Object.assign(S,sc.p);S.cfg=JSON.parse(JSON.stringify(sc.cfg));
+  Object.assign(S,JSON.parse(JSON.stringify(sc.p)));S.cfg=JSON.parse(JSON.stringify(sc.cfg));
+  if(!S.rt)S.rt={...RT_ZERO};
   ['tf','si','so','ys'].forEach(k=>{const el=$('#sl-'+k);if(el)el.value=S[k];});
+  syncRegionSliders();
   syncRegimeUI();updateLabels();if(typeof renderTeams==='function')renderTeams();renderAll();rShockLog();
 }
 
@@ -1171,7 +1220,7 @@ function rHeadline(r,mc_,i25){
   else{tone="opp";title=`${blocName("opp")} wins in round one`;}
   const p=mc_.ro>=0.5?mc_.ro:Math.max(mc_.iW,mc_.oW);
   el.dataset.tone=tone;
-  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p">${pct(p,0)} of simulations</span>`;
+  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p">${pct(p,0)} of simulations${S.mcPending?' · refining…':''}</span>`;
 }
 function setLive(on){
   S.live=!!on;S.timer=30;
@@ -1428,6 +1477,18 @@ function updateLabels(){
   $('#lv-ys').textContent=(S.ys>0?'+':'')+S.ys+'pp';
 }
 
+// Turnout by region: one slider per region, relative change in turnout
+const fmtRt=v=>(v>0?'+':v<0?'−':'±')+Math.abs(v)+'%';
+function buildRegionSliders(){
+  const box=$('#rtGrid');if(!box)return;
+  box.innerHTML=RT_REGIONS.map(r=>`<div class="sl"><label class="sl-top" for="rt-${r.k}"><span>${r.l}</span><output id="lv-rt-${r.k}">${fmtRt(S.rt[r.k]||0)}</output></label>
+    <input type="range" id="rt-${r.k}" min="-20" max="20" step="1" value="${S.rt[r.k]||0}" list="dl-rt-${r.k}" title="Double-click to reset"><datalist id="dl-rt-${r.k}"><option value="${RT_DEFAULT[r.k]}"></option></datalist></div>`).join('');
+  const rerender=dbnc(()=>{renderAll();rShockLog();},200);
+  RT_REGIONS.forEach(r=>{const el=$('#rt-'+r.k);
+    el.addEventListener('input',()=>{S.rt[r.k]=+el.value;$('#lv-rt-'+r.k).textContent=fmtRt(S.rt[r.k]);rerender();});
+    el.addEventListener('dblclick',()=>{el.value=RT_DEFAULT[r.k];el.dispatchEvent(new Event('input',{bubbles:true}));});});
+}
+function syncRegionSliders(){RT_REGIONS.forEach(r=>{const el=$('#rt-'+r.k);if(el){el.value=S.rt[r.k]||0;$('#lv-rt-'+r.k).textContent=fmtRt(S.rt[r.k]||0);}});if(typeof paintRanges==='function')paintRanges();}
 function bndSlider(id,key,scale){
   const el=$('#sl-'+id);if(!el)return;
   const rerender=dbnc(()=>{renderAll();rShockLog();},200);
@@ -1462,17 +1523,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   // warm the scenario cards (the slowest tab) once the page is idle
   (window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>{try{rScen();S.dirty&&S.dirty.delete('mat');}catch(e){}},{timeout:3000});
   document.querySelectorAll('[data-flow]').forEach(btn=>btn.onclick=()=>{S.flowDir=btn.dataset.flow;document.querySelectorAll('[data-flow]').forEach(x=>x.setAttribute('aria-pressed',String(x===btn)));if(S.res)VZ.flow($('#roFlow'),S.res,S.flowDir);});
-  $('#sl-follow')?.addEventListener('dblclick',e=>{e.target.value=85;e.target.dispatchEvent(new Event('input'));});
+  $('#sl-follow')?.addEventListener('dblclick',e=>{e.target.value=72;e.target.dispatchEvent(new Event('input'));});
   $('#sl-follow')?.addEventListener('input',e=>{S.cfg.follow=+e.target.value;$('#lv-follow').textContent=S.cfg.follow+'%';rerenderTeams();});
   renderTeams();
+  buildRegionSliders();
 
   $('#bRefresh').addEventListener('click',()=>{addShock();renderAll();decayShocks();rShockLog();S.timer=30;});
   $('#bReset').addEventListener('click',()=>{
     // Full reset: assumptions, political context, polls and probability settings.
     // (Previously left regimes/polls untouched and kept a stale iteration count and theme.)
-    const {reg:dReg,...dSl}=DEFAULTS;
-    Object.assign(S,dSl,{shocks:[],shLog:[],timer:30,mcMode:'preview',seed:'2027-baseline-001'});
-    S.reg={...dReg};S.cfg=defaultCfg();
+    const {reg:dReg,rt:dRt,...dSl}=DEFAULTS;
+    Object.assign(S,dSl,{shocks:[],shLog:[],timer:30,mcMode:'research',seed:'2027-baseline-001'});
+    S.reg={...dReg};S.rt={...dRt};S.cfg=defaultCfg();syncRegionSliders();
     Object.keys(dSl).forEach(k=>{const el=$('#sl-'+k);if(el)el.value=S[k];});
     if(typeof renderTeams==='function')renderTeams();
     $('#mcModeSelect')&&($('#mcModeSelect').value=S.mcMode);$('#seedInput')&&($('#seedInput').value=S.seed);$('#viewModeSelect')&&($('#viewModeSelect').value=S.viewMode);

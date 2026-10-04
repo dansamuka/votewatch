@@ -11,9 +11,22 @@ Live: https://dansamuka.github.io/votewatch/
 
 1. **Teams** (left, or the top panel on mobile): every candidate polling in
    2026 is listed with their polling average. Put each one on team A (Ruto's
-   side), team B, an extra team (up to four), or Solo. Defaults: Ruto vs the
-   four highest-polling challengers. Then adjust follow-through, swings, youth
-   turnout and protest vote.
+   side), team B, an extra team (up to four), or Solo. Then adjust
+   follow-through, swings, youth turnout, protest vote and turnout by region.
+
+   **Default ("Fractured field")**, a testing baseline rather than a forecast:
+   - A, Broad-based government: Ruto + Oburu Odinga (ODM's government wing)
+   - B, Kalonzo bloc: Kalonzo Musyoka
+   - C, Mt Kenya breakaway: Rigathi Gachagua
+   - everyone else unaligned (solo), including Sifuna (Linda Mwananchi)
+   - follow-through 72% (ODM and UDA bases were rivals for a decade)
+   - turnout by region: Mt Kenya −12%, Rift Valley +2%, Nyanza −3%,
+     Ukambani +4%, Coast −5%, Western −5% (relative to each region's base)
+   - Research mode: 5,000 seeded runs. A quick 400-run estimate shows first
+     ("refining…") and the full run finishes in the background.
+
+   Mudavadi, Wetang'ula, Eugene Wamalwa and Jeremiah Kioni have no published
+   presidential polling, so they are not separate entries in the model.
 2. **Result** in the header: the most likely outcome and the run-off pairing.
 3. **Tabs**: Overview, Run-off, Swing counties, Scenarios (ready-made
    line-ups), Article 138, Map (click a county for its result and wards),

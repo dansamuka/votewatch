@@ -40,8 +40,8 @@ function race(el,r,mc,i25,o25){
   const v=verdictOf(mc),pr=r2pair(nat);
   const A=blocName(pr.a,nat),B=blocName(pr.b,nat),cls=k=>k==='inc'?'rv-a':k==='opp'?'rv-b':'';
   el.querySelector('#raceV').innerHTML=v.t==='Run-off'
-    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span>${p0(v.p)} of simulations</span>`
-    :`<b>${esc(v.t)}</b> <span>${p0(v.p)} of simulations</span>`;
+    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span>${p0(v.p)} of simulations${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
+    :`<b>${esc(v.t)}</b> <span>${p0(v.p)} of simulations${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
   el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
