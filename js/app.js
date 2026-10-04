@@ -180,7 +180,12 @@ const rng=()=>(randUnit()+randUnit()+randUnit()+randUnit()-2)*1.7320508075688772
 // larger where more voters are undecided). ERR_SCALE converts the target into the
 // model's units once team errors and regional noise are included; it was fitted by
 // scripts/calibrate-error.mjs and the validator checks the result stays within 15%.
-let ERR_SCALE=0.652,NAT_SWING_SD=0,UB_SD=0;
+let ERR_SCALE=0.59,NAT_SWING_SD=0,UB_SD=0;
+// County-level error (two-way points), on top of the national and regional error. Set by
+// the 2022 back-test (scripts/backtest-2022.mjs): the smallest value at which 80% of
+// counties fell inside their 80% range with the full model (regional poll layer + bias
+// correction). Before this, county ranges held in only about half of counties.
+const COUNTY_SD=typeof BACKTEST!=='undefined'&&BACKTEST.calibration?BACKTEST.calibration.countySD:0;
 function setErrorScale(k){ERR_SCALE=k;NAT_SWING_SD=k*POLL_ERR.rms/100/Math.SQRT2;UB_SD=NAT_SWING_SD/UNDECIDED.national;}
 setErrorScale(ERR_SCALE);
 
@@ -393,6 +398,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const mA=noise?1+rng()*F.A.sd:1,mB=noise&&F.B?1+rng()*F.B.sd:1,mO=noise?1+rng()*F.oSd:1;
   // how the undecided break, shared nationally in a run (share of the undecided pool moving from B to A)
   const ubShock=noise?rng()*UB_SD:0;
+  // county shocks, one per county per run (two-way share)
+  const cShock=noise&&COUNTY_SD?CO.map(()=>rng()*COUNTY_SD/100):null;
 
   const agg=CO.map(c=>({
     name:c.name,cluster:c.cluster,pop:c.projectedVoters2027,
@@ -441,6 +448,7 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     // Optional poll-bias correction: move team A's two-way share by the historical
     // average miss of the final polls (POLL_ERR.mean, +4.1 points).
     if(hasB&&pBias){const s2=Math.max(inc,0)+Math.max(opp,0);inc+=pBias*s2;opp-=pBias*s2;}
+    if(hasB&&cShock&&k.ci>=0){const s2=Math.max(inc,0)+Math.max(opp,0);inc+=cShock[k.ci]*s2;opp-=cShock[k.ci]*s2;}
 
     // Normalize
     const tot=Math.max(inc,0)+Math.max(opp,0)+Math.max(tf_,0)||1;
@@ -1481,16 +1489,16 @@ function rBacktest(){
   const el=$('#backtest');if(!el||typeof BACKTEST==='undefined')return;
   const B=BACKTEST,f1=x=>(+x).toFixed(1),sg=x=>(x>0?'+':'')+f1(x);
   const errs=pollHistoryErrors();
-  const best=B.variants.find(v=>v.id==='model-bias'),base=B.variants.find(v=>v.id==='model');
+  const best=B.variants.find(v=>v.id==='regional-bias'),base=B.variants.find(v=>v.id==='regional'),cal=B.variants.find(v=>v.id==='regional-bias-cal'),flat=B.variants.find(v=>v.id==='model-bias');
   el.innerHTML=`<div class="g2">
     <div><p class="grp-h">Final polls vs result <span class="c-muted">Kenyatta/Ruto side, two-way share</span></p>
       <div class="tscroll"><table class="tbl"><thead><tr><th>Election</th><th class="r">Final polls</th><th class="r">Result</th><th class="r">Miss</th></tr></thead>
       <tbody>${errs.map(e=>`<tr><td>${e.year}</td><td class="r">${f1(e.poll)}%</td><td class="r">${f1(e.result)}%</td><td class="r u-strong">${sg(e.err)}</td></tr>`).join('')}</tbody></table></div>
       <p class="hint mt8">Validated pollsters only (Ipsos, Infotrak, TIFA). Every final average underestimated the same side, by ${f1(POLL_ERR.mean)} points on average. The model's national error is calibrated to this record; correcting the bias is an option under Evidence.</p></div>
-    <div><p class="grp-h">2022 hindcast <span class="c-muted">final polls + 2017 county pattern</span></p>
+    <div><p class="grp-h">2022 hindcast <span class="c-muted">final polls, TIFA regional poll, 2017 county pattern</span></p>
       <div class="tscroll"><table class="tbl"><thead><tr><th>Method</th><th class="r">National miss</th><th class="r">County error</th><th class="r">Winner</th><th class="r">25% test</th><th class="r">In 80% range</th></tr></thead>
       <tbody>${B.variants.map(v=>`<tr><td>${mapEsc(v.label)}</td><td class="r">${sg(v.nationalErr)}</td><td class="r">${f1(v.countyMAE)}</td><td class="r">${v.winners}/47</td><td class="r">${v.article138}/47</td><td class="r">${f1(v.coverage80)}%</td></tr>`).join('')}</tbody></table></div>
-      <p class="hint mt8">County error: average miss in Ruto's two-way share. With the bias correction (estimated from 2013 and 2017 only) the national miss falls from ${sg(base.nationalErr)} to ${sg(best.nationalErr)} points. County ranges were too narrow: only ${f1(best.coverage80)}% of counties fell inside their 80% range, mainly where alliances shifted (${B.counties.slice(0,3).map(c=>`${mapEsc(c.name)} ${f1(c.pred)}→${f1(c.actual)}`).join(', ')}). This test cannot include the regional poll layer, which exists to capture such shifts.</p></div>
+      <p class="hint mt8">County error: average miss in Ruto's two-way share. With the bias correction (estimated from 2013 and 2017 only) the national miss falls from ${sg(base.nationalErr)} to ${sg(best.nationalErr)} points. The regional layer (TIFA's nine zones, 29 Jul 2022) cut the root-mean-square county error from ${f1(flat.countyRMSE)} to ${f1(best.countyRMSE)} points; its zones are coarse, so winner calls did not improve. With the model's earlier noise only ${f1(best.coverage80)}% of counties fell inside their 80% range, mainly where alliances shifted (${B.counties.slice(0,3).map(c=>`${mapEsc(c.name)} ${f1(c.pred)}→${f1(c.actual)}`).join(', ')}). The model now adds ${f1(B.calibration.countySD)} points of county-level error, which brings that to ${f1(cal.coverage80)}%.</p></div>
   </div>`;
 }
 
@@ -1515,9 +1523,10 @@ function dlCSV(kind){
     const v22=new Map(WD.map(w=>[w.co+'|'+w.cs+'|'+w.w,w.v22]));
     (S.wards||[]).forEach(w=>{const r=R22M.get(w.county+'|'+w.constituency),q=r?r22Share(r):null;rows.push([w.county,w.constituency,w.ward,Math.round(w.voters),v22.get(w.county+'|'+w.constituency+'|'+w.ward)??'',q?pct(q.ru):'',q?pct(q.ra):'',pct(w.to),pct(w.inc),pct(w.opp),pct(w.tf),w.dq]);});
   }else if(kind==='results2022'){
-    rows=[['County','Constituency','Registered2022','Odinga','Ruto','Wajackoyah','Mwaure','Rejected','Check']];
-    const lab={v:'matches official Form 34B total',r:'rescaled to official total',s:'swapped back to correct constituency',u:'not checked'};
-    R22.forEach(x=>rows.push([x.co,x.cs,x.reg,x.ra,x.ru,x.wj,x.mw,x.rej,lab[x.src]||x.src]));
+    rows=[['County','Constituency','Registered2022','Odinga','Ruto','Wajackoyah','Mwaure','Rejected','Check','CountySplitMatchesIndependentSources']];
+    const lab={v:'matches official Form 34B total',r:'rescaled to official total',c:'official total; split from county Form 34C figures',s:'swapped back to correct constituency',u:'total not checked; county split checked'};
+    const ck=typeof CHECK2022!=='undefined'?new Map(CHECK2022.counties.map(c=>[c.name,c.agree])):new Map();
+    R22.forEach(x=>rows.push([x.co,x.cs,x.reg,x.ra,x.ru,x.wj,x.mw,x.rej,lab[x.src]||x.src,ck.has(x.co)?(ck.get(x.co)?'yes':'no'):'']));
   }else if(kind==='tipping'){
     rows=[['County','Cluster','IncShare','Gap','VotesNeeded','OppShare','TFShare','DQ']];
     (S.tip||[]).forEach(t=>rows.push([t.name,t.cl,pct(t.i),pct(t.ig),t.vn,pct(t.o),pct(t.t),t.dq]));

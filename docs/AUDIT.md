@@ -13,7 +13,7 @@ where it conflicts with the current method, the current method applies.
 | Geography | IEBC 47 counties / 290 constituencies / 1,450 wards (Kenya Data Atlas registry) | verified |
 | 2022 register | IEBC Gazette Notice 7290, 22,102,532 by ward; 10 Mandera East/Lafey wards on a boundary hold share their constituency total exactly | verified |
 | Register scenarios | Current proxy 25,039,048 (2022 + IEBC's 2,936,516 new registrations to 20 Aug 2026, shared by the 2,345,476 April 2026 ECVR county figures); 2022 certified; IEBC 28.5m target. Wards scale with their 2022 register; largest-remainder rounding keeps every county exact | gross additions only: removals since 2022 are not netted out |
-| 2022 presidential results | Public tally of IEBC Forms 34B for 290 constituencies, checked against the atlas's official Form 34B totals: 224 match (75.4% of the register), 17 rescaled to the official total (5.6%), 4 swapped back (1.6%), 45 unchecked (17.4%) | totals checked, candidate splits not independently read |
+| 2022 presidential results | Public tally of IEBC Forms 34B for 290 constituencies. Totals checked against the atlas's official Form 34B reads: 224 match (75.4% of the register), 15 rescaled to the official total, 2 re-split from county Form 34C figures (Juja, Wajir West), 4 swapped back, 45 with no official total read (17.4%). Candidate splits checked by county against two independent compilations of IEBC's county results (ELOG; Wikipedia's Form 34C table where it adds up): all 47 counties agree (`scripts/check-2022.mjs`, `data/check2022.js`). National Ruto share 50.49%, as declared | totals: 245 constituencies official; splits: county level, all 290 |
 | 2022 turnout | Atlas official Form 34B turnout for 186 constituencies, the checked tally for the other 104 | — |
 | 2017 history | County results (ELOG compilation of IEBC county results, via the engine repo): Kenyatta share, Odinga share, turnout | compiled, not IEBC primary |
 | 2013 history | Removed: the shares on file contradicted the 2013 county winner in 9 counties | — |
@@ -59,8 +59,9 @@ where it conflicts with the current method, the current method applies.
 ## Validation
 
 `scripts/validate-model.mjs` (run by CI before every deploy) reports two kinds of check:
-**integrity** (179: totals, sources, conservation, exact allocation, calibration to the
-poll-error record, failure-free and reproducible simulations, back-test consistency) and
+**integrity** (183: totals, sources, conservation, exact allocation, calibration to the
+poll-error record, failure-free and reproducible simulations, back-test consistency, the
+county-level check of candidate splits, the county error calibrated by the back-test) and
 **sanity bounds** (6 judgement bounds, such as Kisii's third force at 45–65%; passing them
 is not validation, and Gusii was tuned to respect one).
 
@@ -68,33 +69,37 @@ is not validation, and Gusii was tuned to respect one).
 
 `scripts/backtest-2022.mjs` predicts 2022 using only what was known before the
 election: the final validated polls, the 2017 county pattern, the June 2022
-register and the poll-error record of 2013 and 2017. Results are in
-`data/backtest2022.js` and the Signals tab.
+register, the poll-error record of 2013 and 2017, and a pre-election regional poll
+(TIFA, 29 Jul 2022, nine zones with its own zone-to-county list), used the way the
+2027 model uses its regional layer. Results are in `data/backtest2022.js` and the
+Signals tab.
 
 | Method | National miss | County MAE | Winner | 25% test | In 80% range |
 |---|---|---|---|---|---|
-| Model method, polls as published | +4.6 | 9.8 | 43/47 | 42/47 | 57% |
-| Model method + bias correction (2013/17) | +0.7 | 9.3 | 44/47 | 42/47 | 51% |
-| Unsoftened 2017 pattern | +4.6 | 12.3 | 44/47 | 38/47 | 34% |
-| Uniform swing from 2017 | +4.0 | 11.3 | 45/47 | 38/47 | 45% |
+| Full model (regional layer), polls as published | +4.6 | 9.4 | 43/47 | 40/47 | 47% |
+| Full model + bias correction (2013/17) | +0.7 | 9.1 | 41/47 | 40/47 | 49% |
+| Full model + bias correction + calibrated county error | +0.7 | 9.1 | 41/47 | 40/47 | 81% |
+| No regional layer + bias correction | +0.7 | 9.2 | 44/47 | 42/47 | 51% |
+| Uniform swing from 2017 | +4.0 | 11.2 | 45/47 | 38/47 | 45% |
 
 Findings:
 - The bias correction works out of sample: estimated from 2013 and 2017 alone,
   it cuts the 2022 national miss from 4.6 to 0.7 points.
-- The model's softened spreading beats the unsoftened pattern and uniform swing.
-- County ranges were far too narrow: about half of counties fell inside their 80%
-  range, not 80%. The largest misses are realignments (Mandera, Bungoma, Garissa,
-  the Kalenjin counties). The test cannot include the 2027 model's regional poll
-  layer, which exists to capture such shifts; until it can be tested, treat
-  county ranges as too narrow (the county card says so).
+- The regional layer lowers county error (9.2 → 9.1 MAE, 12.8 → 12.0 RMSE) but
+  TIFA's zones are coarse (Northern joins Mandera and Garissa with Turkana and
+  West Pokot; Central Rift joins Nakuru with the Kalenjin counties), so winner
+  and 25%-test calls do not improve. The 2027 model's eleven groups are finer.
+- With the earlier noise, county 80% ranges held in about half of counties. The
+  model now adds county-level error of 9.9 two-way points (`COUNTY_SD`, read from
+  the back-test file), the smallest value at which 80% of counties fall inside
+  their range. The national error was refitted (`ERR_SCALE` 0.59) so the total
+  stays at the 4.1-point record.
 
 ## Open
 
-- Back-test the regional layer: needs 2022 regional poll tables (Ipsos, TIFA,
-  Infotrak published zone results).
-- Widen or recalibrate county noise once that test exists.
-- Read candidate splits directly from Forms 34B for the 45 unchecked and 17
-  rescaled constituencies.
+- Read candidate splits constituency by constituency from Forms 34B (IEBC's forms
+  portal was unreachable): today they are checked at county level only, where
+  offsetting errors between constituencies of one county would not show up.
 - Net register: rebuild when IEBC publishes the updated register.
 - Estimate transfer, run-off, running-mate and regional-turnout priors from data;
   sample them in the simulations.

@@ -36,7 +36,7 @@ V.S.registerMode = 'current'; V.applyModelBase();
 
 // ── 2022 presidential results
 ok(V.R22.length === 290, '2022 results cover 290 constituencies');
-ok(V.R22.every(x => ['v', 'r', 's', 'u'].includes(x.src)), 'every 2022 row carries a check status');
+ok(V.R22.every(x => ['v', 'r', 'c', 's', 'u'].includes(x.src)), 'every 2022 row carries a check status');
 const ru = sumBy(V.R22, x => x.ru), ra = sumBy(V.R22, x => x.ra), cand = sumBy(V.R22, x => x.ru + x.ra + x.wj + x.mw);
 ok(Math.abs(ru / 7176141 - 1) < 0.002, 'Ruto 2022 total within 0.2% of IEBC declared 7,176,141 (diaspora/prisons excluded)');
 ok(Math.abs(ra / 6942930 - 1) < 0.002, 'Odinga 2022 total within 0.2% of IEBC declared 6,942,930');
@@ -45,6 +45,7 @@ const agg = new Map(); V.R22.forEach(x => { const a = agg.get(x.co) || { ru: 0, 
 V.CO.forEach(c => near(c.baseIncumbent2022, agg.get(c.name).ru / agg.get(c.name).t, 0.0006, '2022 county share matches constituency results: ' + c.name));
 const r22m = new Map(V.R22.map(x => [x.co + '|' + x.cs, x]));
 ok(V.WARDS.every(w => { const x = r22m.get(w.county + '|' + w.constituency); return x && Math.abs(w.bi - x.ru / (x.ru + x.ra + x.wj + x.mw)) < 1e-4; }), "every ward carries its constituency's 2022 Ruto share");
+ok(V.CHECK2022.summary.countiesAgree === 47 && V.CHECK2022.counties.every(k => { const t = agg.get(k.name); return Math.abs(100 * t.ru / t.t - k.rutoShare) < 0.01; }), 'candidate splits agree with independent county compilations (ELOG, Form 34C) in all 47 counties; check file is current (rerun scripts/check-2022.mjs)');
 near(V.CO.find(c => c.name === 'Mandera').baseIncumbent2022, 0.209, 0.01, 'Mandera 2022 Ruto share (regression guard for the old 0.742 error)');
 
 // ── history
@@ -98,7 +99,12 @@ ok(V.SH_DEF.every(e => /^Hypothetical/.test(e.desc)), 'every sandbox event is la
 const btFile = fs.readFileSync(new URL('../data/backtest2022.js', import.meta.url), 'utf8');
 const bt = JSON.parse(btFile.slice(btFile.indexOf('{'), btFile.lastIndexOf('}') + 1));
 const e22 = errs.find(e => e.year === 2022);
-ok(bt.variants.length === 5 && Math.abs(bt.pollLevel - e22.poll) < 0.01 && Math.abs(bt.outOfSample.bias - V.pollErrorStats([2013, 2017]).mean) < 0.01, 'back-test file matches the current poll history (rerun scripts/backtest-2022.mjs after changing it)');
+ok(bt.variants.length >= 8 && Math.abs(bt.pollLevel - e22.poll) < 0.01 && Math.abs(bt.outOfSample.bias - V.pollErrorStats([2013, 2017]).mean) < 0.01, 'back-test file matches the current poll history (rerun scripts/backtest-2022.mjs after changing it)');
+
+const calV = bt.variants.find(x => x.id === 'regional-bias-cal');
+ok(calV && calV.coverage80 >= 80, 'back-test: with calibrated county error, at least 80% of counties fall inside their 80% range');
+ok(bt.regionalPoll && /TIFA/.test(bt.regionalPoll.source) && bt.calibration.countySD > 0, 'back-test includes the 2022 regional poll layer and a county-error calibration');
+ok(Math.abs(V.COUNTY_SD - bt.calibration.countySD) < 1e-9, 'the model uses the county error calibrated by the back-test');
 
 // ── sanity bounds (judgement, not validation)
 for (const n of ['Kisumu', 'Migori']) bound(r.ctyRes.find(x => x.name === n).i < 0.48, n + ': team A below 48%');

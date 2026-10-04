@@ -138,7 +138,7 @@ function card(nat){
   const lead=cs[0],second=cs[1];
   body.innerHTML=`${outlineSVG(name)}
     <div class="cty-res">${cs.filter(x=>x.v>=0.005).slice(0,5).map(x=>`<div class="cty-bar"><span class="nm">${esc(x.name)}</span><span class="tr"><i style="width:${(x.v*100).toFixed(1)}%;background:${x.col}"></i></span><b>${p1(x.v)}</b></div>`).join('')}</div>
-    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[name];return q?`<p class="cty-range">In 80% of simulations: ${esc(S.cfg.teams[0])} ${p0r(q.iLo)}–${p0r(q.iHi)}${nat.B&&nat.B.members.length?`, ${esc(S.cfg.teams[1])} ${p0r(q.oLo)}–${p0r(q.oHi)}`:''}. ${esc(S.cfg.teams[0])} reaches 25% in ${p0r(q.p25)} of them. ${typeof BACKTEST!=='undefined'?`Treat these ranges as too narrow: in the 2022 back-test only ${Math.round(BACKTEST.variants.find(v=>v.id==='model-bias').coverage80)}% of counties fell inside theirs.`:''}</p>`:'';})()}
+    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[name];return q?`<p class="cty-range">In 80% of simulations: ${esc(S.cfg.teams[0])} ${p0r(q.iLo)}–${p0r(q.iHi)}${nat.B&&nat.B.members.length?`, ${esc(S.cfg.teams[1])} ${p0r(q.oLo)}–${p0r(q.oHi)}`:''}. ${esc(S.cfg.teams[0])} reaches 25% in ${p0r(q.p25)} of them. ${typeof BACKTEST!=='undefined'?`Ranges include county-level error calibrated on 2022: ${Math.round(BACKTEST.variants.find(v=>v.id==='regional-bias-cal').coverage80)}% of counties fell inside their 80% range in the back-test.`:''}</p>`:'';})()}
     ${nat.B&&nat.B.members.length?marginGauge(c):''}
     <div class="cty-stats">
       <span>Leader <b>${esc(lead.name)}</b> by ${p1(lead.v-(second?second.v:0))}</span>

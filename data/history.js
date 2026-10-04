@@ -20,6 +20,26 @@ const POLL_HISTORY=[
     {p:'Ipsos',field:'released 2 Aug 2022',a:41,b:47,url:'https://www.ipsos.com/en-ke/ipsos-opinion-poll-7-days-general-elections-mr-odinga-leads-presidential-race'}],
    context:[{p:'Radio Africa',field:'early Aug 2022',a:45.5,b:44.2,url:'https://www.the-star.co.ke/news/2022-09-29-only-radio-africa-correctly-predicted-election-results'}]}
 ];
+// Regional poll used to test the regional layer in the 2022 back-test: TIFA, "Voter
+// participation, coalitions, presidential contest", released 29 Jul 2022 (p. 31 of the
+// report: vote intention by zone, % of all respondents; p. 48: zone-to-county list).
+// Northern had 25% non-response, so its two-way figure rests on fewer answers.
+const REGIONAL_POLL_2022={
+  source:'TIFA Research, 29 Jul 2022',
+  url:'https://www.tifaresearch.com/wp-content/uploads/2022/07/TIFA-Poll_Voter-Participation-Coalitions-Presidential-Contest-and-President-Uhurus-Legacy-29-July-2022.pdf',
+  national:{ruto:44.4,odinga:46.7},
+  zones:{
+    'Central Rift':{ruto:83,odinga:15,counties:['Uasin Gishu','Elgeyo/Marakwet','Nandi','Baringo','Nakuru','Kericho','Bomet']},
+    'Coast':{ruto:37,odinga:57,counties:['Mombasa','Kwale','Kilifi','Tana River','Lamu','Taita Taveta']},
+    'Lower Eastern':{ruto:35,odinga:58,counties:['Kitui','Machakos','Makueni']},
+    'Mt Kenya':{ruto:66,odinga:27,counties:['Meru','Tharaka - Nithi','Embu','Nyandarua','Nyeri','Kirinyaga',"Murang'A",'Kiambu','Laikipia']},
+    'Nairobi':{ruto:34,odinga:59,counties:['Nairobi City']},
+    'Northern':{ruto:31,odinga:36,counties:['Garissa','Wajir','Mandera','Marsabit','Isiolo','Turkana','West Pokot','Samburu']},
+    'Nyanza':{ruto:12,odinga:80,counties:['Siaya','Kisumu','Homa Bay','Migori','Kisii','Nyamira']},
+    'South Rift':{ruto:34,odinga:60,counties:['Narok','Kajiado']},
+    'Western':{ruto:26,odinga:61,counties:['Trans Nzoia','Kakamega','Vihiga','Bungoma','Busia']}
+  }
+};
 // Two-way error of the final poll average for side "a" (result minus polls, points).
 function pollHistoryErrors(years){
   return POLL_HISTORY.filter(e=>!years||years.includes(e.year)).map(e=>{

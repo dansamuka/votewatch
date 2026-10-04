@@ -83,8 +83,9 @@ Live: https://dansamuka.github.io/votewatch/
      whose effects are made-up sizes for sensitivity testing
    - "What this means" gives two ranges: the 80% simulation range for this
      line-up, and the spread across the preset line-ups (who runs together).
-     County ranges are too narrow: in the 2022 back-test only about half of
-     counties fell inside theirs (Signals tab, `docs/AUDIT.md`)
+     County ranges include county-level error calibrated on the 2022 back-test,
+     where 81% of counties then fell inside their 80% range (Signals tab,
+     `docs/AUDIT.md`)
 2. **Result** in the header: the most likely outcome and the run-off pairing,
    as a share of simulations **if this line-up runs** (not the chance that the
    line-up forms).
@@ -148,17 +149,20 @@ docs/AUDIT.md           engine and data audit, method and calibration notes
 `scripts/validate-model.mjs` (run by the Pages workflow before every build; a
 failure blocks deployment) reports:
 
-- **integrity checks** (179): geography 47 / 290 / 1,450; the 2022 register;
+- **integrity checks** (183): geography 47 / 290 / 1,450; the 2022 register;
   register scenarios reconcile exactly to every county; 2022 results against the
   IEBC declaration and the county figures; 2017 history; the poll-error record;
   poll separation; undecided rates; shares sum to 100%; run-off vote
   conservation; the bias correction; simulated error matches the 4.1-point
   record; no failed draws; seeded reproducibility; sandbox labels; the back-test
-  file matches the current history
+  file matches the current history; candidate splits agree with independent
+  county compilations in all 47 counties; the county error comes from the back-test
 - **sanity bounds** (6): judgement bounds such as Kisii's third force at 45–65%.
   Passing them is not validation.
 
-`scripts/backtest-2022.mjs` reruns the 2022 back-test and
+`scripts/backtest-2022.mjs` reruns the 2022 back-test (including the regional
+layer, from TIFA's 29 Jul 2022 zone poll) and calibrates county error,
+`scripts/check-2022.mjs` reruns the county check of the 2022 candidate splits, and
 `scripts/calibrate-error.mjs` refits the error scale; both use
 `scripts/model-harness.mjs`, which loads the browser model in Node.
 
