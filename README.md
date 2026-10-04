@@ -18,14 +18,14 @@ Live: https://dansamuka.github.io/votewatch/
    - A, Broad-based government: Ruto for president, Kithure Kindiki as running
      mate; Oburu Odinga (ODM's government wing) on the team, off the ticket
    - B, United opposition: Kalonzo Musyoka for president, Edwin Sifuna as
-     running mate; Babu Owino, Nyoro, Maraga, Karua, Orengo and Omtata on the
-     team, off the ticket
-   - C, Third force: Fred Matiang'i for president, Rigathi Gachagua as running
+     running mate; Babu Owino, Gachagua, Maraga, Karua, Orengo and Omtata on
+     the team, off the ticket
+   - C, Third force: Fred Matiang'i for president, Ndindi Nyoro as running
      mate (their bases split the opposition vote instead of only leaking)
    - running alone: Wajackoyah and Wanjigi
    - 65% of a running mate's supporters follow (bases of former rivals
      transfer poorly); the presidential candidate keeps all their supporters
-   - preset "No third force" keeps Matiang'i and Gachagua with the opposition
+   - preset "No third force" keeps Matiang'i and Nyoro with the opposition
      for comparison
    - turnout by region: Mt Kenya −12%, Rift Valley +2%, Nyanza −3%,
      Ukambani +4%, Coast −5%, Western −5% (relative to each region's base)

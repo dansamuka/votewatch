@@ -21,18 +21,18 @@ const TO_SIG={
 // slot; teams C/D and solo candidates make up "others".
 // Default line-up (Oct 2026 testing baseline): the broad-based government
 // (Ruto–Kindiki, Oburu Odinga's ODM wing off the ticket) vs a Kalonzo–Sifuna
-// United opposition, with Matiang'i–Gachagua running as a third force so their
-// bases split the opposition vote instead of only leaking from it. 65% of a
+// United opposition (Gachagua backing it from off the ticket), with Matiang'i–
+// Nyoro running as a third force so their bases split the opposition vote. 65% of a
 // running mate's supporters follow: bases of former rivals transfer poorly.
 const MAX_TEAMS=4;
 function defaultCfg(){
   return presetCfg(['Broad-based government','United opposition','Third force'],
     [['William Ruto','Oburu Odinga'],
-     ['Kalonzo Musyoka','Edwin Sifuna','Babu Owino','Ndindi Nyoro','David Maraga','Martha Karua','James Orengo','Okiya Omtata'],
-     ["Fred Matiang'i",'Rigathi Gachagua']],65,
-    [{p:'William Ruto',r:'pick:kindiki'},{p:'Kalonzo Musyoka',r:'Edwin Sifuna'},{p:"Fred Matiang'i",r:'Rigathi Gachagua'}]);
+     ['Kalonzo Musyoka','Edwin Sifuna','Babu Owino','Rigathi Gachagua','David Maraga','Martha Karua','James Orengo','Okiya Omtata'],
+     ["Fred Matiang'i",'Ndindi Nyoro']],65,
+    [{p:'William Ruto',r:'pick:kindiki'},{p:'Kalonzo Musyoka',r:'Edwin Sifuna'},{p:"Fred Matiang'i",r:'Ndindi Nyoro'}]);
 }
-// Same line-up without the third force: Matiang'i and Gachagua back the United opposition from off the ticket
+// Same line-up without the third force: Matiang'i and Nyoro back the United opposition from off the ticket
 function noThirdForceCfg(){
   return presetCfg(['Broad-based government','United opposition'],
     [['William Ruto','Oburu Odinga'],
@@ -100,11 +100,11 @@ const RT_REGIONS=[
 const RT_ZERO=Object.fromEntries(RT_REGIONS.map(r=>[r.k,0]));
 const RT_DEFAULT={mtk:-12,rift:2,nyz:-3,kmb:4,cst:-5,wst:-5,nbi:0,ne:0};
 const SCENS=[
-  {id:'s0',tier:'Three-way split',c:'#b86a10',t:'Default: Ruto–Kindiki vs Kalonzo–Sifuna, with a Matiang\'i–Gachagua third force',
-    d:'Ruto runs with Kindiki; Oburu Odinga\'s ODM wing backs him from off the ticket. Kalonzo heads the United opposition with Sifuna as running mate. Matiang\'i and Gachagua run their own ticket and split the opposition vote. 65% of a running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
+  {id:'s0',tier:'Three-way split',c:'#b86a10',t:'Default: Ruto–Kindiki vs Kalonzo–Sifuna, with a Matiang\'i–Nyoro third force',
+    d:'Ruto runs with Kindiki; Oburu Odinga\'s ODM wing backs him from off the ticket. Kalonzo heads the United opposition with Sifuna as running mate and Gachagua behind them. Matiang\'i and Nyoro run their own ticket and split the opposition vote. 65% of a running mate’s supporters follow; lower turnout in Mt Kenya (−12%), Coast and Western (−5%) and Nyanza (−3%), higher in Ukambani (+4%) and the Rift (+2%).',
     cfg:defaultCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
-  {id:'s0b',tier:'No third force',c:'#b86a10',t:'Same line-up, Matiang\'i and Gachagua stay with the opposition',
-    d:'As the default, but Matiang\'i and Gachagua back the Kalonzo–Sifuna ticket from off the ticket instead of running their own. Compare with the default to see what a third force costs the opposition.',
+  {id:'s0b',tier:'No third force',c:'#b86a10',t:'Same line-up, Matiang\'i and Nyoro stay with the opposition',
+    d:'As the default, but Matiang\'i and Nyoro back the Kalonzo–Sifuna ticket from off the ticket instead of running their own. Compare with the default to see what a third force costs the opposition.',
     cfg:noThirdForceCfg(),p:{tf:0,si:0,so:0,ys:0,rt:{...RT_DEFAULT}}},
   {id:'s1',tier:'Ruto vs the top four',c:'#b86a10',t:'Kalonzo, Sifuna, Matiang\'i and Babu Owino on one ticket',
     d:'The four highest-polling challengers combine; Gachagua and the rest run solo. Matches the engine dashboard defaults.',
@@ -932,7 +932,11 @@ function renderTeams(){
         <label><input type="radio" name="tm${ri}" value="-1" aria-label="Runs solo" ${!(cur>=0)?'checked':''} ${fixed?'disabled':''}><span>Solo</span></label></span>
     </div>`;}).join('')+
     (!renderTeams.all&&rows.length>8?`<button type="button" class="tm-showall" id="tmAll">Show ${rows.length-8} more candidates</button>`:'');
-  grid.querySelectorAll('input').forEach(n=>n.onchange=()=>{cfg.assign[rows[+n.name.slice(2)].name]=+n.value;rerenderTeams();});
+  grid.querySelectorAll('input').forEach(n=>n.onchange=()=>{
+    cfg.assign[rows[+n.name.slice(2)].name]=+n.value;
+    const nm=n.name,v=n.value;renderTeams();
+    const back=grid.querySelector(`input[name="${nm}"][value="${v}"]`);if(back)back.focus();
+    rerenderTeams();});
   const all=$('#tmAll');if(all)all.onclick=()=>{renderTeams.all=true;renderTeams();};
   const fo=$('#sl-follow');if(fo){fo.value=cfg.follow;$('#lv-follow').textContent=cfg.follow+'%';}
   renderTickets(tks);
