@@ -16,11 +16,11 @@ Live: https://dansamuka.github.io/votewatch/
 
    **Default ("Fractured field")**, a testing baseline rather than a forecast:
    - A, Broad-based government: Ruto + Oburu Odinga (ODM's government wing)
-   - B, Kalonzo bloc: Kalonzo Musyoka
-   - C, Mt Kenya breakaway: Rigathi Gachagua
-   - everyone else unaligned (solo), including Sifuna (Linda Mwananchi)
-   - tickets: Ruto with Oburu Odinga as running mate; Kalonzo and Gachagua
-     head their own teams
+   - B, United opposition: Kalonzo Musyoka
+   - everyone else unaligned (solo), including Gachagua and Sifuna
+     (Linda Mwananchi)
+   - tickets: Ruto with Oburu Odinga as running mate; Kalonzo heads the
+     United opposition
    - 72% of a running mate's supporters follow (ODM and UDA bases were rivals
      for a decade); the presidential candidate keeps all their supporters
    - turnout by region: Mt Kenya −12%, Rift Valley +2%, Nyanza −3%,
