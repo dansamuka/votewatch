@@ -94,7 +94,7 @@ const dbnc=(fn,ms=150)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 const $=(s)=>document.querySelector(s);
 const $$=(s)=>document.querySelectorAll(s);
 function csvE(v){var s=String(v==null?'':v);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
-function iCol(s){return s<0.25?'var(--red2)':s<0.40?'var(--amb2)':s<0.55?'var(--gold)':'var(--gbr)';}
+function iCol(s){return s<0.25?'var(--c-red)':s<0.40?'var(--c-amber)':s<0.55?'var(--accent)':'var(--c-green)';}
 
 // ═══ SIMULATION ENGINE ═══
 // Per-ward constants that never change between runs. Computed once so the
@@ -612,7 +612,7 @@ function rTornado(nat){
     {l:'Follow-through 70%',v:run({cfg:{...S.cfg,follow:70}})},
     {l:'Follow-through 100%',v:run({cfg:{...S.cfg,follow:100}})},
     {l:'Incumbent swing +6pp',v:run({si:S.si+6})}
-  ].map(c=>({...c,c:c.v>=base?'var(--gbr)':base-c.v>0.04?'var(--red2)':'var(--amb2)'}))
+  ].map(c=>({...c,c:c.v>=base?'var(--c-green)':base-c.v>0.04?'var(--c-red)':'var(--c-amber)'}))
    .sort((a,b)=>Math.abs(b.v-base)-Math.abs(a.v-base));
   const rng_=Math.max(...cases.map(c=>Math.abs(c.v-base)))||0.08;
   $('#tornado').innerHTML=`<p class="torn-cap">Now: <b>${pct(base)}</b> · bars left of centre lower it, right raise it</p>`+cases.map(c=>{
@@ -634,7 +634,7 @@ function rRunoff(r,mc_){
   const pr=r2pair(nat),A=blocName(pr.a),B=blocName(pr.b),E=blocName(pr.e);
   const BC=new Proxy({},{get:(_,k)=>VZ.ink(k)});
   const sh=k=>k==='inc'?nat.i:k==='opp'?nat.o:((nat.others||[]).find(o=>o.key===k)||{share:0}).share;
-  const dirs=[{k:'toA',l:`If the other candidates' voters lean to ${A}`,c:BC[pr.a]},{k:'toB',l:`If they lean to ${B}`,c:BC[pr.b]},{k:'spl',l:'If they split evenly',c:'var(--muted)'}];
+  const dirs=[{k:'toA',l:`If the other candidates' voters lean to ${A}`,c:BC[pr.a]},{k:'toB',l:`If they lean to ${B}`,c:BC[pr.b]},{k:'spl',l:'If they split evenly',c:'var(--ink-subtle)'}];
   $('#roScens').innerHTML=`<div class="ro-pair u-span-all"><span class="ro-pair-l">Run-off pairing</span>
       <b style="color:${BC[pr.a]}">${A}</b> <span class="ro-pair-s">${pct(sh(pr.a))}</span> vs <b style="color:${BC[pr.b]}">${B}</b> <span class="ro-pair-s">${pct(sh(pr.b))}</span>
       <span class="ro-pair-e">${E} comes third with ${pct(sh(pr.e))}; votes for everyone else decide round two.${mc_.ro>0?` Across simulated run-offs, this pairing comes up ${pct((mc_.pairs||{})[[pr.a,pr.b].sort().join('|')]||0,0)} of the time; with an even split, ${A} wins round two in ${pct((mc_.r2Win||{})[pr.a]||0,0)} and ${B} in ${pct((mc_.r2Win||{})[pr.b]||0,0)}.`:''}</span></div>`+
@@ -675,12 +675,12 @@ function rTipping(r,f,i25){
   $('#ffBoxes').innerHTML=`
   <div class="u-well">
     <div class="eyebrow u-mb8">Extra vote for others to keep A under 50%</div>
-    <div style="font-family:var(--disp);font-size:26px;color:${f.ia?'var(--amb2)':'var(--gbr)'};">${f.ia?pct(f.tbi):'Already &lt;50%'}</div>
+    <div style="font-family:var(--font-sans);font-size:26px;color:${f.ia?'var(--c-amber)':'var(--c-green)'};">${f.ia?pct(f.tbi):'Already &lt;50%'}</div>
     <div class="u-meta u-mt4">Others now: ${pct(f.cur)}</div>
   </div>
   <div class="u-well">
     <div class="eyebrow u-mb8">Extra vote for others to keep B under 50%</div>
-    <div style="font-family:var(--disp);font-size:26px;color:${f.oa?'var(--amb2)':'var(--gbr)'};">${f.oa?pct(f.tbo):'Already &lt;50%'}</div>
+    <div style="font-family:var(--font-sans);font-size:26px;color:${f.oa?'var(--c-amber)':'var(--c-green)'};">${f.oa?pct(f.tbo):'Already &lt;50%'}</div>
     <div class="u-meta u-mt4">Run-off: ${f.forced?'<span class="b b-r">FORCED</span>':'Not yet forced'}</div>
   </div>`;
 
@@ -850,7 +850,7 @@ function rConst(r,mc_){
     <div class="fb mb8 u-fs12"><span class="u-strong">${cl}</span>
     <span class="cl-n">${d.a} of ${d.t} counties</span></div>
     <div class="meter">
-      <div style="height:100%;width:${d.a/d.t*100}%;background:var(--gbr);"></div>
+      <div style="height:100%;width:${d.a/d.t*100}%;background:var(--c-green);"></div>
     </div>
   </div>`).join('');
 
@@ -865,7 +865,7 @@ function rConst(r,mc_){
   <div>
     <div class="u-strong u-fs12 u-mb8 c-warn">Coast counties</div>
     ${cst.map(c=>`<div class="fb u-row u-mono12 u-py4">
-      <span>${c.name}</span><span style="color:${c.i>=0.25?'var(--blbr)':'var(--red2)'}">${pct(c.i)} ${c.i>=0.25?'✓':'✗'}</span></div>`).join('')}
+      <span>${c.name}</span><span style="color:${c.i>=0.25?'var(--team-a-ink)':'var(--c-red)'}">${pct(c.i)} ${c.i>=0.25?'✓':'✗'}</span></div>`).join('')}
   </div>`;
 
   const clH={};
@@ -879,7 +879,7 @@ function rConst(r,mc_){
     const up=a22>a17;
     return`<div class="u-mb8">
       <div class="fb mb8 u-fs12"><span class="u-strong">${cl}</span>
-        <span style="color:${up?'var(--gbr)':'var(--red2)'}">${up?'▲':'▼'} ${pct(Math.abs(a22-a17))}</span></div>
+        <span style="color:${up?'var(--c-green)':'var(--c-red)'}">${up?'▲':'▼'} ${pct(Math.abs(a22-a17))}</span></div>
       <div class="flex g12 u-meta">
         <span>2013: <strong class="c-ink">${pct(a13)}</strong></span>
         <span>2017: <strong class="c-ink">${pct(a17)}</strong></span>
@@ -1160,8 +1160,8 @@ function rIntel(){
   $('#levList').innerHTML=LEVERS.map(l=>`
   <div class="item-row">
     <div style="width:7px;height:7px;border-radius:50%;margin-top:3px;flex-shrink:0;
-      background:${l.s==='red'?'var(--red2)':l.s==='amb'?'var(--amb2)':'var(--gbr)'};
-      box-shadow:0 0 4px ${l.s==='red'?'var(--red2)':l.s==='amb'?'var(--amb2)':'var(--gbr)'}"></div>
+      background:${l.s==='red'?'var(--c-red)':l.s==='amb'?'var(--c-amber)':'var(--c-green)'};
+      box-shadow:0 0 4px ${l.s==='red'?'var(--c-red)':l.s==='amb'?'var(--c-amber)':'var(--c-green)'}"></div>
     <div><div class="item-t">${mapEsc(l.t)}</div>
     <div class="item-d">${mapEsc(l.d)}</div>
     <div class="item-impl"><strong>In the model:</strong> ${mapEsc(l.i)}</div></div>
@@ -1182,7 +1182,7 @@ function rIntel(){
     <div class="g3 u-mono12">
       <div><div class="c-muted">Model</div><div class="u-strong">${pct(b.mb)}</div></div>
       <div><div class="c-muted">Actual</div><div class="u-strong">${pct(b.act)}</div></div>
-      <div><div class="c-muted">Delta</div><div style="font-weight:600;color:${b.d<0?'var(--red2)':'var(--gbr)'}">${b.d>0?'+':''}${pct(b.d)}</div></div>
+      <div><div class="c-muted">Delta</div><div style="font-weight:600;color:${b.d<0?'var(--c-red)':'var(--c-green)'}">${b.d>0?'+':''}${pct(b.d)}</div></div>
     </div>
     <div class="u-meta u-mt4 u-italic">${b.note}</div>
   </div>`).join('');
@@ -1314,7 +1314,7 @@ function assumptionSensitivityHTML(){
   ];
   const rows=tests.map(([label,p])=>{const r=sim({...p},false,true,false);return{label,delta:r.nat.i-base,inc:r.nat.i,ro:ff(r.nat).forced};})
     .sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
-  return `<table class="tbl"><thead><tr><th>If…</th><th>Team A change</th><th>Team A share</th><th>Effect</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.label}</td><td style="color:${r.delta<0?'var(--red2)':'var(--gbr)'}">${r.delta>0?'+':''}${pct(r.delta)}</td><td>${pct(r.inc)}</td><td>${Math.abs(r.delta)>0.025?'Major':'Minor'}</td></tr>`).join('')}</tbody></table>`;
+  return `<table class="tbl"><thead><tr><th>If…</th><th>Team A change</th><th>Team A share</th><th>Effect</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.label}</td><td style="color:${r.delta<0?'var(--c-red)':'var(--c-green)'}">${r.delta>0?'+':''}${pct(r.delta)}</td><td>${pct(r.inc)}</td><td>${Math.abs(r.delta)>0.025?'Major':'Minor'}</td></tr>`).join('')}</tbody></table>`;
 }
 function responsibleUseHTML(){
   return `<div class="note u-fs12 u-lh-relaxed"><strong class="c-accent">Permitted:</strong> civic analysis, academic research, journalistic review, scenario planning, election-risk monitoring and data-quality auditing.<br><strong class="c-team-b">Prohibited:</strong> voter suppression, deceptive persuasion, intimidation, unofficial result claims, microtargeting based on sensitive traits, or spreading unverified projections as official outcomes.<br><strong>Language standard:</strong> use “threshold-sensitive”, “uncertainty hotspot”, “data validation priority”, and “scenario driver”; avoid operational terms such as target, mobilize, persuade, counter-message, flip or suppress. Current display mode: <span class="b ${S.viewMode==='public'?'b-gr':'b-g'}">${S.viewMode==='public'?'PUBLIC / NEUTRAL':'INTERNAL'}</span></div>`;
@@ -1370,14 +1370,14 @@ function riskLensHTML(type){
 }
 function formatMovementRows(rows,key,baseFn,sortDesc=true,limit=6){
   const arr=rows.map(r=>({r,val:(r.values[key]||0)-(baseFn(r)||0)})).sort((a,b)=>sortDesc?b.val-a.val:a.val-b.val).slice(0,limit);
-  return arr.map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td style="color:${x.val<0?'var(--red2)':'var(--gbr)'}">${x.val>0?'+':''}${x.val.toFixed(1)}pp</td><td>${mapFmt(x.r,key)}</td></tr>`).join('');
+  return arr.map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td style="color:${x.val<0?'var(--c-red)':'var(--c-green)'}">${x.val>0?'+':''}${x.val.toFixed(1)}pp</td><td>${mapFmt(x.r,key)}</td></tr>`).join('');
 }
 function mapMovementHTML(){
   const rows=VW_MAP_STATE.rows||[];
   const incG=formatMovementRows(rows,'incShare',r=>(r.base||0)*100,true,5);
   const incL=formatMovementRows(rows,'incShare',r=>(r.base||0)*100,false,5);
   const tf=rows.map(r=>({r,val:r.values.thirdShare})).sort((a,b)=>b.val-a.val).slice(0,5).map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td>${x.val.toFixed(1)}%</td><td>${x.r.values.disputeRisk.toFixed(0)}</td></tr>`).join('');
-  const art=rows.map(r=>({r,val:r.values.article138Gap})).sort((a,b)=>a.val-b.val).slice(0,5).map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td style="color:${x.val<0?'var(--red2)':'var(--amb2)'}">${x.val.toFixed(1)}pp</td><td>${x.r.values.thirdShare.toFixed(1)}%</td></tr>`).join('');
+  const art=rows.map(r=>({r,val:r.values.article138Gap})).sort((a,b)=>a.val-b.val).slice(0,5).map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td style="color:${x.val<0?'var(--c-red)':'var(--c-amber)'}">${x.val.toFixed(1)}pp</td><td>${x.r.values.thirdShare.toFixed(1)}%</td></tr>`).join('');
   const run=rows.map(r=>({r,val:r.values.runoffSensitivity})).sort((a,b)=>b.val-a.val).slice(0,5).map(x=>`<tr><td>${x.r.name}</td><td>${x.r.cluster}</td><td>${x.val.toFixed(0)}</td><td>${x.r.values.leadMargin.toFixed(1)}pp</td></tr>`).join('');
   return `<div class="g2"><div><div class="gov-title">Largest incumbent gains vs baseline</div><table class="tbl"><tbody>${incG}</tbody></table></div><div><div class="gov-title">Largest incumbent losses vs baseline</div><table class="tbl"><tbody>${incL}</tbody></table></div></div><div class="divider"></div><div class="g3"><div><div class="gov-title">Largest Third Force share</div><table class="tbl"><tbody>${tf}</tbody></table></div><div><div class="gov-title">Article 138 deterioration</div><table class="tbl"><tbody>${art}</tbody></table></div><div><div class="gov-title">Run-off sensitivity</div><table class="tbl"><tbody>${run}</tbody></table></div></div>`;
 }

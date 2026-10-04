@@ -74,8 +74,8 @@ function spark(a){
 }
 function gauge(score){
   const s=Math.max(0,Math.min(100,score)),C=2*Math.PI*26,arc=C*0.75;
-  const col=s>60?'var(--red2)':s>35?'var(--amb2)':'var(--gbr)';
-  return`<svg class="kpi-gauge" viewBox="0 0 64 64" role="img" aria-label="Dispute risk ${Math.round(s)} out of 100"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--bdr2)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${arc} ${C}" transform="rotate(135 32 32)"/><circle cx="32" cy="32" r="26" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(arc*s/100).toFixed(1)} ${C}" transform="rotate(135 32 32)"/></svg>`;
+  const col=s>60?'var(--c-red)':s>35?'var(--c-amber)':'var(--c-green)';
+  return`<svg class="kpi-gauge" viewBox="0 0 64 64" role="img" aria-label="Dispute risk ${Math.round(s)} out of 100"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--line-2)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${arc} ${C}" transform="rotate(135 32 32)"/><circle cx="32" cy="32" r="26" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(arc*s/100).toFixed(1)} ${C}" transform="rotate(135 32 32)"/></svg>`;
 }
 function decorateKPIs(r,mc_,dr,i25){
   push('inc',r.nat.i*100);push('ro',mc_.ro*100);push('art',i25);push('dis',dr.score);push('tf',r.nat.t*100);
