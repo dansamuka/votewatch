@@ -153,9 +153,19 @@
         <p class="hint">Points less support for team A among young voters than older ones. Infotrak (June 2026): Sifuna leads 18–26-year-olds with 20%, while Ruto polls 32% overall. Takes effect when youth turnout changes.</p>
       </div>
       <div class="sl">
-        <label class="sl-top" for="sl-ub"><span>Undecided voters break</span><output id="lv-ub">±0pp</output></label>
+        <label class="sl-top" for="sl-ub"><span>Undecided A/B break</span><output id="lv-ub">±0pp</output></label>
         <input type="range" id="sl-ub" list="vwZero" title="Double-click to reset" min="-30" max="30" step="1" value="0">
-        <p class="hint">How much of the undecided vote (20% nationally, 26% in Mt Kenya) goes to team A beyond its share of decided voters: +10 moves a tenth of the undecided from team B to team A. Matters most where more voters are undecided.</p>
+        <p class="hint">How much of the undecided pool (20% nationally, 26% in Mt Kenya) moves between the two main sides beyond the proportional baseline. +10 moves a tenth of that pool from team B to team A.</p>
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-uo"><span>Undecided to other candidates</span><output id="lv-uo">±0pp</output></label>
+        <input type="range" id="sl-uo" list="vwZero" title="Double-click to reset" min="-20" max="20" step="1" value="0">
+        <p class="hint">Sensitivity only: positive values move part of the undecided pool from the two main sides to other contestants; negative values move it back. Default is zero because no published poll measures this transfer directly.</p>
+      </div>
+      <div class="sl">
+        <label class="sl-top" for="sl-ua"><span>Undecided turnout</span><output id="lv-ua">±0%</output></label>
+        <input type="range" id="sl-ua" list="vwZero" title="Double-click to reset" min="-30" max="30" step="1" value="0">
+        <p class="hint">Sensitivity only: changes turnout among the undecided cohort relative to the model baseline. −20 means 20% lower participation within that cohort, not 20 percentage points off national turnout.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-tf"><span>Protest vote</span><output id="lv-tf">0pp</output></label>
