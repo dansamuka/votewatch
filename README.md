@@ -70,11 +70,15 @@ Live: https://dansamuka.github.io/votewatch/
      two-way share varies by 4.1 points, the RMS miss of the final polls in
      2013, 2017 and 2022 (`data/history.js`, `scripts/calibrate-error.mjs`)
    - undecided voters (20% nationally, 26% in Mt Kenya) split like decided
-     voters by default; "Undecided voters break" moves part of them to team A
-     or B, and in simulations their break varies, most where more are undecided
+     voters by default; separate sensitivities test the A/B break, movement to
+     other candidates and participation of the undecided cohort. The A/B break
+     also varies in simulations, most where more voters are undecided
    - in a run-off, each eliminated candidate's voters split by
      candidate-by-region priors (`RUNOFF_INC_PRIORS`), with a separate shock
-     for each candidate in every simulation; protest votes split evenly
+     for each candidate in every simulation; protest votes split evenly. Because
+     Kenya has no observed presidential run-off under the current constitution,
+     deterministic views keep turnout neutral while simulations add zero-mean
+     finalist/transfer-voter remobilisation uncertainty
    - young voters back team A 10 points less than older voters (adjustable);
      this matters when youth turnout changes
    - home counties get ×1.25
@@ -84,7 +88,8 @@ Live: https://dansamuka.github.io/votewatch/
    - "What this means" gives two ranges: the 80% simulation range for this
      line-up, and the spread across the preset line-ups (who runs together).
      County ranges include county-level error calibrated on the 2022 back-test,
-     where 81% of counties then fell inside their 80% range (Signals tab,
+     where 81% of counties then fell inside their 80% range. This is in-sample
+     calibration, not independent proof of 80% future coverage (Signals tab,
      `docs/AUDIT.md`)
 2. **Result** in the header: the most likely outcome and the run-off pairing,
    as a share of simulations **if this line-up runs** (not the chance that the
@@ -149,11 +154,12 @@ docs/AUDIT.md           engine and data audit, method and calibration notes
 `scripts/validate-model.mjs` (run by the Pages workflow before every build; a
 failure blocks deployment) reports:
 
-- **integrity checks** (183): geography 47 / 290 / 1,450; the 2022 register;
+- **integrity checks** (187): geography 47 / 290 / 1,450; the 2022 register;
   register scenarios reconcile exactly to every county; 2022 results against the
   IEBC declaration and the county figures; 2017 history; the poll-error record;
-  poll separation; undecided rates; shares sum to 100%; run-off vote
-  conservation; the bias correction; simulated error matches the 4.1-point
+  poll separation; undecided rates and A/B/other/turnout sensitivities; shares
+  sum to 100%; deterministic run-off vote conservation plus stochastic
+  remobilisation bounds; the bias correction; simulated error matches the 4.1-point
   record; no failed draws; seeded reproducibility; sandbox labels; the back-test
   file matches the current history; candidate splits agree with independent
   county compilations in all 47 counties; the county error comes from the back-test
