@@ -137,7 +137,7 @@ const SCENS=[
 // (22–26 Jun 2026, n=3,000): Sifuna leads 18–26-year-olds at 20% while Ruto polls
 // 32% overall, so Ruto is below 20% among the youngest voters. 10 points is a
 // cautious reading for the wider youth group.
-const DEFAULTS={tf:0,si:0,so:0,ys:0,yg:10,ub:0,pollBias:false,registerMode:'current',pollMode:'validated',reg:{uda:true},rt:{...RT_DEFAULT}};
+const DEFAULTS={tf:0,si:0,so:0,ys:0,yg:10,ub:0,uo:0,ua:0,pollBias:false,registerMode:'current',pollMode:'validated',reg:{uda:true},rt:{...RT_DEFAULT}};
 // Coalition display lists (Article 138 tab)
 const FK=['Bungoma','Kakamega','Vihiga','Busia','Trans Nzoia'];
 const OLG=['Mombasa','Kilifi','Kwale','Lamu','Tana River'];
@@ -147,7 +147,7 @@ const CTY_N=24;
 
 // ═══ STATE — all raw integers, engine divides ═══
 const S={
-  tf:DEFAULTS.tf,si:DEFAULTS.si,so:DEFAULTS.so,ys:DEFAULTS.ys,yg:DEFAULTS.yg,ub:DEFAULTS.ub,pollBias:DEFAULTS.pollBias,registerMode:DEFAULTS.registerMode,pollMode:DEFAULTS.pollMode,  // RAW pp; engine does /100
+  tf:DEFAULTS.tf,si:DEFAULTS.si,so:DEFAULTS.so,ys:DEFAULTS.ys,yg:DEFAULTS.yg,ub:DEFAULTS.ub,uo:DEFAULTS.uo,ua:DEFAULTS.ua,pollBias:DEFAULTS.pollBias,registerMode:DEFAULTS.registerMode,pollMode:DEFAULTS.pollMode,  // RAW pp; engine does /100
   reg:{...DEFAULTS.reg},rt:{...DEFAULTS.rt},
   cfg:defaultCfg(),
   selCty:'Nairobi City',
@@ -378,6 +378,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const ys  =(params.ys  !==undefined?params.ys  :S.ys )  /100;
   const yg  =(params.yg  !==undefined?params.yg  :(S.yg??DEFAULTS.yg))/100;
   const ub  =(params.ub  !==undefined?params.ub  :(S.ub??0))/100;
+  const uo  =(params.uo  !==undefined?params.uo  :(S.uo??0))/100;
+  const ua  =(params.ua  !==undefined?params.ua  :(S.ua??0))/100;
   const pBias=(params.pollBias!==undefined?params.pollBias:S.pollBias)?POLL_ERR.mean/100:0;
   const reg={...S.reg,...(params.reg||{})};
   const rt=params.rt||S.rt||RT_ZERO;
@@ -445,6 +447,15 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     // shock) moves part of the undecided pool from team B to team A; the effect is
     // proportional to how many voters in the ward are undecided.
     if(hasB&&(ub||ubShock)){const du=WU[wi]*(ub+ubShock);inc+=du;opp-=du;}
+    // Optional undecided-to-others sensitivity. Positive values move that share of
+    // the undecided pool from the two main sides to other contestants; negative
+    // values move it back, split between A/B in proportion to their local support.
+    // Default is zero because no published poll measures this transfer directly.
+    if(uo){
+      const du=WU[wi]*uo,main=Math.max(inc,0)+Math.max(opp,0);
+      if(du>0&&main>0){const take=Math.min(du,main*0.95);inc-=take*Math.max(inc,0)/main;opp-=take*Math.max(opp,0)/main;tf_+=take;}
+      else if(du<0&&Math.max(tf_,0)>0){const give=Math.min(-du,Math.max(tf_,0)*0.95),den=main||1;tf_-=give;inc+=give*Math.max(inc,0)/den;opp+=give*Math.max(opp,0)/den;}
+    }
     // Optional poll-bias correction: move team A's two-way share by the historical
     // average miss of the final polls (POLL_ERR.mean, +4.1 points).
     if(hasB&&pBias){const s2=Math.max(inc,0)+Math.max(opp,0);inc+=pBias*s2;opp-=pBias*s2;}
@@ -454,7 +465,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
     const tot=Math.max(inc,0)+Math.max(opp,0)+Math.max(tf_,0)||1;
     const si_=Math.max(inc,0)/tot,so_=Math.max(opp,0)/tot,st_=Math.max(tf_,0)/tot;
 
-    const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)*(1-F.away[wi])+tn,0.2,0.87);
+    const uTurn=1+WU[wi]*ua;
+    const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)*(1-F.away[wi])*uTurn+tn,0.2,0.87);
     const vs=w.voters*to;
     const a=k.ci>=0?agg[k.ci]:null;
     if(a){
@@ -489,9 +501,9 @@ function sim(params={},noise=false,shocks=true,capWards=false){
 function mcCore(params,n){
   // i = draws attempted, ok = draws that completed; failures are counted and reported
   let i=0,ok=0,failed=0,lastErr='',iW=0,oW=0,ro=0,iJ=0,oJ=0;
-  const iA=[],oA=[],tA=[],pairs={},r2Win={};
+  const iA=[],oA=[],tA=[],r2Turn=[],pairs={},r2Win={};
   const nC=CO.length,cI=Array.from({length:nC},()=>new Float32Array(n)),cO=Array.from({length:nC},()=>new Float32Array(n)),c25=new Uint32Array(nC);
-  const gen=S.mcMode==='research'?mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.yg}|${S.ub}|${S.pollBias}|${S.registerMode}|${S.pollMode}|${JSON.stringify(S.reg)}|${JSON.stringify(S.rt)}|${JSON.stringify(S.cfg)}`)):null;
+  const gen=S.mcMode==='research'?mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.yg}|${S.ub}|${S.uo}|${S.ua}|${S.pollBias}|${S.registerMode}|${S.pollMode}|${JSON.stringify(S.reg)}|${JSON.stringify(S.rt)}|${JSON.stringify(S.cfg)}`)):null;
   const mode=S.mcMode,seed=S.seed;
   return {
     step(k){
@@ -511,7 +523,7 @@ function mcCore(params,n){
               const r2=r2sim(r.ctyRes,r.nat,'aff',true);
               const key=[r2.a,r2.b].sort().join('|');
               pairs[key]=(pairs[key]||0)+1;
-              r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;
+              r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;r2Turn.push(r2.turnoutRatio);
             }
             if(iP)iJ++;if(oP)oJ++;
             iA.push(r.nat.i);oA.push(r.nat.o);tA.push(r.nat.t);
@@ -526,7 +538,7 @@ function mcCore(params,n){
       // pairs / r2Win are shares of the run-off draws only
       const norm=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,ro?v/ro:0]));
       const d=ok||1;
-      return{iW:iW/d,oW:oW/d,ro:ro/d,iJ:iJ/d,oJ:oJ/d,pairs:norm(pairs),r2Win:norm(r2Win),failed,lastErr,
+      return{iW:iW/d,oW:oW/d,ro:ro/d,iJ:iJ/d,oJ:oJ/d,pairs:norm(pairs),r2Win:norm(r2Win),failed,lastErr,r2TurnLo:r2Turn.length?qntl(r2Turn,.1):null,r2TurnMed:r2Turn.length?qntl(r2Turn,.5):null,r2TurnHi:r2Turn.length?qntl(r2Turn,.9):null,
         iMed:qntl(iA,.5),oMed:qntl(oA,.5),tMed:qntl(tA,.5),
         iLo:qntl(iA,.1),iHi:qntl(iA,.9),oLo:qntl(oA,.1),oHi:qntl(oA,.9),
         // per county: 80% range of each main side's share, and how often A clears 25%
@@ -588,6 +600,11 @@ const R2_LEAN=0.70;
 // Votes not tied to a contestant (the protest-vote slider) split evenly, so the
 // round-two total always equals round one's.
 const R2_SD=0.15;
+// No Kenyan presidential run-off has yet supplied an empirical turnout baseline.
+// In deterministic views round-two turnout therefore stays neutral. In Monte Carlo,
+// zero-mean remobilisation shocks let finalist and transferred electorates turn out
+// differently without pretending a measured directional effect.
+const R2_FINALIST_TURNOUT_SD=0.04,R2_TRANSFER_TURNOUT_SD=0.07;
 function contestantMembers(k,nat){return k==='inc'?(nat.A?.members||[]):k==='opp'?(nat.B?.members||[]):((nat.others||[]).find(o=>o.key===k)?.members||[]);}
 function contestantToA(k,a,b,grp,nat,shock){
   let w=0,x=0;contestantMembers(k,nat).forEach(ci=>{const t=CAND.target[ci]||0;w+=t;x+=t*runoffIncShare(CAND.names[ci],grp);});
@@ -601,29 +618,32 @@ function r2sim(ctyRes,nat,dir='aff',noise=false){
   const others=nat.others||[];
   const keys=['inc',...(nat.B&&nat.B.members.length?['opp']:[]),...others.map(o=>o.key)];
   const shock=Object.fromEntries(keys.map(k=>[k,noise?rng()*R2_SD:0]));
+  const finalistTurn=Object.fromEntries([a,b].map(k=>[k,noise?clamp(1+rng()*R2_FINALIST_TURNOUT_SD,0.85,1.12):1]));
+  const transferTurn=Object.fromEntries(keys.map(k=>[k,noise?clamp(1+rng()*R2_TRANSFER_TURNOUT_SD,0.75,1.12):1]));
+  const restTurn=noise?clamp(1+rng()*R2_TRANSFER_TURNOUT_SD,0.75,1.12):1;
   const vOf=(c,k)=>k==='inc'?c.iv:k==='opp'?c.ov:(c.oc?c.oc[others.find(o=>o.key===k).idx]:0)||0;
   const fixed=dir==='toA'?R2_LEAN:dir==='toB'?1-R2_LEAN:0.5;
   let aV=0,bV=0;
   const r2cty=ctyRes.map(c=>{
     const grp=GROUP_OF[c.name]||null;
-    let ra=vOf(c,a),rb=vOf(c,b),oSum=0;
+    let ra=vOf(c,a)*finalistTurn[a],rb=vOf(c,b)*finalistTurn[b],oSum=0;
     others.forEach(o=>{oSum+=c.oc?c.oc[o.idx]:0;});
     for(const k of keys){
       if(k===a||k===b)continue;
-      const vk=vOf(c,k);if(!vk)continue;
+      const vk=vOf(c,k)*transferTurn[k];if(!vk)continue;
       const p=dir==='aff'?contestantToA(k,a,b,grp,nat,shock[k]):fixed;
       ra+=vk*p;rb+=vk*(1-p);
     }
-    const rest=Math.max(0,c.tfv-oSum),pr=dir==='aff'?0.5:fixed;
+    const rest=Math.max(0,c.tfv-oSum)*restTurn,pr=dir==='aff'?0.5:fixed;
     ra+=rest*pr;rb+=rest*(1-pr);
     const t=ra+rb||1;aV+=ra;bV+=rb;
     const r2a=ra/t;
     return{...c,r2a,r2lead:r2a>=0.5?a:b};
   });
-  const shareA=aV/((aV+bV)||1);
+  const shareA=aV/((aV+bV)||1),r1Votes=ctyRes.reduce((s,c)=>s+c.tv,0);
   // Art. 138(7): most votes wins the run-off; no county-spread test in round two.
   const winner=shareA>=0.5?a:b;
-  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,votesA:aV,votesB:bV,
+  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,votesA:aV,votesB:bV,turnoutRatio:(aV+bV)/(r1Votes||1),
     r2iN:a==='inc'?shareA:b==='inc'?1-shareA:null};
 }
 
@@ -914,7 +934,7 @@ function rRunoff(r,mc_){
       <div class="pbar"><div class="pf" style="width:${pct(ro.shareA,0)};background:${VZ.col(ro.a)}"></div></div>
       <div><span class="b ${ro.winner==='inc'?'b-ta':ro.winner==='opp'?'b-tb':'b-to'}">${blocName(ro.winner)} wins</span></div>
     </div>`;
-  }).join('');
+  }).join('')+(mc_.r2TurnLo!=null?`<div class="note u-fs12">Run-off turnout/remobilisation is an uncalibrated sensitivity: deterministic views keep round-one turnout neutral; simulations allow correlated finalist and transfer-voter turnout to vary. Simulated round-two turnout is typically ${pct(mc_.r2TurnLo,0)}–${pct(mc_.r2TurnHi,0)} of round one (80% range).</div>`:'');
 
   VZ.flow($('#roFlow'),r,S.flowDir||'aff');
 
@@ -997,7 +1017,7 @@ function rScen(){
   const N_SC=200;
   // Presets ignore the sliders and switches, so only the seed and poll anchor
   // matter: cache so slider moves stay fast.
-  const key=JSON.stringify([S.seed,S.reg,S.registerMode,S.pollMode,S.pollBias,S.ub]);
+  const key=JSON.stringify([S.seed,S.reg,S.registerMode,S.pollMode,S.pollBias,S.ub,S.uo,S.ua]);
   if(rScen._key!==key){rScen._key=key;rScen._res=null;}
   const results=rScen._res||(rScen._res=SCENS.map(sc=>{
     const p={...sc.p,cfg:sc.cfg};
@@ -1604,6 +1624,7 @@ function assumptionSensitivityHTML(){
     ['Protest vote +5pp',{tf:S.tf+5}],
     ['Swing to Ruto +4pp',{si:S.si+4}],['Swing to team B +4pp',{so:S.so+4}],
     ['Youth turnout +8pp',{ys:S.ys+8}],
+    ['Undecided to others +10',{uo:S.uo+10}],['Undecided turnout -20%',{ua:S.ua-20}],
     ['Follow-through 70%',{cfg:{...S.cfg,follow:70}}],['Follow-through 100%',{cfg:{...S.cfg,follow:100}}]
   ];
   const rows=tests.map(([label,p])=>{const r=sim({...p},false,true,false);return{label,delta:r.nat.i-base,inc:r.nat.i,ro:ff(r.nat).forced};})
@@ -1623,7 +1644,7 @@ function renderGovernanceWidgets(){
   $('#securityRiskPanel')&&( $('#securityRiskPanel').innerHTML=riskLensHTML('security') );
   $('#marketRiskPanel')&&( $('#marketRiskPanel').innerHTML=riskLensHTML('market') );
 }
-function validationHTML(){return `<div class="note u-fs12 u-lh-relaxed"><strong class="c-warn">Validation status: Not yet externally validated.</strong><br>Required data: 2022 ward presidential results; 2017 ward/constituency tallies; 2023–2025 by-election results; polling time series; official voter-register growth; verified turnout history.<br>Current calibration available: internal by-election analogues and scenario consistency checks only. This panel is intentionally explicit so outputs are not misread as validated forecasts.</div>`;}
+function validationHTML(){return `<div class="note u-fs12 u-lh-relaxed"><strong class="c-warn">Validation status: historically back-tested; not externally validated as a 2027 forecast.</strong><br>Current calibration: 2022 national/county/regional hindcast, 2013–2022 poll-error record, exact register reconciliation and county uncertainty calibrated to 2022 coverage. Remaining evidence gaps: direct ward/polling-station presidential history, cleaned IEBC register, more polling time series, and measured coalition/run-off/running-mate/turnout transfer effects.<br>County uncertainty is calibrated on 2022 rather than independently validated out of sample.</div>`;}
 function modelRiskRegisterHTML(){
   const risks=[
     ['Ward-level vote shares imputed from county baseline','High','Replace with actual ward-level presidential results'],
@@ -1741,7 +1762,7 @@ const REPORT_SC_RUNS=150;
 // Re-run the model for one ticket variant: deterministic shares + seeded mini Monte Carlo
 function ticketScenario(mod,ti){
   const cfg=JSON.parse(JSON.stringify(S.cfg));cfg.tickets=cfg.tickets||[];mod(cfg);
-  const key=JSON.stringify([cfg,S.rt,S.tf,S.si,S.so,S.ys,S.yg,S.ub,S.pollBias,S.reg,S.seed,S.mcMode,S.registerMode,S.pollMode,ti]);
+  const key=JSON.stringify([cfg,S.rt,S.tf,S.si,S.so,S.ys,S.yg,S.ub,S.uo,S.ua,S.pollBias,S.reg,S.seed,S.mcMode,S.registerMode,S.pollMode,ti]);
   const C=(ticketScenario._c=ticketScenario._c||new Map());if(C.has(key))return C.get(key);
   if(C.size>80)C.clear();
   const r=sim({cfg},false,true,false),n=r.nat;
@@ -1844,7 +1865,7 @@ function renderExecutiveReport(){
   };
   const lk=S.cfg.leak||LEAK_DEFAULT.leak,lt=(lk.home+lk.cross+lk.else)||1;
   const rtTxt=RT_REGIONS.filter(q=>S.rt[q.k]).map(q=>`${q.l} ${S.rt[q.k]>0?'+':'−'}${Math.abs(S.rt[q.k])}%`).join(' · ')||'No regional changes';
-  const sw=[S.si&&`Swing to A ${S.si>0?'+':''}${S.si}`,S.so&&`Swing to B ${S.so>0?'+':''}${S.so}`,S.ys&&`Youth turnout ${S.ys>0?'+':''}${S.ys}`,S.ub&&`Undecided break ${S.ub>0?'+':''}${S.ub} to A`,S.pollBias&&'Poll-bias correction on',(S.yg??DEFAULTS.yg)!==DEFAULTS.yg&&`Youth lean ${S.yg}`,S.tf&&`Protest vote ${S.tf}`].filter(Boolean).join(' · ')||'None';
+  const sw=[S.si&&`Swing to A ${S.si>0?'+':''}${S.si}`,S.so&&`Swing to B ${S.so>0?'+':''}${S.so}`,S.ys&&`Youth turnout ${S.ys>0?'+':''}${S.ys}`,S.ub&&`Undecided A/B break ${S.ub>0?'+':''}${S.ub} to A`,S.uo&&`Undecided to others ${S.uo>0?'+':''}${S.uo}`,S.ua&&`Undecided turnout ${S.ua>0?'+':''}${S.ua}`,S.pollBias&&'Poll-bias correction on',(S.yg??DEFAULTS.yg)!==DEFAULTS.yg&&`Youth lean ${S.yg}`,S.tf&&`Protest vote ${S.tf}`].filter(Boolean).join(' · ')||'None';
   const qa=technicalEngineQA(),move=movementFromBaselineRows();
 
   el.innerHTML=`<div class="rd">
@@ -1900,7 +1921,7 @@ function renderExecutiveReport(){
         <div><dt>Swings</dt><dd>${sw}</dd></div>
         <div><dt>Simulation</dt><dd>${mapEsc(settings.mode)} · ${N.format(settings.iterations)} runs${S.mcMode==='research'?` · seed ${mapEsc(settings.seed)}`:''}</dd></div>
       </dl>
-      <p class="rd-fine">Percentages are shares of simulations of this line-up with these assumptions, not the chance that this line-up forms. Candidate levels come from the average of validated polls (one-poll figures count half). In a run-off, everyone else's voters follow their candidates' assumed loyalties. Running-mate pulls outside the polls, follow-through, loyalties, the youth gap and the leak split are assumptions. Ward and constituency vote shares are county estimates. Not externally validated. For civic, academic, journalistic and analytical use only; not for voter suppression, deceptive persuasion, intimidation, unofficial result claims or microtargeting.</p>
+      <p class="rd-fine">Percentages are shares of simulations of this line-up with these assumptions, not the chance that this line-up forms. Candidate levels come from the average of validated polls (one-poll figures count half). In a run-off, everyone else's voters follow their candidates' assumed loyalties. Running-mate pulls outside the polls, follow-through, loyalties, the youth gap and the leak split are assumptions. Constituency estimates are anchored to constituency-level 2022 presidential results; ward estimates inherit their constituency political baseline and are not independent ward forecasts. Not externally validated. For civic, academic, journalistic and analytical use only; not for voter suppression, deceptive persuasion, intimidation, unofficial result claims or microtargeting.</p>
     </article>
     <div class="analyst-only rd-grid2">
       <article class="rd-tile"><header class="rd-th"><h4>Model checks</h4></header>${reportTable(qa.checks,[['Check',q=>q[0]],['Status',q=>q[1]?'<span class="qa-pass">Pass</span>':'<span class="qa-warn">Check</span>'],['Detail',q=>q[2]]])}</article>
@@ -1949,6 +1970,8 @@ function updateLabels(){
   $('#lv-ys').textContent=(S.ys>0?'+':'')+S.ys+'pp';
   if($('#lv-yg'))$('#lv-yg').textContent=(S.yg??DEFAULTS.yg)+'pp';
   if($('#lv-ub'))$('#lv-ub').textContent=(S.ub>0?'+':S.ub<0?'−':'±')+Math.abs(S.ub||0)+'pp';
+  if($('#lv-uo'))$('#lv-uo').textContent=(S.uo>0?'+':S.uo<0?'−':'±')+Math.abs(S.uo||0)+'pp';
+  if($('#lv-ua'))$('#lv-ua').textContent=(S.ua>0?'+':S.ua<0?'−':'±')+Math.abs(S.ua||0)+'%';
 }
 
 // Turnout by region: one slider per region, relative change in turnout
@@ -1994,7 +2017,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   bndSlider('so','so',1);
   bndSlider('ys','ys',1);   // slider -5–18 → S.ys
   bndSlider('yg','yg',1);   // slider 0–25 → S.yg (youth lean against team A)
-  bndSlider('ub','ub',1);   // slider -30–30 → S.ub (undecided break toward team A)
+  bndSlider('ub','ub',1);   // slider -30–30 → S.ub (undecided A/B break toward team A)
+  bndSlider('uo','uo',1);   // slider -20–20 → S.uo (undecided shift to/from other candidates)
+  bndSlider('ua','ua',1);   // slider -30–30 → S.ua (undecided-cohort turnout sensitivity)
   $$('.tbtn').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.t;if(S.dirty&&S.dirty.has(t))renderPane(t);}));
   // warm the scenario cards (the slowest tab) once the page is idle
   (window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>{try{rScen();S.dirty&&S.dirty.delete('mat');}catch(e){}},{timeout:3000});

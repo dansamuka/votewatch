@@ -72,12 +72,19 @@ near(r.nat.i + r.nat.o + r.nat.t, 1, 1e-9, 'national shares sum to 100%');
 r.ctyRes.forEach(c => near(c.i + c.o + c.t, 1, 1e-9, 'county shares sum to 100%: ' + c.name));
 const rU = V.sim({ ub: 10 }, false, false, false);
 ok(rU.nat.i > r.nat.i, 'an undecided break toward A raises team A');
+const rO = V.sim({ uo: 10 }, false, false, false);
+ok(rO.nat.t > r.nat.t, 'undecided-to-others sensitivity raises the other-candidate share');
+const rA = V.sim({ ua: -20 }, false, false, false);
+ok(rA.nat.v < r.nat.v, 'lower undecided-cohort participation reduces total votes');
 
 // ── run-off
 const ro = V.r2sim(r.ctyRes, r.nat, 'aff'), spl = V.r2sim(r.ctyRes, r.nat, 'spl');
 ok(Math.abs(ro.shareA - spl.shareA) > 0.01, 'modelled run-off transfers differ from a 50/50 split');
 const r1 = sumBy(r.ctyRes, c => c.tv);
 near(ro.votesA + ro.votesB, r1, r1 * 1e-9, 'run-off keeps every round-one vote');
+near(ro.turnoutRatio, 1, 1e-9, 'deterministic run-off keeps neutral turnout');
+V.seedRng('ci-runoff-turnout'); const roN = V.r2sim(r.ctyRes, r.nat, 'aff', true);
+ok(roN.turnoutRatio > 0.75 && roN.turnoutRatio < 1.15 && Math.abs((roN.votesA + roN.votesB) - r1) > 1, 'stochastic run-off remobilisation varies turnout within bounds');
 const rP = V.sim({ tf: 8 }, false, false, false), roP = V.r2sim(rP.ctyRes, rP.nat, 'aff');
 near(roP.votesA + roP.votesB, sumBy(rP.ctyRes, c => c.tv), 1, 'run-off keeps the protest vote when the protest slider is on');
 
@@ -92,7 +99,7 @@ near(sd, V.POLL_ERR.rms, 0.15 * V.POLL_ERR.rms, 'simulated two-way error matches
 // ── simulation health and reproducibility
 const m1 = V.mc({}, 300), m2 = V.mc({}, 300);
 ok(m1.failed === 0, 'no failed simulation draws');
-ok(m1.ro === m2.ro && m1.iMed === m2.iMed && JSON.stringify(m1.r2Win) === JSON.stringify(m2.r2Win), 'seeded Monte Carlo is reproducible');
+ok(m1.ro === m2.ro && m1.iMed === m2.iMed && m1.r2TurnLo === m2.r2TurnLo && JSON.stringify(m1.r2Win) === JSON.stringify(m2.r2Win), 'seeded Monte Carlo is reproducible');
 ok(V.SH_DEF.every(e => /^Hypothetical/.test(e.desc)), 'every sandbox event is labelled hypothetical');
 
 // ── back-test file consistent with the current history

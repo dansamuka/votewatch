@@ -35,9 +35,11 @@ where it conflicts with the current method, the current method applies.
    candidate-by-region priors (`TRANSFER_PRIORS`). Those who leave stay home,
    cross (more where the other side is locally strong) or vote elsewhere.
 4. **Undecided voters.** Polls are shares of decided voters, so by default the
-   undecided split in proportion. A slider and, in simulations, a shared shock
-   move part of the undecided pool from team B to team A, with more effect where
-   more voters are undecided.
+   undecided split in proportion. Separate sensitivities test the A/B break,
+   movement to other contestants and turnout of the undecided cohort. The A/B
+   break also varies in simulations, with more effect where more voters are
+   undecided. The other-candidate and turnout sensitivities default to zero
+   because no published poll measures those transitions directly.
 5. **Poll bias.** Optional correction: +4.1 two-way points to team A, the average
    miss of the final validated polls in 2013, 2017 and 2022. Off in the central case.
 6. **Youth.** Young voters back team A 10 points less (Infotrak, Jun 2026); this
@@ -49,8 +51,10 @@ where it conflicts with the current method, the current method applies.
    Failed draws are counted and excluded; the data-quality panel reports them.
 8. **Article 138.** Outright win needs over 50% and 25% in 24 counties; otherwise
    the top two meet. Run-off transfers follow candidate-by-region priors
-   (`RUNOFF_INC_PRIORS`) with a shock per eliminated contestant; every round-one
-   vote is carried into round two.
+   (`RUNOFF_INC_PRIORS`) with a shock per eliminated contestant. Deterministic
+   views keep round-two turnout neutral; Monte Carlo adds zero-mean finalist and
+   transfer-voter remobilisation uncertainty because Kenya has no observed
+   presidential run-off under the current constitution.
 9. **Uncertainty shown.** The 80% simulation range for the line-up, county ranges
    and 25% odds, and the spread across the preset line-ups (structural).
 10. **Events.** News events are listed in Signals with no vote effect. The "Test
@@ -59,7 +63,7 @@ where it conflicts with the current method, the current method applies.
 ## Validation
 
 `scripts/validate-model.mjs` (run by CI before every deploy) reports two kinds of check:
-**integrity** (183: totals, sources, conservation, exact allocation, calibration to the
+**integrity** (187: totals, sources, conservation, exact allocation, calibration to the
 poll-error record, failure-free and reproducible simulations, back-test consistency, the
 county-level check of candidate splits, the county error calibrated by the back-test) and
 **sanity bounds** (6 judgement bounds, such as Kisii's third force at 45–65%; passing them
@@ -102,8 +106,12 @@ Findings:
   offsetting errors between constituencies of one county would not show up.
 - Net register: rebuild when IEBC publishes the updated register.
 - Estimate transfer, run-off, running-mate and regional-turnout priors from data;
-  sample them in the simulations.
-- Run-off turnout is reused from round one.
+  the run-off transfer and turnout layers are sampled today, but their prior
+  magnitudes still need empirical calibration.
+- Run-off turnout now has explicit zero-mean remobilisation uncertainty in
+  simulations, but its magnitude is not empirically calibrated because Kenya has
+  no observed presidential run-off under the current constitution. The
+  deterministic central case therefore remains turnout-neutral.
 - House effects need more polls than the 6 validated ones available.
 
 ---
