@@ -24,8 +24,9 @@ Live: https://dansamuka.github.io/votewatch/
    - C, Third force: Fred Matiang'i for president, Ndindi Nyoro as running
      mate (their bases split the opposition vote instead of only leaking)
    - running alone: Wajackoyah and Wanjigi
-   - 65% of a running mate's supporters follow (bases of former rivals
-     transfer poorly); the presidential candidate keeps all their supporters
+   - 65% of a running mate's supporters follow (a judgement that bases of
+     former rivals transfer poorly; no published Kenyan study measures it),
+     and the presidential candidate is assumed to keep all their supporters
    - preset "No third force" keeps Matiang'i and Nyoro with the opposition
      for comparison
    - turnout by region: Mt Kenya −12%, Rift Valley +2%, Nyanza −3%,
