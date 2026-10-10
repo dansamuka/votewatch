@@ -7,7 +7,7 @@ const GEO_NAME={'Elgeyo-Marakwet':'Elgeyo/Marakwet','Tharaka':'Tharaka - Nithi',
 const MX=lon=>+((lon-33.6)*56).toFixed(1), MY=lat=>+((5.2-lat)*56).toFixed(1);
 const VM={measure:'lead',built:false};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const p1=v=>(v*100).toFixed(1)+'%';
+const p1=v=>A138.safePct(v,1);
 const TEAMC=['var(--team-a)','var(--team-b)','var(--team-c)','var(--team-d)'];
 const RAMP=['a','b','c','d'];
 // five-step OKLCH ramps (tokens.css): weak → strong, never mixed toward the dark surface

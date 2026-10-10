@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const p1=v=>((v||0)*100).toFixed(1)+'%', p0=v=>Math.round((v||0)*100)+'%';
+const p1=v=>A138.safePct(v,1), p0=v=>A138.safePct(v,0);
 const votes=v=>{v=Math.round(v||0);return v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?Math.round(v/1e3)+'K':String(v);};
 
 // Colour for a contestant key: team A/B/C/D or a solo candidate
@@ -46,7 +46,7 @@ function race(el,r,mc,i25,o25){
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
   gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>0.5);
-  gap.querySelector('span').textContent=lead.v<0.5?`+${((0.5-lead.v)*100).toFixed(1)} pts to win outright`:'';
+  gap.querySelector('span').textContent=lead.v>0.5?'':`+${Math.max(0.1,Math.ceil((0.5-lead.v)*1000)/10).toFixed(1)} pts to win outright`;
   // Kenya signature: county centroids coloured by who leads, sized by votes cast (built when idle)
   (window.requestIdleCallback||setTimeout)(()=>{
     const sig=el.querySelector('#keSig');if(!sig||typeof KE_GEO==='undefined')return;

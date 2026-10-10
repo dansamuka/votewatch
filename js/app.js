@@ -162,7 +162,8 @@ function savePref(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 
 // ═══ UTILS ═══
 const N=new Intl.NumberFormat('en-KE');
-const pct=(x,d=1)=>((x||0)*100).toFixed(d)+'%';
+// Never rounds a value across the 25% or 50% line (js/article138.js)
+const pct=(x,d=1)=>A138.safePct(x,d);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 
 let RNG_SOURCE=null;

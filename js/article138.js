@@ -125,5 +125,13 @@ const A138=(()=>{
     return{text,pass,glyph:pass?'✓':'✗'};
   }
 
-  return{COUNTIES,NEEDED,largestRemainder,evaluate,freshElectionField,freshElectionWinner,fromSim,fmtGate,fmtMajority};
+  // General-purpose percentage for the whole page: rounds normally, except that a value
+  // below 25% or 50% is never shown at or above that line (24.96% → "24.9%", not "25.0%").
+  function safePct(x,d=1){
+    const v=Number(x)||0,f=10**(d+2);let s=Math.round(v*f)/f;
+    for(const thr of [0.25,0.5])if(v<thr&&s>=thr)s=Math.floor(v*f)/f;
+    return (s*100).toFixed(d)+'%';
+  }
+
+  return{COUNTIES,NEEDED,largestRemainder,evaluate,freshElectionField,freshElectionWinner,fromSim,fmtGate,fmtMajority,safePct};
 })();
