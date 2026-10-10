@@ -8,6 +8,7 @@
 //                respect some of them.
 import fs from 'node:fs';
 import { loadModel } from './model-harness.mjs';
+import { runArticle138Tests, runEngineGateTests } from './test-article138.mjs';
 
 const V = loadModel();
 const res = { integrity: [], sanity: [] };
@@ -15,6 +16,10 @@ const check = kind => (x, m) => { if (!x) throw new Error(`FAIL (${kind}): ${m}`
 const ok = check('integrity'), bound = check('sanity');
 const near = (a, b, t, m, f = ok) => f(Math.abs(a - b) <= t, `${m} (expected ${b} ±${t}, got ${a})`);
 const sumBy = (xs, f) => xs.reduce((a, x) => a + f(x), 0);
+
+// ── Article 138 gates (js/article138.js): exact integer boundaries and edge cases
+runArticle138Tests(V.A138, ok);
+runEngineGateTests(V, ok);
 
 // ── geography and register
 ok(V.CO.length === 47, '47 counties');
@@ -101,6 +106,30 @@ const m1 = V.mc({}, 300), m2 = V.mc({}, 300);
 ok(m1.failed === 0, 'no failed simulation draws');
 ok(m1.ro === m2.ro && m1.iMed === m2.iMed && m1.r2TurnLo === m2.r2TurnLo && JSON.stringify(m1.r2Win) === JSON.stringify(m2.r2Win), 'seeded Monte Carlo is reproducible');
 ok(V.SH_DEF.every(e => /^Hypothetical/.test(e.desc)), 'every sandbox event is labelled hypothetical');
+for (const mode of ['preview', 'standard']) {
+  V.S.mcMode = mode; const a = V.mc({}, 200), b = V.mc({}, 200);
+  ok(a.ro === b.ro && a.iMed === b.iMed && a.oHi === b.oHi && a.seed === V.S.seed, `${mode} mode is seeded and reproducible`);
+}
+V.S.mcMode = 'research';
+{ // running in slices gives exactly the same result as running in one go
+  const c = V.mcCore({}, 250); while (!c.step(37)); const whole = V.mc({}, 250), sliced = c.result();
+  ok(sliced.ro === whole.ro && sliced.iLo === whole.iLo && JSON.stringify(sliced.cty) === JSON.stringify(whole.cty), 'Monte Carlo in slices equals one run');
+}
+{ // common random numbers: two scenarios share each draw's randomness
+  const d = [], a = [];
+  for (let i = 0; i < 200; i++) {
+    V.drawRng(V.S.seed, i); const x = V.sim({}, true, false, false).nat.i;
+    V.drawRng(V.S.seed, i); const y = V.sim({ si: 1 }, true, false, false).nat.i;
+    d.push(y - x); a.push(x);
+  }
+  V.clearRng();
+  const sdv = xs => { const m = xs.reduce((p, q) => p + q, 0) / xs.length; return Math.sqrt(xs.reduce((p, q) => p + (q - m) ** 2, 0) / (xs.length - 1)); };
+  ok(sdv(d) < 0.1 * sdv(a), `common random numbers: a 1-point swing changes each draw consistently (sd of difference ${(sdv(d) * 100).toFixed(2)} vs ${(sdv(a) * 100).toFixed(2)} pts)`);
+}
+{ // test events come from the seed: the k-th event after a reset is always the same
+  const seq = () => { V.S.shocks = []; V.S.shockN = 0; for (let k = 0; k < 6; k++) V.addShock(); const t = V.S.shocks.map(x => x.t).join('|'); V.S.shocks = []; V.S.shLog = []; V.S.shockN = 0; return t; };
+  ok(seq() === seq(), 'sandbox test events are reproducible from the seed');
+}
 
 // ── back-test file consistent with the current history
 const btFile = fs.readFileSync(new URL('../data/backtest2022.js', import.meta.url), 'utf8');

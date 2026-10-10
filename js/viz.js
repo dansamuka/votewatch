@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const p1=v=>((v||0)*100).toFixed(1)+'%', p0=v=>Math.round((v||0)*100)+'%';
+const p1=v=>A138.safePct(v,1), p0=v=>A138.safePct(v,0), fq=v=>A138.freqPct(v);
 const votes=v=>{v=Math.round(v||0);return v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?Math.round(v/1e3)+'K':String(v);};
 
 // Colour for a contestant key: team A/B/C/D or a solo candidate
@@ -27,7 +27,7 @@ function race(el,r,mc,i25,o25){
   const nat=r.nat,f=field(nat);
   if(!el.dataset.built){
     el.innerHTML=`<header class="race-hd"><p class="eyebrow" id="raceT">First round · decided voters</p><p class="race-verdict" id="raceV"></p>
-        <p class="race-total"><span>Votes cast</span><b id="raceTot"></b></p></header>
+        <p class="race-total"><span>Valid votes</span><b id="raceTot"></b></p></header>
       <div class="rs-wrap"><div class="rs" role="img" id="raceBar"><div class="rs-segs"></div></div>
         <div class="rs-rule" aria-hidden="true"><i>50% + 1</i></div><div class="rs-gap" id="raceGap" aria-hidden="true"><span></span></div></div>
       <ol class="race-legend" id="raceLg"></ol>
@@ -40,13 +40,13 @@ function race(el,r,mc,i25,o25){
   const v=verdictOf(mc),pr=r2pair(nat);
   const A=blocName(pr.a,nat),B=blocName(pr.b,nat),cls=k=>k==='inc'?'rv-a':k==='opp'?'rv-b':'';
   el.querySelector('#raceV').innerHTML=v.t==='Run-off'
-    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
-    :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
-  el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
+    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${fq(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
+    :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${fq(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
+  el.querySelector('#raceTot').textContent=Math.round(nat.valid??nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
-  gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>=0.5);
-  gap.querySelector('span').textContent=lead.v<0.5?`+${((0.5-lead.v)*100).toFixed(1)} pts to win outright`:'';
+  gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>0.5);
+  gap.querySelector('span').textContent=lead.v>0.5?'':`+${Math.max(0.1,Math.ceil((0.5-lead.v)*1000)/10).toFixed(1)} pts to win outright`;
   // Kenya signature: county centroids coloured by who leads, sized by votes cast (built when idle)
   (window.requestIdleCallback||setTimeout)(()=>{
     const sig=el.querySelector('#keSig');if(!sig||typeof KE_GEO==='undefined')return;
@@ -73,8 +73,8 @@ function race(el,r,mc,i25,o25){
   el.querySelector('#raceBar').setAttribute('aria-label',f.slice(0,3).map(c=>`${c.name} ${p1(c.v)}`).join(', ')+'. 50% plus one needed to win outright.');
   // legend: top three plus the rest
   const top=f.slice(0,3),rest=f.slice(3).reduce((s,c)=>s+c.v,0);
-  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*nat.v)} votes</em></li>`).join('')+
-    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*nat.v)} votes</em></li>`:'');
+  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*(nat.valid??nat.v))} votes</em></li>`).join('')+
+    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*(nat.valid??nat.v))} votes</em></li>`:'');
   // 47-county meters for team A and team B
   const row=(k,n)=>`<div class="cb-row" role="img" aria-label="${esc(blocName(k,nat))}: 25% or more in ${n} of 47 counties"><span class="cb-l" style="color:${ink(k)}">${k==='inc'?'A':'B'} <b>${n}</b></span><span class="ticks" style="--c:${col(k)}">${Array.from({length:47},(_,i)=>`<i${i<n?' class="on"':''}></i>`).join('')}</span></div>`;
   el.querySelector('#raceCb').innerHTML=row('inc',i25)+(nat.B&&nat.B.members.length?row('opp',o25):'');
@@ -100,7 +100,7 @@ function outcomes(el,mc){
     <p class="hint">Out of 100 simulations of this line-up and these assumptions. Not the chance that this line-up forms.</p>`;
 }
 
-/* ── County margin strip (A minus B), petition zone ±5 points ── */
+/* ── County margin strip (A minus B), close-margin zone ±5 points ── */
 function margins(el,ctyRes,opts={}){
   if(!el)return;
   const W=opts.w||600,H=opts.h||76,R=opts.r||4,pad=12,span=0.8;
@@ -115,7 +115,7 @@ function margins(el,ctyRes,opts={}){
     <line class="axis" x1="${pad}" x2="${W-pad}" y1="${mid}" y2="${mid}"/><line class="zero" x1="${X(0)}" x2="${X(0)}" y1="4" y2="${H-22}"/>
     ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${yOf(p.lvl).toFixed(1)}" r="${R}" style="fill:${p.m>=0?'var(--team-a)':'var(--team-b)'}"><title>${esc(p.n)}: ${p.m>=0?'A':'B'} ahead by ${p1(Math.abs(p.m))}</title></circle>`).join('')}
     <text x="${pad}" y="${H-6}" class="ax-l">B +80</text><text x="${X(0)}" y="${H-6}" class="ax-l" text-anchor="middle">level</text><text x="${W-pad}" y="${H-6}" class="ax-l" text-anchor="end">A +80</text>
-  </svg><p class="mstrip-cap"><b>${close}</b> ${close===1?'county is':'counties are'} within 5 points (shaded): the likeliest to be contested.</p>`;
+  </svg><p class="mstrip-cap"><b>${close}</b> ${close===1?'county is':'counties are'} within 5 points (shaded): the closest results.</p>`;
 }
 
 /* ── Article 138: two gates ── */
@@ -135,7 +135,7 @@ function gates(el,r,mc,i25,o25){
   <div class="gate"><p class="eyebrow">2 · 25% in at least 24 of 47 counties</p>
     <div class="track">${door((24/47*100).toFixed(2)+'%',passA2||passB2,'24 counties')}${mk('inc',i25/47,'A '+i25)}${hasB?mk('opp',o25/47,'B '+o25):''}</div>
     <p class="gate-s">${[passA2&&'A is through',passB2&&'B is through'].filter(Boolean).join(' · ')||'Neither reaches 24'}</p></div>
-  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations of this line-up).`:`Outright win in ${p0(mc.iW)} of simulations for A, ${p0(mc.oW)} for B.`}</span></p>`;
+  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${fq(mc.ro)} of simulations of this line-up).`:`Outright win in ${fq(mc.iW)} of simulations for A, ${fq(mc.oW)} for B.`}</span></p>`;
 }
 
 /* ── Run-off transfer flow (three columns) ── */
