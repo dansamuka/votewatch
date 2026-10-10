@@ -1021,7 +1021,7 @@ function rTipping(r,f,i25){
     <td class="r c-team-a">${pct(t.i)}</td>
     <td><span class="b ${gc}">${t.ig>0?'+':''}${pct(t.ig)}</span></td>
     <td class="r u-mono12">${t.vn>0?'+'+N.format(t.vn):'<span class="c-ok">Above</span>'}</td>
-    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[t.name];return q?`<td class="r u-mono12">${pct(q.p25,0)}</td><td class="r u-mono12 opt">${pct(q.iLo,0)}–${pct(q.iHi,0)}</td>`:'<td class="r">—</td><td class="r opt">—</td>';})()}
+    ${(()=>{const q=S.mc&&S.mc.cty&&S.mc.cty[t.name];return q?`<td class="r u-mono12">${A138.freqPct(q.p25)}</td><td class="r u-mono12 opt">${pct(q.iLo,0)}–${pct(q.iHi,0)}</td>`:'<td class="r">—</td><td class="r opt">—</td>';})()}
     <td class="c-muted">${t.cl}</td>
     <td class="r c-team-b opt">${pct(t.o)}</td>
     <td class="r c-others opt">${pct(t.t)}</td>
@@ -1100,7 +1100,7 @@ function rScen(){
     <p class="sq-total">Valid votes <b>${N.format(Math.round(sc.n.valid))}</b> · turnout ${pct(sc.n.cast/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} projected voters</p>
     <div class="sq-foot">
       <span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span>
-      <span>Run-off ${pct(sc.ro,0)} · Ruto 25%+ in ${sc.i25}/47</span>
+      <span>Run-off ${A138.freqPct(sc.ro)} · Ruto 25%+ in ${sc.i25}/47</span>
       ${active&&active.id===sc.id?'<span class="b b-m">In use</span>':`<button type="button" class="btn" onclick="applyScenario('${sc.id}')">Use this line-up</button>`}
     </div>
   </div>`).join('');
@@ -1113,7 +1113,7 @@ function rScen(){
     <td class="c-others">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.valid)}</span></td>
     <td>${N.format(Math.round(sc.n.valid))}</td>
     <td>${sc.i25}/47</td>
-    <td>${pct(sc.ro,0)}</td>
+    <td>${A138.freqPct(sc.ro)}</td>
     <td><span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span></td>
   </tr>`).join('')}</tbody>`;
 }
@@ -1536,11 +1536,13 @@ function rIntel(){
 }
 
 // Signals: the poll-error record and the 2022 back-test (data/history.js, data/backtest2022.js)
+// Back-test rows that are simple reference methods rather than the model
+const BT_BASELINES=['linear','swing','swing-bias'];
 function rBacktest(){
   const el=$('#backtest');if(!el||typeof BACKTEST==='undefined')return;
   const B=BACKTEST,f1=x=>(+x).toFixed(1),sg=x=>(x>0?'+':'')+f1(x);
   const errs=pollHistoryErrors();
-  const best=B.variants.find(v=>v.id==='regional-bias'),base=B.variants.find(v=>v.id==='regional'),cal=B.variants.find(v=>v.id==='regional-bias-cal'),flat=B.variants.find(v=>v.id==='model-bias');
+  const best=B.variants.find(v=>v.id==='regional-bias'),base=B.variants.find(v=>v.id==='regional'),cal=B.variants.find(v=>v.id==='regional-bias-cal'),flat=B.variants.find(v=>v.id==='model-bias'),sw=B.variants.find(v=>v.id==='swing-bias');
   el.innerHTML=`<div class="g2">
     <div><p class="grp-h">Final polls vs result <span class="c-muted">Kenyatta/Ruto side, two-way share</span></p>
       <div class="tscroll"><table class="tbl"><thead><tr><th>Election</th><th class="r">Final polls</th><th class="r">Result</th><th class="r">Miss</th></tr></thead>
@@ -1548,8 +1550,10 @@ function rBacktest(){
       <p class="hint mt8">Validated pollsters only (Ipsos, Infotrak, TIFA). Every final average underestimated the same side, by ${f1(POLL_ERR.mean)} points on average. The model's national error is calibrated to this record; correcting the bias is an option under Evidence.</p></div>
     <div><p class="grp-h">2022 hindcast <span class="c-muted">final polls, TIFA regional poll, 2017 county pattern</span></p>
       <div class="tscroll"><table class="tbl"><thead><tr><th>Method</th><th class="r">National miss</th><th class="r">County error</th><th class="r">Winner</th><th class="r">25% test</th><th class="r">In 80% range</th></tr></thead>
-      <tbody>${B.variants.map(v=>`<tr><td>${mapEsc(v.label)}</td><td class="r">${sg(v.nationalErr)}</td><td class="r">${f1(v.countyMAE)}</td><td class="r">${v.winners}/47</td><td class="r">${v.article138}/47</td><td class="r">${f1(v.coverage80)}%</td></tr>`).join('')}</tbody></table></div>
-      <p class="hint mt8">County error: average miss in Ruto's two-way share. With the bias correction (estimated from 2013 and 2017 only) the national miss falls from ${sg(base.nationalErr)} to ${sg(best.nationalErr)} points. The regional layer (TIFA's nine zones, 29 Jul 2022) cut the root-mean-square county error from ${f1(flat.countyRMSE)} to ${f1(best.countyRMSE)} points; its zones are coarse, so winner calls did not improve. With the model's earlier noise only ${f1(best.coverage80)}% of counties fell inside their 80% range, mainly where alliances shifted (${B.counties.slice(0,3).map(c=>`${mapEsc(c.name)} ${f1(c.pred)}→${f1(c.actual)}`).join(', ')}). The model now adds ${f1(B.calibration.countySD)} points of county-level error, which brings that to ${f1(cal.coverage80)}%.</p></div>
+      <tbody>${B.variants.map(v=>`<tr><td>${mapEsc(v.label)}${BT_BASELINES.includes(v.id)?' <span class="b b-o">simple baseline</span>':''}</td><td class="r">${sg(v.nationalErr)}</td><td class="r">${f1(v.countyMAE)}</td><td class="r">${v.winners}/47</td><td class="r">${v.article138}/47</td><td class="r">${f1(v.coverage80)}%${v.id==='regional-bias-cal'?'<sup>*</sup>':''}</td></tr>`).join('')}</tbody></table></div>
+      <p class="hint mt8"><sup>*</sup> In-sample: the county error was chosen on this same 2022 test so that 80% of counties fall inside their range. It shows the fit, not how often 2027 ranges will hold; no out-of-sample test of the ranges exists yet.</p>
+      <p class="hint mt8"><strong>Against simple baselines.</strong> A uniform swing from 2017 with the same bias correction misses the national result by ${sg(sw.nationalErr)} points, against ${sg(best.nationalErr)} for the full model: nationally, the bias correction does the work. The model's gain is at county level, an average county error of ${f1(best.countyMAE)} points against ${f1(sw.countyMAE)} for the uniform swing.</p>
+      <p class="hint mt8">County error: average miss in Ruto's two-way share. With the bias correction (estimated from 2013 and 2017 only) the national miss falls from ${sg(base.nationalErr)} to ${sg(best.nationalErr)} points. The regional layer (TIFA's nine zones, 29 Jul 2022) cut the root-mean-square county error from ${f1(flat.countyRMSE)} to ${f1(best.countyRMSE)} points; its zones are coarse, so winner calls did not improve. With the model's earlier noise only ${f1(best.coverage80)}% of counties fell inside their 80% range, mainly where alliances shifted (${B.counties.slice(0,3).map(c=>`${mapEsc(c.name)} ${f1(c.pred)}→${f1(c.actual)}`).join(', ')}). The model now adds ${f1(B.calibration.countySD)} points of county-level error, which brings that to ${f1(cal.coverage80)}% (in-sample).</p></div>
   </div>`;
 }
 
@@ -1604,7 +1608,7 @@ function rHeadline(r,mc_,i25){
   else{tone="opp";title=`${blocName("opp")} wins in round one`;}
   const p=mc_.ro>=0.5?mc_.ro:Math.max(mc_.iW,mc_.oW);
   el.dataset.tone=tone;
-  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p" title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${pct(p,0)} if this line-up runs${S.mcPending?' · refining…':''}</span>`;
+  el.innerHTML=`<span class="v-dot" aria-hidden="true"></span><span class="v-title">${title}</span><span class="v-p" title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${A138.freqPct(p)} if this line-up runs${S.mcPending?' · refining…':''}</span>`;
 }
 function setLive(on){
   S.live=!!on;S.timer=30;
@@ -1900,7 +1904,7 @@ function renderExecutiveReport(){
   <header class="rd-head">
     <div><p class="rd-kicker">VoteWatch 2027 · Kenya presidential scenario</p>
       <h3 class="rd-title">${runoff?'Run-off likely':mc_.iW>=mc_.oW?`${mapEsc(nm('inc'))} wins in round one`:`${mapEsc(nm('opp'))} wins in round one`}</h3>
-      <p class="rd-lede">${runoff?`${mapEsc(nm(pr2.a))} and ${mapEsc(nm(pr2.b))} meet in round two in ${pct(mc_.ro,0)} of ${runs}.`:`In ${pct(Math.max(mc_.iW,mc_.oW),0)} of ${runs}.`}</p></div>
+      <p class="rd-lede">${runoff?`${mapEsc(nm(pr2.a))} and ${mapEsc(nm(pr2.b))} meet in round two in ${A138.freqPct(mc_.ro)} of ${runs}.`:`In ${pct(Math.max(mc_.iW,mc_.oW),0)} of ${runs}.`}</p></div>
     <p class="rd-meta">${date}<br>A scenario, not a prediction</p>
   </header>
 
@@ -1908,7 +1912,7 @@ function renderExecutiveReport(){
   ${solos.length?`<p class="rd-solo"><span>Running alone</span>${solos.map(o=>`<em><b>${mapEsc(o.name)}</b> ${pct(o.share)}</em>`).join('')}</p>`:''}
 
   <section class="rd-kpis">
-    <div class="rd-tile rd-kpi"><span>Run-off</span><b>${pct(mc_.ro,0)}</b><em>if this line-up runs</em></div>
+    <div class="rd-tile rd-kpi"><span>Run-off</span><b>${A138.freqPct(mc_.ro)}</b><em>if this line-up runs</em></div>
     <div class="rd-tile rd-kpi"><span>24-county test</span><b><span style="color:${ink('inc')}">${i25}</span><small> · </small><span style="color:${ink('opp')}">${o25}</span></b><em>A · B, needs 24</em></div>
     <div class="rd-tile rd-kpi"><span>Leader short of 50%</span><b>${field[0].v<0.5?fmtVotes((0.5-field[0].v)*n.valid):'—'}</b><em>votes for ${mapEsc(field[0].l)}</em></div>
     <div class="rd-tile rd-kpi"><span>Margin exposure</span><b class="${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}<small>/100</small></b><em>${dr.n} counties within 6 points</em></div>
@@ -1963,7 +1967,7 @@ function renderExecutiveReport(){
       const it=scQueue.shift();if(!it)return resolve();
       const [res,ti,i]=it;ticketScenarioMC(res,ti);
       const a=el.querySelector('[data-sc-ro="'+ti+':'+i+'"]'),b=el.querySelector('[data-sc-win="'+ti+':'+i+'"]');
-      if(a)a.textContent=pct(res.ro,0);if(b)b.textContent=pct(res.win,0);
+      if(a)a.textContent=A138.freqPct(res.ro);if(b)b.textContent=pct(res.win,0);
       setTimeout(next,0);};
     setTimeout(next,0);
   });

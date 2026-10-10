@@ -1,4 +1,5 @@
 // ═══ ARTICLE 138 — constitutional tests on integer valid-vote tallies ═══
+// (plus the page's threshold-safe percentage and simulation-frequency formatting)
 // Pure functions, no DOM: loaded by the page before js/app.js and by the Node scripts
 // through scripts/model-harness.mjs, so the browser and the validator run the same code.
 //
@@ -133,5 +134,14 @@ const A138=(()=>{
     return (s*100).toFixed(d)+'%';
   }
 
-  return{COUNTIES,NEEDED,largestRemainder,evaluate,freshElectionField,freshElectionWinner,fromSim,fmtGate,fmtMajority,safePct};
+  // Share of simulation runs, in whole percentages. Never prints 0% or 100% unless every
+  // run agreed (0.9998 → ">99%", 0.0002 → "<1%"), and never rounds up to 50%.
+  function freqPct(x){
+    const v=Number(x)||0;
+    if(v<=0)return '0%';if(v>=1)return '100%';
+    if(v<0.005)return '<1%';if(v>=0.995)return '>99%';
+    return safePct(v,0);
+  }
+
+  return{COUNTIES,NEEDED,largestRemainder,evaluate,freshElectionField,freshElectionWinner,fromSim,fmtGate,fmtMajority,safePct,freqPct};
 })();

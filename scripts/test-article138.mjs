@@ -51,6 +51,7 @@ export function runArticle138Tests(A, ok) {
   ok(m.text === '> 50.0%' && m.pass, 'Display: a bare majority renders "> 50.0%", never a plain "50.0%"');
   ok(A.safePct(0.24996) === '24.9%' && A.safePct(0.49996) === '49.9%' && A.safePct(0.49996, 0) === '49%', 'Display: page-wide percentages never round up across 25% or 50%');
   ok(A.safePct(0.2504) === '25.0%' && A.safePct(0.1234) === '12.3%' && A.safePct(0.876, 0) === '88%' && A.safePct(-0.031) === '-3.1%', 'Display: other percentages round normally');
+  ok(A.freqPct(0.9998) === '>99%' && A.freqPct(0.0002) === '<1%' && A.freqPct(1) === '100%' && A.freqPct(0) === '0%' && A.freqPct(0.497) === '49%' && A.freqPct(0.71) === '71%', 'Display: simulation frequencies never claim certainty that the runs do not show');
   // 11. a county with no valid votes: ingest throws; the engine marks it unavailable
   const zero = field(fill(47, 600)); zero[0] = { code: 'C01', valid: { A: 0n, B: 0n } };
   ok(throws(() => ev(zero, {}, { mode: 'ingest' })), 'Art. 138: ingest rejects a county with no valid votes');

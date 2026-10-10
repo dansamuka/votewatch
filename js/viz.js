@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const p1=v=>A138.safePct(v,1), p0=v=>A138.safePct(v,0);
+const p1=v=>A138.safePct(v,1), p0=v=>A138.safePct(v,0), fq=v=>A138.freqPct(v);
 const votes=v=>{v=Math.round(v||0);return v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?Math.round(v/1e3)+'K':String(v);};
 
 // Colour for a contestant key: team A/B/C/D or a solo candidate
@@ -40,8 +40,8 @@ function race(el,r,mc,i25,o25){
   const v=verdictOf(mc),pr=r2pair(nat);
   const A=blocName(pr.a,nat),B=blocName(pr.b,nat),cls=k=>k==='inc'?'rv-a':k==='opp'?'rv-b':'';
   el.querySelector('#raceV').innerHTML=v.t==='Run-off'
-    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
-    :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
+    ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${fq(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
+    :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${fq(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
   el.querySelector('#raceTot').textContent=Math.round(nat.valid??nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
@@ -135,7 +135,7 @@ function gates(el,r,mc,i25,o25){
   <div class="gate"><p class="eyebrow">2 · 25% in at least 24 of 47 counties</p>
     <div class="track">${door((24/47*100).toFixed(2)+'%',passA2||passB2,'24 counties')}${mk('inc',i25/47,'A '+i25)}${hasB?mk('opp',o25/47,'B '+o25):''}</div>
     <p class="gate-s">${[passA2&&'A is through',passB2&&'B is through'].filter(Boolean).join(' · ')||'Neither reaches 24'}</p></div>
-  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${p0(mc.ro)} of simulations of this line-up).`:`Outright win in ${p0(mc.iW)} of simulations for A, ${p0(mc.oW)} for B.`}</span></p>`;
+  <p class="gate-out" style="--gc:${both?'var(--c-green)':'var(--c-amber)'}"><i aria-hidden="true"></i><span><b>${who}.</b> ${mc.ro>=0.5?`A run-off is likely (${fq(mc.ro)} of simulations of this line-up).`:`Outright win in ${fq(mc.iW)} of simulations for A, ${fq(mc.oW)} for B.`}</span></p>`;
 }
 
 /* ── Run-off transfer flow (three columns) ── */
