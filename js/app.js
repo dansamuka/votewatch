@@ -182,7 +182,14 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 let RNG_SOURCE=null;
 function seedHash(str){let h=2166136261>>>0;for(let i=0;i<String(str).length;i++){h^=String(str).charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
-function randUnit(){return RNG_SOURCE?RNG_SOURCE():Math.random();}
+// Every random draw is reproducible. Monte Carlo draw i uses its own stream, keyed by the
+// seed and the draw index only (drawStream), in every simulation depth: the same seed gives
+// the same numbers, and two scenarios run with the same seed share their random draws
+// (common random numbers), so the difference between them is not Monte Carlo noise.
+// Outside a draw, randomness falls back to a fixed seeded stream, never Math.random.
+const drawStream=(seed,i)=>mulberry32(seedHash(`${seed}|draw|${i}`));
+let RNG_FALLBACK=mulberry32(seedHash('votewatch|fallback'));
+function randUnit(){return RNG_SOURCE?RNG_SOURCE():RNG_FALLBACK();}
 // Approximate standard normal (mean 0, sd 1): sum of 4 uniforms has variance 1/3,
 // so centre and scale by √3. (Was ÷2, giving sd ≈0.29 and far too narrow a spread.)
 const rng=()=>(randUnit()+randUnit()+randUnit()+randUnit()-2)*1.7320508075688772;
@@ -515,21 +522,21 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   return{ctyRes,nat,wardRes};
 }
 
-// Monte Carlo as a resumable stepper. Research mode owns a seeded generator, so
-// running it in chunks (with other work in between) gives exactly the same
-// result as running it in one go.
+// Monte Carlo as a resumable stepper. Each draw has its own seeded stream, so running
+// it in chunks (with other work in between) gives exactly the same result as running
+// it in one go, in every simulation depth.
 function mcCore(params,n){
   // i = draws attempted, ok = draws that completed; failures are counted and reported
   let i=0,ok=0,failed=0,lastErr='',iW=0,oW=0,ro=0,iJ=0,oJ=0,degenerate=0,r2Tie=0;
   const iA=[],oA=[],tA=[],r2Turn=[],pairs={},r2Win={},xW={};
   const nC=CO.length,cI=Array.from({length:nC},()=>new Float32Array(n)),cO=Array.from({length:nC},()=>new Float32Array(n)),c25=new Uint32Array(nC);
-  const gen=S.mcMode==='research'?mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.yg}|${S.ub}|${S.uo}|${S.ua}|${S.pollBias}|${S.registerMode}|${S.pollMode}|${JSON.stringify(S.reg)}|${JSON.stringify(S.rt)}|${JSON.stringify(S.cfg)}`)):null;
   const mode=S.mcMode,seed=S.seed;
   return {
     step(k){
-      const prevRng=RNG_SOURCE;if(gen)RNG_SOURCE=gen;
+      const prevRng=RNG_SOURCE;
       try{
         for(const end=Math.min(n,i+k);i<end;i++){
+          RNG_SOURCE=drawStream(seed,i);
           try{
             const r=sim(params,true,true,false);
             // Art. 138(4) on integer valid-vote tallies, for every contestant (js/article138.js)
@@ -565,7 +572,7 @@ function mcCore(params,n){
         // per county: 80% range of each main side's share, and how often A clears 25%
         cty:Object.fromEntries(CO.map((c,j)=>{const a=Array.from(cI[j].subarray(0,ok)),b=Array.from(cO[j].subarray(0,ok));
           return[c.name,{iLo:qntl(a,.1),iHi:qntl(a,.9),oLo:qntl(b,.1),oHi:qntl(b,.9),p25:ok?c25[j]/ok:0}];})),
-        iterations:n,mode,seed:mode==='research'?seed:null};
+        iterations:n,mode,seed};
     }
   };
 }
@@ -801,10 +808,12 @@ const SH_DEF=[
   {t:'County endorsement',rnd:true,si:0.012,desc:'Hypothetical +1.2 pts Ruto in the county'},
   {t:'Service delivery event',rnd:true,si:0.014,desc:'Hypothetical +1.4 pts Ruto in the county'}
 ];
+// Test events are drawn from the seed: the k-th event after a reset is always the same.
 function addShock(){
-  const b=SH_DEF[Math.floor(Math.random()*SH_DEF.length)];
+  const u=mulberry32(seedHash(`${S.seed}|shock|${S.shockN=(S.shockN||0)+1}`));
+  const b=SH_DEF[Math.floor(u()*SH_DEF.length)];
   const sh={...b,eff:1,rem:2,decay:0.65,spill:{}};
-  if(sh.rnd){const c=CO[Math.floor(Math.random()*CO.length)];sh.county=c.name;sh.t=`Endorsement: ${c.name}`;}
+  if(sh.rnd){const c=CO[Math.floor(u()*CO.length)];sh.county=c.name;sh.t=`Endorsement: ${c.name}`;}
   if(sh.county&&TR[sh.county]){for(const cn of TR[sh.county]){const v=(sh.si||0.01)*({A:1.0,B:0.7,C:0.4,rural:0.15}[cn.roadClass]||0.3)*Math.pow(0.85,cn.distanceKm/10);sh.spill[cn.target]=v;}}
   S.shocks.push(sh);
   S.shLog.unshift({ts:new Date().toLocaleTimeString(),e:sh.t,d:sh.desc});
@@ -1049,9 +1058,9 @@ function rScen(){
     const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
     let iW=0,oW=0,xW=0;
     const prev=RNG_SOURCE;
-    RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${sc.id}`));
     try{
       for(let i=0;i<N_SC;i++){
+        RNG_SOURCE=drawStream(S.seed,i);   // same draws as the main simulation: presets compare like for like
         const mr=sim(p,true,false,false);
         const el=A138.fromSim(mr.ctyRes,mr.nat,OOC_SHARE).elected[0];
         if(el==='inc')iW++;else if(el==='opp')oW++;else if(el)xW++;
@@ -1631,13 +1640,13 @@ function setViewMode(v){
 }
 function updateMcModeUI(){
   ITERS=MC_MODES[S.mcMode]||MC_MODES.preview;
-  const modeText={preview:'Preview · 400',standard:'Standard · 1,000',research:'Research · 5,000 seeded'}[S.mcMode]||'Preview · 400';
+  const modeText={preview:'Preview · 400',standard:'Standard · 1,000',research:'Research · 5,000'}[S.mcMode]||'Preview · 400';
   $('#mcModeLabel')&&( $('#mcModeLabel').textContent=modeText );
   $('#seedLabel')&&( $('#seedLabel').textContent=S.seed );
   $('#mcCredibilityNote')&&( $('#mcCredibilityNote').innerHTML=S.mcMode==='preview'
     ?'Preview mode prioritizes speed. Treat probabilities as directional and switch to Standard or Research before briefing.'
-    :S.mcMode==='standard'?'Standard mode is suitable for internal review. Use Research mode for reproducible exported briefings.'
-    :'Research mode uses 5,000 seeded simulations for reproducibility; record the seed in exported materials.');
+    :S.mcMode==='standard'?'Standard mode is suitable for internal review. Use Research mode for exported briefings: more runs give tighter ranges.'
+    :'Research mode runs 5,000 simulations. Every depth is seeded; record the seed in exported materials.');
 }
 function assumptionSensitivityHTML(){
   if(!S.res)return '<div class="note">Run the model to calculate sensitivity.</div>';
@@ -1826,7 +1835,7 @@ function renderExecutiveReport(){
   const initials=s=>String(s||'').split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,1).concat(String(s||'').split(/\s+/).slice(-1).map(x=>x[0]||'')).join('').toUpperCase();
   const avgOf=s=>{const c=CANDIDATES.find(x=>x.name===s)||{};return S.pollMode==='all'||c.poll==null?c.pollAll:c.poll;};
   const date=new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'});
-  const runs=`${N.format(mc_.iterations||ITERS)} ${mc_.mode==='research'?'seeded ':''}simulations${S.mcPending?' (refining)':''}`;
+  const runs=`${N.format(mc_.iterations||ITERS)} seeded simulations${S.mcPending?' (refining)':''}`;
   const keyOf=ti=>ti===0?'inc':ti===1?'opp':'t'+ti;
   const othOf=k=>(n.others||[]).find(o=>o.key===k);
   const shareOf=k=>k==='inc'?n.i:k==='opp'?n.o:(othOf(k)||{share:0}).share;
@@ -1932,7 +1941,7 @@ function renderExecutiveReport(){
   </section>
 
   <section class="rd-page2">
-    <header class="rd-th rd-p2h"><h4>Running-mate options</h4><span>each row re-runs the model with only the running mate changed · ${REPORT_SC_RUNS} ${S.mcMode==='research'?'seeded ':''}simulations per row</span></header>
+    <header class="rd-th rd-p2h"><h4>Running-mate options</h4><span>each row re-runs the model with only the running mate changed · ${REPORT_SC_RUNS} seeded simulations per row</span></header>
     <div class="rd-optgrid">${S.cfg.teams.map((_,ti)=>scTile(ti)).join('')}</div>
     <article class="rd-tile rd-assume"><header class="rd-th"><h4>Assumptions</h4></header>
       <dl>
@@ -1941,7 +1950,7 @@ function renderExecutiveReport(){
         <div><dt>Where the rest go</dt><dd>${Math.round(lk.home/lt*100)}% stay home · ${Math.round(lk.cross/lt*100)}% cross over · ${Math.round(lk.else/lt*100)}% elsewhere</dd></div>
         <div><dt>Turnout by region</dt><dd>${rtTxt}</dd></div>
         <div><dt>Swings</dt><dd>${sw}</dd></div>
-        <div><dt>Simulation</dt><dd>${mapEsc(settings.mode)} · ${N.format(settings.iterations)} runs${S.mcMode==='research'?` · seed ${mapEsc(settings.seed)}`:''}</dd></div>
+        <div><dt>Simulation</dt><dd>${mapEsc(settings.mode)} · ${N.format(settings.iterations)} runs · seed ${mapEsc(settings.seed)}</dd></div>
       </dl>
       <p class="rd-fine">Percentages are shares of simulations of this line-up with these assumptions, not the chance that this line-up forms. Candidate levels come from the average of validated polls (one-poll figures count half). In a run-off, everyone else's voters follow their candidates' assumed loyalties. Running-mate pulls outside the polls, follow-through, loyalties, the youth gap and the leak split are assumptions. Constituency estimates are anchored to constituency-level 2022 presidential results; ward estimates inherit their constituency political baseline and are not independent ward forecasts. Not externally validated. For civic, academic, journalistic and analytical use only; not for voter suppression, deceptive persuasion, intimidation, unofficial result claims or microtargeting.</p>
     </article>
@@ -2065,7 +2074,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Full reset: assumptions, political context, polls and probability settings.
     // (Previously left regimes/polls untouched and kept a stale iteration count and theme.)
     const {reg:dReg,rt:dRt,...dSl}=DEFAULTS;
-    Object.assign(S,dSl,{shocks:[],shLog:[],timer:30,mcMode:'research',seed:'2027-baseline-001'});
+    Object.assign(S,dSl,{shocks:[],shLog:[],shockN:0,timer:30,mcMode:'research',seed:'2027-baseline-001'});
     S.reg={...dReg};S.rt={...dRt};S.cfg=defaultCfg();syncRegionSliders();applyModelBase();
     $('#registerModeSelect')&&($('#registerModeSelect').value=S.registerMode);$('#pollModeSelect')&&($('#pollModeSelect').value=S.pollMode);$('#pollBiasSelect')&&($('#pollBiasSelect').value=S.pollBias?'on':'off');
     Object.keys(dSl).forEach(k=>{const el=$('#sl-'+k);if(el)el.value=S[k];});
@@ -2084,7 +2093,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // v4.5 governance controls
   $('#mcModeSelect')?.addEventListener('change',e=>{S.mcMode=e.target.value;updateMcModeUI();renderAll();rShockLog();});
-  $('#seedInput')?.addEventListener('change',e=>{S.seed=e.target.value||'2027-baseline-001';updateMcModeUI();if(S.mcMode==='research'){renderAll();rShockLog();}});
+  $('#seedInput')?.addEventListener('change',e=>{S.seed=e.target.value||'2027-baseline-001';updateMcModeUI();renderAll();rShockLog();});
   $('#viewModeSelect')?.addEventListener('change',e=>{S.viewMode=e.target.value;updateViewModeLabels();renderAll();});
   $('#themeSelect')?.addEventListener('change',e=>{S.theme=e.target.value;applyTheme();});
   updateMcModeUI();updateViewModeLabels();applyTheme();

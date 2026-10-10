@@ -23,3 +23,15 @@ diaspora and prisons) are added to the national denominator only.
 - County vote totals: about 0.8% lower (valid, not cast).
 - Monte Carlo outcome frequencies: unchanged; county 25%-pass frequencies move by at
   most 2 of 300 draws, from integer rounding at the line.
+
+## Seeded draws in every mode; common random numbers (Phase 0, item 5)
+
+Only Research mode was seeded, and its seed hashed every setting, so any change
+re-randomised all draws. Each Monte Carlo draw now has its own stream keyed by the seed
+and the draw index only, in every simulation depth; the preset cards use the same draws.
+
+- Deterministic results: unchanged.
+- Monte Carlo summaries: new random draws, so 300-draw values move within sampling
+  error (largest: one county's 25%-pass frequency, 8.7 points at n=300, ≈3 standard
+  errors as the maximum over 141 values). At n=3,000 the old and new streams agree
+  within sampling error on every outcome (e.g. s0b B outright 39.8% vs 39.9%).

@@ -21,6 +21,6 @@ export function loadModel(extraFiles = []) {
   vm.runInContext(`globalThis.__V={CO,WARDS,WD,R22,S,CANDIDATES,SH_DEF,POLL_ERR,POLL_HISTORY,UNDECIDED,REGIONAL_POLL_2022,pollHistoryErrors,pollErrorStats,
     CHECK2022,SCENS,A138,REJ_RATE,OOC_SHARE,sim,r2sim,mc,structuralSummary,applyModelBase,setErrorScale,REGISTER_META,GROUP_OF,COUNTY_GROUP,
     get WU(){return WU},get NAT_SWING_SD(){return NAT_SWING_SD},get UB_SD(){return UB_SD},get ERR_SCALE(){return ERR_SCALE},get COUNTY_SD(){return COUNTY_SD},
-    seedRng:s=>{RNG_SOURCE=mulberry32(seedHash(s));}};`, context);
+    seedRng:s=>{RNG_SOURCE=mulberry32(seedHash(s));},drawRng:(seed,i)=>{RNG_SOURCE=drawStream(seed,i);},clearRng:()=>{RNG_SOURCE=null;},addShock,mcCore};`, context);
   return context.__V;
 }

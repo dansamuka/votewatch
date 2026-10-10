@@ -184,16 +184,16 @@
     <details class="side-adv">
       <summary>Advanced</summary>
       <div class="side-sec">
-        <label class="sl-top" for="mcModeSelect"><span>Simulation depth</span><output id="mcModeLabel">Research · 5,000 seeded</output></label>
+        <label class="sl-top" for="mcModeSelect"><span>Simulation depth</span><output id="mcModeLabel">Research · 5,000</output></label>
         <select class="gov-select w100" id="mcModeSelect">
           <option value="preview">Preview (fast, 400 runs)</option>
           <option value="standard">Standard (1,000 runs)</option>
-          <option value="research" selected>Research (5,000 seeded runs)</option>
+          <option value="research" selected>Research (5,000 runs)</option>
         </select>
         <p class="hint" id="mcCredibilityNote">Preview is for exploring. Switch to Standard or Research before briefing.</p>
         <label class="sl-top" for="seedInput"><span>Random seed</span><output id="seedLabel">2027-baseline-001</output></label>
         <input class="srch w100" id="seedInput" value="2027-baseline-001" spellcheck="false">
-        <p class="hint">Research mode with the same seed gives the same result every time.</p>
+        <p class="hint">The same seed gives the same result every time, at every depth. Scenarios run with the same seed share their random draws, so differences between them are not simulation noise.</p>
       </div>
     </details>
     </div>
