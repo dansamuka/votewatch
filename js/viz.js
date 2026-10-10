@@ -27,7 +27,7 @@ function race(el,r,mc,i25,o25){
   const nat=r.nat,f=field(nat);
   if(!el.dataset.built){
     el.innerHTML=`<header class="race-hd"><p class="eyebrow" id="raceT">First round · decided voters</p><p class="race-verdict" id="raceV"></p>
-        <p class="race-total"><span>Votes cast</span><b id="raceTot"></b></p></header>
+        <p class="race-total"><span>Valid votes</span><b id="raceTot"></b></p></header>
       <div class="rs-wrap"><div class="rs" role="img" id="raceBar"><div class="rs-segs"></div></div>
         <div class="rs-rule" aria-hidden="true"><i>50% + 1</i></div><div class="rs-gap" id="raceGap" aria-hidden="true"><span></span></div></div>
       <ol class="race-legend" id="raceLg"></ol>
@@ -42,7 +42,7 @@ function race(el,r,mc,i25,o25){
   el.querySelector('#raceV').innerHTML=v.t==='Run-off'
     ?`<b>Run-off likely</b> · <b class="${cls(pr.a)}">${esc(A)}</b> vs <b class="${cls(pr.b)}">${esc(B)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`
     :`<b>${esc(v.t)}</b> <span title="Share of simulations with this line-up and these assumptions, not the chance that this line-up forms">${p0(v.p)} if this line-up runs${typeof S!=='undefined'&&S.mcPending?' · refining…':''}</span>`;
-  el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
+  el.querySelector('#raceTot').textContent=Math.round(nat.valid??nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
   gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>0.5);
@@ -73,8 +73,8 @@ function race(el,r,mc,i25,o25){
   el.querySelector('#raceBar').setAttribute('aria-label',f.slice(0,3).map(c=>`${c.name} ${p1(c.v)}`).join(', ')+'. 50% plus one needed to win outright.');
   // legend: top three plus the rest
   const top=f.slice(0,3),rest=f.slice(3).reduce((s,c)=>s+c.v,0);
-  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*nat.v)} votes</em></li>`).join('')+
-    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*nat.v)} votes</em></li>`:'');
+  el.querySelector('#raceLg').innerHTML=top.map(c=>`<li style="--c:${col(c.key)};--ci:${ink(c.key)}"><span>${esc(c.name)}</span><b>${p1(c.v)}</b><em>${votes(c.v*(nat.valid??nat.v))} votes</em></li>`).join('')+
+    (rest>0.0005?`<li style="--c:var(--line-2);--ci:var(--ink-2)"><span>Everyone else</span><b>${p1(rest)}</b><em>${votes(rest*(nat.valid??nat.v))} votes</em></li>`:'');
   // 47-county meters for team A and team B
   const row=(k,n)=>`<div class="cb-row" role="img" aria-label="${esc(blocName(k,nat))}: 25% or more in ${n} of 47 counties"><span class="cb-l" style="color:${ink(k)}">${k==='inc'?'A':'B'} <b>${n}</b></span><span class="ticks" style="--c:${col(k)}">${Array.from({length:47},(_,i)=>`<i${i<n?' class="on"':''}></i>`).join('')}</span></div>`;
   el.querySelector('#raceCb').innerHTML=row('inc',i25)+(nat.B&&nat.B.members.length?row('opp',o25):'');

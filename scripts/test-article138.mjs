@@ -95,6 +95,19 @@ export function runEngineGateTests(V, ok) {
   const sumN = r.ctyRes.reduce((s, c) => s + Math.round(c.tv), 0);
   ok(g.N === BigInt(sumN), 'Engine: integer valid votes reconcile to the rounded county totals');
   ok(Object.values(g.total).reduce((a, b) => a + b, 0n) === g.N, 'Engine: every valid vote is allocated to exactly one contestant');
+
+  // Ballot accounting: ballots cast = valid + rejected, at the 2022 county rejection rates
+  const rates = Object.values(V.REJ_RATE);
+  const j22 = V.R22.reduce((s, x) => s + x.rej, 0), v22 = V.R22.reduce((s, x) => s + x.ru + x.ra + x.wj + x.mw, 0);
+  ok(rates.length === 47 && rates.every(x => x > 0 && x < 0.05), 'Ballots: every county has a 2022 rejection rate between 0% and 5%');
+  ok(Math.abs(j22 / (j22 + v22) - 0.00781) < 0.0001, `Ballots: 2022 national rejection rate is 0.78% (got ${(j22 / (j22 + v22) * 100).toFixed(3)}%)`);
+  ok(r.ctyRes.every(c => Math.abs(c.cv - c.jv - c.tv) < 1e-6 * c.cv && Math.abs(c.jv / c.cv - V.REJ_RATE[c.name]) < 1e-9), 'Ballots: in every county, valid votes = ballots cast − rejected, at the 2022 county rate');
+  ok(Math.abs(r.nat.valid - r.nat.v * (1 + V.OOC_SHARE)) < 1e-6 * r.nat.v && Math.abs(V.OOC_SHARE * v22 - 12371) < 1, 'Ballots: out-of-county votes (12,371 in 2022) are added to the national valid total');
+  // more rejected ballots with the same ballots cast: fewer valid votes, county shares unchanged
+  const rj = V.sim({ rejX: 2 }, false, false, false);
+  ok(rj.ctyRes.every((c, j) => c.tv < r.ctyRes[j].tv && Math.abs(c.cv - r.ctyRes[j].cv) < 1e-6 * c.cv && Math.abs(c.i - r.ctyRes[j].i) < 1e-12 && Math.abs(c.o - r.ctyRes[j].o) < 1e-12), 'Ballots: doubling rejected ballots lowers valid votes and leaves every county share unchanged');
+  const gj = V.A138.fromSim(rj.ctyRes, rj.nat, V.OOC_SHARE), g0 = V.A138.fromSim(r.ctyRes, r.nat, V.OOC_SHARE);
+  ok(gj.N < g0.N && gj.gates.inc.countiesQualified === g0.gates.inc.countiesQualified, 'Ballots: the Art. 138 denominator shrinks with rejected ballots; county qualification is unchanged');
 }
 
 if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}` || process.argv[1].endsWith('test-article138.mjs')) {

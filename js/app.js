@@ -15,6 +15,19 @@ const CM=new Map(CO.map(c=>[c.name,c]));
 // 2022 presidential result by constituency, keyed "County|Constituency"
 const R22M=new Map((typeof R22!=='undefined'?R22:[]).map(x=>[x.co+'|'+x.cs,x]));
 const r22Share=x=>{const t=x.ru+x.ra+x.wj+x.mw||1;return{ru:x.ru/t,ra:x.ra/t};};
+// Rejected presidential ballots, by county, from the 2022 Forms 34B (R22 `rej`).
+// Turnout bases count ballots cast, so valid votes = ballots cast × (1 − rate).
+// "Votes cast" in Art. 138 means valid votes (Supreme Court, 2013), so the gates
+// are tested on valid votes only.
+const REJ_RATE=(()=>{const a={};(typeof R22!=='undefined'?R22:[]).forEach(x=>{const o=a[x.co]||(a[x.co]={j:0,v:0});o.j+=x.rej||0;o.v+=x.ru+x.ra+x.wj+x.mw;});
+  return Object.fromEntries(Object.entries(a).map(([k,o])=>[k,o.j/((o.j+o.v)||1)]));})();
+// Valid votes cast outside any county (diaspora, prisons), as a share of in-county valid
+// votes. 2022: IEBC declared Ruto 7,176,141 and Odinga 6,942,930 against 7,170,304 and
+// 6,936,396 in the constituency tally, so at least 12,371 votes came from outside the
+// counties (the two minor candidates' out-of-county votes are not in the source). They
+// count toward the national majority and in no county's 25% test; the model splits them
+// in proportion to the national result (an assumption: no 2027 diaspora poll exists).
+const OOC_SHARE=(()=>{const t=(typeof R22!=='undefined'?R22:[]).reduce((s,x)=>s+x.ru+x.ra+x.wj+x.mw,0);return t?((7176141-7170304)+(6942930-6936396))/t:0;})();
 const WBC=new Map();
 WARDS.forEach(w=>{if(!WBC.has(w.county))WBC.set(w.county,[]);WBC.get(w.county).push(w);});
 
@@ -382,6 +395,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const uo  =(params.uo  !==undefined?params.uo  :(S.uo??0))/100;
   const ua  =(params.ua  !==undefined?params.ua  :(S.ua??0))/100;
   const pBias=(params.pollBias!==undefined?params.pollBias:S.pollBias)?POLL_ERR.mean/100:0;
+  // rejected-ballot sensitivity: multiplier on each county's 2022 rejection rate (default 1)
+  const rejX=params.rejX!==undefined?params.rejX:(S.rejX??1);
   const reg={...S.reg,...(params.reg||{})};
   const rt=params.rt||S.rt||RT_ZERO;
   // county → turnout factor from the regional sliders
@@ -407,7 +422,7 @@ function sim(params={},noise=false,shocks=true,capWards=false){
   const agg=CO.map(c=>({
     name:c.name,cluster:c.cluster,pop:c.projectedVoters2027,
     dq:c.dataQuality,vl:c.volatility,yr:c.youthRatio,
-    tv:0,iv:0,ov:0,tfv:0,ts:0,wc:0,oc:new Float64Array(nO)
+    tv:0,iv:0,ov:0,tfv:0,ts:0,wc:0,cv:0,jv:0,oc:new Float64Array(nO)
   }));
   // Active shocks; cluster shocks are defined with `cl`, older ones with `cluster`
   const shockList=shocks?S.shocks.map(sh=>({sh,cl:sh.cluster||sh.cl})):[];
@@ -468,10 +483,11 @@ function sim(params={},noise=false,shocks=true,capWards=false){
 
     const uTurn=1+WU[wi]*ua;
     const to=clamp((w.toBase+(w.yr||0.42)*ys+sto)*(rtc[w.county]||1)*(1-F.away[wi])*uTurn+tn,0.2,0.87);
-    const vs=w.voters*to;
+    // ballots cast, minus rejected ballots = valid votes, which every share is of
+    const cast=w.voters*to,vs=cast*(1-clamp((REJ_RATE[w.county]||0)*rejX,0,0.5));
     const a=k.ci>=0?agg[k.ci]:null;
     if(a){
-      a.tv+=vs;a.iv+=vs*si_;a.ov+=vs*so_;a.tfv+=vs*st_;a.ts+=to;a.wc++;
+      a.cv+=cast;a.jv+=cast-vs;a.tv+=vs;a.iv+=vs*si_;a.ov+=vs*so_;a.tfv+=vs*st_;a.ts+=to;a.wc++;
       for(let o=0;o<nO;o++)a.oc[o]+=vs*st_*F.others[o].frac[wi];
     }
     if(capWards)wardRes.push({county:w.county,constituency:w.constituency,ward:w.ward,
@@ -486,12 +502,15 @@ function sim(params={},noise=false,shocks=true,capWards=false){
       ls:Math.max(i,o,t)};
   });
 
-  const tot=ctyRes.reduce((a,c)=>({v:a.v+c.tv,i:a.i+c.iv,o:a.o+c.ov,t:a.t+c.tfv}),{v:0,i:0,o:0,t:0});
+  const tot=ctyRes.reduce((a,c)=>({v:a.v+c.tv,i:a.i+c.iv,o:a.o+c.ov,t:a.t+c.tfv,cast:a.cast+c.cv,rej:a.rej+c.jv}),{v:0,i:0,o:0,t:0,cast:0,rej:0});
   const V=tot.v||1;
   // every other contestant's national share, largest first (idx = position in F.others)
   const others=F.others.map((g,o)=>({idx:o,key:g.key,name:g.name,members:g.members,share:ctyRes.reduce((s,c)=>s+c.oc[o],0)/V}))
     .sort((x,y)=>y.share-x.share);
-  const nat={i:tot.i/V,o:tot.o/V,t:tot.t/V,v:tot.v,others,
+  // v = valid votes in the counties; ooc = valid votes cast outside any county, split in
+  // proportion to the national result so shares are unchanged; valid = the Art. 138 denominator
+  const ooc=tot.v*OOC_SHARE;
+  const nat={i:tot.i/V,o:tot.o/V,t:tot.t/V,v:tot.v,ooc,valid:tot.v+ooc,cast:tot.cast+ooc,rejected:tot.rej,others,
     A:{name:F.A.name,members:F.A.members},B:F.B?{name:F.B.name,members:F.B.members}:null};
   return{ctyRes,nat,wardRes};
 }
@@ -514,7 +533,7 @@ function mcCore(params,n){
           try{
             const r=sim(params,true,true,false);
             // Art. 138(4) on integer valid-vote tallies, for every contestant (js/article138.js)
-            const g=A138.fromSim(r.ctyRes,r.nat);
+            const g=A138.fromSim(r.ctyRes,r.nat,OOC_SHARE);
             if(g.degenerate)degenerate++;
             const el=g.elected[0]||null;
             if(el==='inc')iW++;else if(el==='opp')oW++;else if(el)xW[el]=(xW[el]||0)+1;else{
@@ -708,7 +727,7 @@ function implTxt(res,mc_){
   const out=[];
   const lead=nat.i>=nat.o?'inc':'opp',L=blocName(lead),short=Math.max(0,0.5-Math.max(nat.i,nat.o));
   if(mc_.ro>0.60)
-    out.push(`Nobody reaches 50% plus one, so a run-off is the most likely ending. ${L} would need about ${fmtVotes(short*nat.v)} more votes to win in round one.`);
+    out.push(`Nobody reaches 50% plus one, so a run-off is the most likely ending. ${L} would need about ${fmtVotes(short*nat.valid)} more votes to win in round one.`);
   else if(Math.max(mc_.iW,mc_.oW)>0.45)
     out.push(`${blocName(mc_.iW>=mc_.oW?'inc':'opp')} can win in round one, but only if both tests hold: over half the votes and 25% in 24 counties.`);
   else
@@ -1034,7 +1053,7 @@ function rScen(){
     try{
       for(let i=0;i<N_SC;i++){
         const mr=sim(p,true,false,false);
-        const el=A138.fromSim(mr.ctyRes,mr.nat).elected[0];
+        const el=A138.fromSim(mr.ctyRes,mr.nat,OOC_SHARE).elected[0];
         if(el==='inc')iW++;else if(el==='opp')oW++;else if(el)xW++;
       }
     }finally{RNG_SOURCE=prev;}
@@ -1067,9 +1086,9 @@ function rScen(){
     ${coal(sc.cfg)}
     <div class="sq-bars" aria-label="First-round shares">
       ${[[sc.cfg.teams[0],sc.n.i,'var(--team-a)'],[sc.cfg.teams[1],sc.n.o,'var(--team-b)'],['Others',sc.n.t,'var(--others)']].map(([l,v,col])=>`
-      <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b><em>${fmtVotes(v*sc.n.v)}</em></div>`).join('')}
+      <div class="sq-bar"><span>${l}</span><div class="sq-track"><div style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div><b>${pct(v)}</b><em>${fmtVotes(v*sc.n.valid)}</em></div>`).join('')}
     </div>
-    <p class="sq-total">Total votes cast <b>${N.format(Math.round(sc.n.v))}</b> · turnout ${pct(sc.n.v/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} projected voters</p>
+    <p class="sq-total">Valid votes <b>${N.format(Math.round(sc.n.valid))}</b> · turnout ${pct(sc.n.cast/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} projected voters</p>
     <div class="sq-foot">
       <span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span>
       <span>Run-off ${pct(sc.ro,0)} · Ruto 25%+ in ${sc.i25}/47</span>
@@ -1080,10 +1099,10 @@ function rScen(){
   $('#sqTbl').innerHTML=`<thead><tr><th>Scenario</th><th>Team A</th><th>Team B</th><th>Others</th><th>Total votes</th><th>A 25%+ counties</th><th>Run-off (share of runs)</th><th>Most likely</th></tr></thead>
   <tbody>${results.map(sc=>`<tr>
     <td class="u-strong">${sc.tier}</td>
-    <td class="c-team-a">${pct(sc.n.i)} <span class="hint">${fmtVotes(sc.n.i*sc.n.v)}</span></td>
-    <td class="c-team-b">${pct(sc.n.o)} <span class="hint">${fmtVotes(sc.n.o*sc.n.v)}</span></td>
-    <td class="c-others">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.v)}</span></td>
-    <td>${N.format(Math.round(sc.n.v))}</td>
+    <td class="c-team-a">${pct(sc.n.i)} <span class="hint">${fmtVotes(sc.n.i*sc.n.valid)}</span></td>
+    <td class="c-team-b">${pct(sc.n.o)} <span class="hint">${fmtVotes(sc.n.o*sc.n.valid)}</span></td>
+    <td class="c-others">${pct(sc.n.t)} <span class="hint">${fmtVotes(sc.n.t*sc.n.valid)}</span></td>
+    <td>${N.format(Math.round(sc.n.valid))}</td>
     <td>${sc.i25}/47</td>
     <td>${pct(sc.ro,0)}</td>
     <td><span class="b ${sc.outcome[0]}">${sc.outcome[1]}</span></td>
@@ -1834,7 +1853,7 @@ function renderExecutiveReport(){
     return `<article class="rd-tile rd-team" style="--tc:${col(key)}">
       <header class="rd-team-h"><span class="rd-letter">${String.fromCharCode(65+ti)}</span><h4>${mapEsc(t)}</h4><span class="rd-status${status==='Out after round one'?' is-out':''}">${status}</span></header>
       <div class="rd-ticket">${person(k.p,'President',pPolls,key)}${k.rName?person(k.rName,'Running mate',rmNote,key):`<div class="rd-person is-empty"><span class="rd-av">–</span><span class="rd-pn"><b>No running mate</b></span></div>`}</div>
-      <div class="rd-share"><b style="color:${ink(key)}">${pct(sh)}</b><span>first round<br>${fmtVotes(sh*n.v)} votes</span></div>
+      <div class="rd-share"><b style="color:${ink(key)}">${pct(sh)}</b><span>first round<br>${fmtVotes(sh*n.valid)} votes</span></div>
       <div class="rd-metric"><span class="rd-ml">25%+ in <b>${nc}</b> of 47 counties</span>${ticks(nc,key)}<span class="rd-need">${nc>=24?'Passes':'Needs 24'}</span></div>
       <div class="rd-metric rd-win"><span class="rd-ml">Wins, this line-up</span><span class="rd-winbar"><i style="width:${(wn*100).toFixed(1)}%;background:${col(key)}"></i></span><b>${pct(wn,0)}</b></div>
       ${behind.length?`<p class="rd-behind"><span>Also on the team</span>${behind.map(b=>`<em>${mapEsc(b)}${avgOf(b)!=null?` ${avgOf(b).toFixed(1)}%`:''}</em>`).join('')}</p>`:''}
@@ -1885,13 +1904,13 @@ function renderExecutiveReport(){
   <section class="rd-kpis">
     <div class="rd-tile rd-kpi"><span>Run-off</span><b>${pct(mc_.ro,0)}</b><em>if this line-up runs</em></div>
     <div class="rd-tile rd-kpi"><span>24-county test</span><b><span style="color:${ink('inc')}">${i25}</span><small> · </small><span style="color:${ink('opp')}">${o25}</span></b><em>A · B, needs 24</em></div>
-    <div class="rd-tile rd-kpi"><span>Leader short of 50%</span><b>${field[0].v<0.5?fmtVotes((0.5-field[0].v)*n.v):'—'}</b><em>votes for ${mapEsc(field[0].l)}</em></div>
+    <div class="rd-tile rd-kpi"><span>Leader short of 50%</span><b>${field[0].v<0.5?fmtVotes((0.5-field[0].v)*n.valid):'—'}</b><em>votes for ${mapEsc(field[0].l)}</em></div>
     <div class="rd-tile rd-kpi"><span>Dispute risk</span><b class="${dr.score>60?'vr':dr.score>35?'va':'vgr'}">${Math.round(dr.score)}<small>/100</small></b><em>${dr.n} counties within 6 points</em></div>
   </section>
 
   <section class="rd-detail">
     <article class="rd-tile">
-      <header class="rd-th"><h4>Round one</h4><span>${N.format(Math.round(n.v))} votes · turnout ${pct(n.v/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} (${mapEsc(REGISTER_MODES[S.registerMode||'current'].l.toLowerCase())})</span></header>
+      <header class="rd-th"><h4>Round one</h4><span>${N.format(Math.round(n.valid))} valid votes · turnout ${pct(n.cast/REG_TOTAL,0)} of ${fmtVotes(REG_TOTAL)} (${mapEsc(REGISTER_MODES[S.registerMode||'current'].l.toLowerCase())})</span></header>
       <div class="rd-r1"><div class="rs"><div class="rs-segs">${r1}</div></div><span class="rd-half" aria-hidden="true"><i>50% + 1</i></span></div>
       <ul class="rd-legend">${field.slice(0,5).map(c=>`<li style="--c:${col(c.k)}"><i></i><span>${mapEsc(c.l)}</span><b>${pct(c.v)}</b></li>`).join('')}</ul>
       <p class="rd-note">Outright win needs over 50% and 25% in 24 counties. ${field[0].v<0.5?`${mapEsc(field[0].l)} is ${((0.5-field[0].v)*100).toFixed(1)} points short of 50%.`:''}</p>

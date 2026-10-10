@@ -67,6 +67,15 @@ function cmp(a, b, path) {
   if (a !== b) diffs.push([path, a, b, Infinity]);
 }
 cmp(want, out, 'golden');
+if (diffs.length && process.argv.includes('--report')) {
+  // Largest change per field: national shares/votes, county shares (cty columns 1–3 = i/o/t,
+  // 4 = valid votes) and Monte Carlo summaries. Helps describe an intended change.
+  const field = p => { const m = p.match(/\.cty\.\d+\.(\d)$/); if (m) return 'county.' + ['name', 'i', 'o', 't', 'votes'][+m[1]];
+    const q = p.match(/\.p25\.\d+$/); if (q) return 'mc.countyP25'; const parts = p.split('.'); return (p.includes('.mc.') ? 'mc.' : 'nat.') + parts[parts.length - 1]; };
+  const agg = {};
+  for (const [p, a, b, d] of diffs) { const f = field(p), n = (agg[f]?.n || 0) + 1; if (!agg[f] || d > agg[f].d) agg[f] = { d, p, a, b }; agg[f].n = n; }
+  for (const [f, x] of Object.entries(agg).sort()) console.error(`  ${f.padEnd(16)} ${String(x.n).padStart(5)} differ · max |Δ| ${+x.d.toPrecision(4)} at ${x.p.replace('golden.', '')}`);
+}
 if (diffs.length) {
   const worst = [...diffs].sort((x, y) => y[3] - x[3]).slice(0, 15);
   console.error(`GOLDEN MASTER: ${diffs.length} values differ (largest first):`);
