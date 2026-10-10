@@ -71,6 +71,7 @@
       <div class="tm-chips" id="teamChips"></div>
       <p class="side-h tm-sub">Who joins which team</p>
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
+      <p class="hint">Team A is the incumbent's team, and the incumbent stays on it: the model's assumptions about where voters go are written relative to the incumbent's side. The letters are positions, not a ranking or an endorsement.</p>
       <p class="hint">Weighted average of validated polls (recency, sample, pollster). <sup>*</sup> one poll, pulled toward a small prior. <sup>†</sup> no validated poll yet. Hover a figure for the detail.</p>
       <p class="side-h tm-sub">Tickets</p>
       <div class="tk" id="ticketBox"></div>
@@ -95,7 +96,7 @@
       <div class="sl">
         <label class="sl-top" for="sl-lc"><span>Cross to the other main side</span><output id="lv-lc">40%</output></label>
         <input type="range" id="sl-lc" list="vwLc" title="Double-click to reset" min="0" max="100" step="1" value="40">
-        <p class="hint">Opposition voters go to team A; team A's voters go to team B.</p>
+        <p class="hint">Voters leaving an opposition candidate cross to team A; voters leaving a team A candidate cross to team B.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-le"><span>Vote for someone else</span><output id="lv-le">30%</output></label>
@@ -274,7 +275,7 @@
 <!-- ═══ TAB: TIPPING ═══ -->
 <div class="tpane" id="t-tip" role="tabpanel" aria-labelledby="tab-tip">
   <h2 class="sr-only">Swing counties</h2>
-  <p class="pane-intro"><strong>Counties near the 25% line.</strong> Team A needs 25% in 24 counties; these could go either way.</p>
+  <p class="pane-intro"><strong>Counties near the 25% line.</strong> Every candidate needs 25% in at least 24 counties to win outright. This tab tracks team A's counties; both main teams' county counts are on the Article 138 tab.</p>
   <section class="pan mb16" aria-labelledby="tipStripT"><div class="pan-hdr"><h3 class="pan-t" id="tipStripT">Every county against the 25% line <span class="pan-s">team A share</span></h3></div><div id="tipStrip"></div></section>
   <section class="pan mb12" aria-labelledby="p24T">
     <div class="pan-hdr"><h3 class="pan-t" id="p24T">The 24-county test</h3></div>

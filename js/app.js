@@ -39,8 +39,13 @@ const TO_SIG={
 };
 // ═══ TEAMS (v7) ═══
 // Every candidate in data/context.js is on exactly one team or runs solo.
-// Team A is Ruto's side (Ruto is fixed there); team B is the main challenger
-// slot; teams C/D and solo candidates make up "others".
+// Team A is the incumbent's team and the incumbent cannot move: the transfer and
+// run-off priors (TRANSFER_PRIORS, RUNOFF_INC_PRIORS in data/context.js) and the
+// running-mate picks are defined relative to the incumbent's side ('inc'), so moving
+// the incumbent would invert them. Team B is the main challenger slot; teams C/D and
+// solo candidates make up "others". Removing this asymmetry needs contestant-specific
+// priors (spec Phase 3, transfer simplex), not a UI change.
+const INCUMBENT='William Ruto';
 // Default line-up (Oct 2026 testing baseline): the broad-based government
 // (Ruto–Kindiki, Oburu Odinga's ODM wing off the ticket) vs a Kalonzo–Sifuna
 // United opposition (Gachagua backing it from off the ticket), with Matiang'i–
@@ -65,7 +70,7 @@ function noThirdForceCfg(){
 function topFourCfg(){
   const assign={};let n=0;
   [...CANDIDATES].sort((a,b)=>b.avg-a.avg).forEach(c=>{
-    if(c.name==='William Ruto')assign[c.name]=0;
+    if(c.name===INCUMBENT)assign[c.name]=0;
     else if(n<4){assign[c.name]=1;n++;}
     else assign[c.name]=-1;
   });
@@ -109,7 +114,7 @@ function rmEffectText(pk){
 }
 function ticketOf(cfg,ti){
   const m=teamMembers(cfg,ti),t=(cfg.tickets&&cfg.tickets[ti])||{};
-  const p=ti===0&&m.includes('William Ruto')?'William Ruto':(m.includes(t.p)?t.p:m[0]||null);
+  const p=ti===0&&m.includes(INCUMBENT)?INCUMBENT:(m.includes(t.p)?t.p:m[0]||null);
   let r,pick=null;
   if(t.r===null||t.r==='')r=null;
   else if(ti===0&&rmPick(t.r)){r=t.r;pick=rmPick(t.r);}
@@ -1142,7 +1147,7 @@ function renderTeams(){
   const roleOf=n=>{const ti=cfg.assign[n];if(!(ti>=0))return '';const t=tks[ti];if(!t||(t.members.length<2&&!t.pick))return '';
     return n===t.p?'<small class="tm-role is-p">President</small>':n===t.r?'<small class="tm-role is-r">Running mate</small>':n===t.ally?'<small class="tm-role is-r">Backs mate</small>':'<small class="tm-role is-off">Off ticket</small>';};
   grid.innerHTML=rows.map((c,ri)=>{
-    const cur=cfg.assign[c.name];const fixed=c.name==='William Ruto';
+    const cur=cfg.assign[c.name];const fixed=c.name===INCUMBENT;
     return `<div class="tm-row${ri>=8&&!renderTeams.all?' tm-more':''}" role="radiogroup" aria-labelledby="tmn${ri}">
       <span class="tm-name" id="tmn${ri}"><span>${mapEsc(c.name)}</span>${roleOf(c.name)}<i style="--w:${(c.avg/rows[0].avg*100).toFixed(0)}%" aria-hidden="true"></i></span><span class="tm-avg" title="${mapEsc(pollTip(c))}">${(S.pollMode==='all'||!c.val?c.pollAll:c.poll).toFixed(1)}%${!c.val&&S.pollMode!=='all'?'<sup>†</sup>':(S.pollMode==='all'?c.pollsAll:c.polls)===1?'<sup>*</sup>':''}</span>
       <span class="tm-seg">${cfg.teams.map((t,ti)=>`<label style="--tc:var(${TEAM_VARS[ti]})"><input type="radio" name="tm${ri}" value="${ti}" aria-label="${mapEsc(t)}" ${cur===ti?'checked':''} ${fixed&&ti!==0?'disabled':''}><span>${L(ti)}</span></label>`).join('')}
@@ -1175,7 +1180,7 @@ function renderTickets(tks){
   const rowsH=cfg.teams.map((t,ti)=>{const k=tks[ti];if(!k||(k.members.length<2&&ti!==0))return '';
     const rmSel=ti===0?rmOptsA(k):`<option value=""${k.r?'':' selected'}>None</option>${k.members.filter(n=>n!==k.p).map(n=>opt(n,k.r)).join('')}`;
     return `<div class="tk-row" style="--tc:var(${TEAM_VARS[ti]})"><p class="tk-h"><b>${L(ti)}</b>${mapEsc(t)}</p>
-      <label class="tk-f"><span>President</span><select class="sel" data-tk="${ti}" data-role="p"${ti===0?' disabled title="Ruto leads team A"':''}>${k.members.map(n=>opt(n,k.p)).join('')}</select></label>
+      <label class="tk-f"><span>President</span><select class="sel" data-tk="${ti}" data-role="p"${ti===0?` disabled title="${mapEsc(INCUMBENT)} (the incumbent) leads team A: the model's transfer priors are defined relative to the incumbent's side"`:''}>${k.members.map(n=>opt(n,k.p)).join('')}</select></label>
       <label class="tk-f"><span>Running mate</span><select class="sel" data-tk="${ti}" data-role="r">${rmSel}</select></label>
       ${k.pick?`<p class="hint tk-off"><b>${mapEsc(k.pick.name)}</b>: ${mapEsc(rmEffectText(k.pick))}</p>`:''}${ti===0&&k.r&&cfg.defectors&&cfg.defectors.includes(k.r)?`<p class="hint tk-off"><b>${mapEsc(k.r)}</b> crossed from the opposition: ${cfg.offFollow??LEAK_DEFAULT.off}% of their supporters follow; the rest split as set below.</p>`:''}
       ${k.off.length?`<p class="hint tk-off">Off the ticket: ${k.off.map(n=>mapEsc(n.split(' ').slice(-1)[0])).join(', ')}</p>`:''}</div>`;}).join('');
@@ -1821,7 +1826,7 @@ function runningMateOptions(ti){
     Object.entries(RM_PICKS).forEach(([id,p])=>opts.push({label:p.name,kind:'Outside the polls',r:'pick:'+id,mod:setR('pick:'+id)}));
     // the two biggest opposition names as defectors (or the current defector)
     const def=[...CANDIDATES].sort((a,b)=>b.avg-a.avg).map(c=>c.name).filter(n=>S.cfg.assign[n]!==0).slice(0,2);
-    def.forEach(n=>opts.push({label:n,kind:'Defector',r:n,mod:c=>{c.assign[n]=0;c.defectors=[...new Set([...(c.defectors||[]),n])];c.tickets[0]={p:'William Ruto',r:n};}}));
+    def.forEach(n=>opts.push({label:n,kind:'Defector',r:n,mod:c=>{c.assign[n]=0;c.defectors=[...new Set([...(c.defectors||[]),n])];c.tickets[0]={p:INCUMBENT,r:n};}}));
   }
   return opts.map(o=>({...o,cur:(o.r||null)===(cur.r||null)}));
 }
