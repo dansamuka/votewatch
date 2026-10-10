@@ -8,7 +8,7 @@ const WARDS=WD.map(w=>({id:w.id,county:w.co,constituency:w.cs,ward:w.w,
 // Register scenarios (from vote2watch v8): 2022 certified; current proxy (2022 +
 // 2.94m new registrations by 20 Aug 2026, shared by IEBC's April county split);
 // IEBC's ~28.5m 2027 planning target. Wards scale with their 2022 register.
-const REGISTER_MODES={base:{k:'registered2022',l:'2022 certified register'},current:{k:'currentEnrolmentProxyAug2026',l:'Current proxy (Aug 2026)'},target:{k:'target2027',l:'IEBC 2027 target scenario'}};
+const REGISTER_MODES={base:{k:'registered2022',l:'2022 certified register'},current:{k:'currentEnrolmentProxyAug2026',l:'Gross-additions proxy (Aug 2026; removals not netted)'},target:{k:'target2027',l:'IEBC 2027 planning target (not a register)'}};
 function countyRegister(c,mode){const k=(REGISTER_MODES[mode]||REGISTER_MODES.current).k;return Number(c&&c[k])||Number(c&&c.registered2022)||0;}
 let REG_TOTAL=0,WT=[],WT_SUM=0,WU=[];
 const CM=new Map(CO.map(c=>[c.name,c]));
@@ -1571,12 +1571,14 @@ function dlCSV(kind){
   const r=S.res;if(!r)return;
   let rows=[],fn=`vw2027_${kind}.csv`;
   if(kind==='county'){
-    rows=[['County','Cluster','Voters','Turnout','Inc','Inc≥25','Opp','TF','DQ']];
-    r.ctyRes.forEach(c=>rows.push([c.name,c.cluster,Math.round(c.tv),pct(c.to),pct(c.i),c.ia,pct(c.o),pct(c.t),c.dq]));
+    rows=[['County','Cluster','BallotsCast','Rejected','ValidVotes','Turnout','Inc','Inc≥25','Opp','TF','DQ']];
+    r.ctyRes.forEach(c=>rows.push([c.name,c.cluster,Math.round(c.cv),Math.round(c.jv),Math.round(c.tv),pct(c.to),pct(c.i),c.ia,pct(c.o),pct(c.t),c.dq]));
   }else if(kind==='ward'){
-    rows=[['County','Constituency','Ward','Registered2027','Registered2022_IEBC','Ruto2022_constituency','Odinga2022_constituency','Turnout_est','Inc_est','Opp_est','TF_est','DQ']];
+    // Ward rows are modelled: IEBC publishes no ward presidential totals, so each ward inherits its
+    // constituency's 2022 result. The Resolution and ModelledNotOfficial columns say so in the file.
+    rows=[['County','Constituency','Ward','Registered2027','Registered2022_IEBC','Ruto2022_constituency','Odinga2022_constituency','Turnout_est','Inc_est','Opp_est','TF_est','DQ','Resolution','ModelledNotOfficial']];
     const v22=new Map(WD.map(w=>[w.co+'|'+w.cs+'|'+w.w,w.v22]));
-    (S.wards||[]).forEach(w=>{const r=R22M.get(w.county+'|'+w.constituency),q=r?r22Share(r):null;rows.push([w.county,w.constituency,w.ward,Math.round(w.voters),v22.get(w.county+'|'+w.constituency+'|'+w.ward)??'',q?pct(q.ru):'',q?pct(q.ra):'',pct(w.to),pct(w.inc),pct(w.opp),pct(w.tf),w.dq]);});
+    (S.wards||[]).forEach(w=>{const r=R22M.get(w.county+'|'+w.constituency),q=r?r22Share(r):null;rows.push([w.county,w.constituency,w.ward,Math.round(w.voters),v22.get(w.county+'|'+w.constituency+'|'+w.ward)??'',q?pct(q.ru):'',q?pct(q.ra):'',pct(w.to),pct(w.inc),pct(w.opp),pct(w.tf),w.dq,'constituency-inherited','yes']);});
   }else if(kind==='results2022'){
     rows=[['County','Constituency','Registered2022','Odinga','Ruto','Wajackoyah','Mwaure','Rejected','Check','CountySplitMatchesIndependentSources']];
     const lab={v:'matches official Form 34B total',r:'rescaled to official total',c:'official total; split from county Form 34C figures',s:'swapped back to correct constituency',u:'total not checked; county split checked'};
@@ -1681,7 +1683,7 @@ function renderGovernanceWidgets(){
 function validationHTML(){return `<div class="note u-fs12 u-lh-relaxed"><strong class="c-warn">Validation status: historically back-tested; not externally validated as a 2027 forecast.</strong><br>Current calibration: 2022 national/county/regional hindcast, 2013–2022 poll-error record, exact register reconciliation and county uncertainty calibrated to 2022 coverage. Remaining evidence gaps: direct ward/polling-station presidential history, cleaned IEBC register, more polling time series, and measured coalition/run-off/running-mate/turnout transfer effects.<br>County uncertainty is calibrated on 2022 rather than independently validated out of sample.</div>`;}
 function modelRiskRegisterHTML(){
   const risks=[
-    ['Ward-level vote shares imputed from county baseline','High','Replace with actual ward-level presidential results'],
+    ['Ward vote shares inherited from the constituency 2022 result (no ward presidential totals are published)','High','Use polling-station Forms 34A to build ward results'],
     ['Third Force baseline synthetic','High','Calibrate with polling and repeated survey waves'],
     ['Proxy boundary polygons exist','Medium/High','Replace proxy geometries with verified official county GeoJSON'],
     ['Polling anchor previously under-wired','Mitigated','v4.5 applies Incumbent, Opposition and Third Force poll adjustments'],
