@@ -8,6 +8,7 @@
 //                respect some of them.
 import fs from 'node:fs';
 import { loadModel } from './model-harness.mjs';
+import { runArticle138Tests, runEngineGateTests } from './test-article138.mjs';
 
 const V = loadModel();
 const res = { integrity: [], sanity: [] };
@@ -15,6 +16,10 @@ const check = kind => (x, m) => { if (!x) throw new Error(`FAIL (${kind}): ${m}`
 const ok = check('integrity'), bound = check('sanity');
 const near = (a, b, t, m, f = ok) => f(Math.abs(a - b) <= t, `${m} (expected ${b} ±${t}, got ${a})`);
 const sumBy = (xs, f) => xs.reduce((a, x) => a + f(x), 0);
+
+// ── Article 138 gates (js/article138.js): exact integer boundaries and edge cases
+runArticle138Tests(V.A138, ok);
+runEngineGateTests(V, ok);
 
 // ── geography and register
 ok(V.CO.length === 47, '47 counties');

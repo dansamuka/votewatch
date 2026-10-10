@@ -45,7 +45,7 @@ function race(el,r,mc,i25,o25){
   el.querySelector('#raceTot').textContent=Math.round(nat.v).toLocaleString('en-KE');
   // gap annotation: how far the leader is from 50% + 1
   const lead=f[0],gap=el.querySelector('#raceGap');
-  gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>=0.5);
+  gap.style.setProperty('--from',Math.min(lead.v,0.5));gap.classList.toggle('over',lead.v>0.5);
   gap.querySelector('span').textContent=lead.v<0.5?`+${((0.5-lead.v)*100).toFixed(1)} pts to win outright`:'';
   // Kenya signature: county centroids coloured by who leads, sized by votes cast (built when idle)
   (window.requestIdleCallback||setTimeout)(()=>{

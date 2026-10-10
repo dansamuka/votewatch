@@ -500,8 +500,8 @@ function sim(params={},noise=false,shocks=true,capWards=false){
 // result as running it in one go.
 function mcCore(params,n){
   // i = draws attempted, ok = draws that completed; failures are counted and reported
-  let i=0,ok=0,failed=0,lastErr='',iW=0,oW=0,ro=0,iJ=0,oJ=0;
-  const iA=[],oA=[],tA=[],r2Turn=[],pairs={},r2Win={};
+  let i=0,ok=0,failed=0,lastErr='',iW=0,oW=0,ro=0,iJ=0,oJ=0,degenerate=0,r2Tie=0;
+  const iA=[],oA=[],tA=[],r2Turn=[],pairs={},r2Win={},xW={};
   const nC=CO.length,cI=Array.from({length:nC},()=>new Float32Array(n)),cO=Array.from({length:nC},()=>new Float32Array(n)),c25=new Uint32Array(nC);
   const gen=S.mcMode==='research'?mulberry32(seedHash(`${S.seed}|${JSON.stringify(params)}|${n}|${S.tf}|${S.si}|${S.so}|${S.ys}|${S.yg}|${S.ub}|${S.uo}|${S.ua}|${S.pollBias}|${S.registerMode}|${S.pollMode}|${JSON.stringify(S.reg)}|${JSON.stringify(S.rt)}|${JSON.stringify(S.cfg)}`)):null;
   const mode=S.mcMode,seed=S.seed;
@@ -512,22 +512,23 @@ function mcCore(params,n){
         for(const end=Math.min(n,i+k);i<end;i++){
           try{
             const r=sim(params,true,true,false);
-            const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
-            const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
-            const iP=r.nat.i>0.50&&i25>=CTY_N;
-            const oP=r.nat.o>0.50&&o25>=CTY_N;
-            if(iP)iW++;else if(oP)oW++;else{
+            // Art. 138(4) on integer valid-vote tallies, for every contestant (js/article138.js)
+            const g=A138.fromSim(r.ctyRes,r.nat);
+            if(g.degenerate)degenerate++;
+            const el=g.elected[0]||null;
+            if(el==='inc')iW++;else if(el==='opp')oW++;else if(el)xW[el]=(xW[el]||0)+1;else{
               ro++;
               // which two finish top in this draw, and who wins round two: everyone
               // else follows their candidates' loyalties, with a national shift each run
               const r2=r2sim(r.ctyRes,r.nat,'aff',true);
               const key=[r2.a,r2.b].sort().join('|');
               pairs[key]=(pairs[key]||0)+1;
-              r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;r2Turn.push(r2.turnoutRatio);
+              if(r2.winner)r2Win[r2.winner]=(r2Win[r2.winner]||0)+1;else r2Tie++;
+              r2Turn.push(r2.turnoutRatio);
             }
-            if(iP)iJ++;if(oP)oJ++;
+            if(el==='inc')iJ++;if(el==='opp')oJ++;
             iA.push(r.nat.i);oA.push(r.nat.o);tA.push(r.nat.t);
-            r.ctyRes.forEach((c,j)=>{cI[j][ok]=c.i;cO[j][ok]=c.o;if(c.i>=0.25)c25[j]++;});
+            r.ctyRes.forEach((c,j)=>{cI[j][ok]=c.i;cO[j][ok]=c.o;if(g.countyStatus[c.name].inc==='pass')c25[j]++;});
             ok++;
           }catch(e){failed++;lastErr=String(e&&e.message||e);}
         }
@@ -538,7 +539,7 @@ function mcCore(params,n){
       // pairs / r2Win are shares of the run-off draws only
       const norm=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,ro?v/ro:0]));
       const d=ok||1;
-      return{iW:iW/d,oW:oW/d,ro:ro/d,iJ:iJ/d,oJ:oJ/d,pairs:norm(pairs),r2Win:norm(r2Win),failed,lastErr,r2TurnLo:r2Turn.length?qntl(r2Turn,.1):null,r2TurnMed:r2Turn.length?qntl(r2Turn,.5):null,r2TurnHi:r2Turn.length?qntl(r2Turn,.9):null,
+      return{iW:iW/d,oW:oW/d,ro:ro/d,iJ:iJ/d,oJ:oJ/d,xW:Object.fromEntries(Object.entries(xW).map(([k,v])=>[k,v/d])),pairs:norm(pairs),r2Win:norm(r2Win),r2Tie:ro?r2Tie/ro:0,degenerate,failed,lastErr,r2TurnLo:r2Turn.length?qntl(r2Turn,.1):null,r2TurnMed:r2Turn.length?qntl(r2Turn,.5):null,r2TurnHi:r2Turn.length?qntl(r2Turn,.9):null,
         iMed:qntl(iA,.5),oMed:qntl(oA,.5),tMed:qntl(tA,.5),
         iLo:qntl(iA,.1),iHi:qntl(iA,.9),oLo:qntl(oA,.1),oHi:qntl(oA,.9),
         // per county: 80% range of each main side's share, and how often A clears 25%
@@ -570,6 +571,7 @@ function mcProgressive(onDone){
 // "others" key ('t2','t3' for teams C/D, 's<n>' for a solo candidate).
 function blocName(k,nat=S.res&&S.res.nat){
   const cfg=S.cfg;
+  if(k==null)return 'Exact tie (not resolved by Art. 138(7))';
   if(k==='inc')return cfg.teams[0]||'Team A';
   if(k==='opp')return cfg.teams[1]||'Team B';
   if(k==='tf')return 'Others';
@@ -641,9 +643,10 @@ function r2sim(ctyRes,nat,dir='aff',noise=false){
     return{...c,r2a,r2lead:r2a>=0.5?a:b};
   });
   const shareA=aV/((aV+bV)||1),r1Votes=ctyRes.reduce((s,c)=>s+c.tv,0);
-  // Art. 138(7): most votes wins the run-off; no county-spread test in round two.
-  const winner=shareA>=0.5?a:b;
-  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,dir,votesA:aV,votesB:bV,turnoutRatio:(aV+bV)/(r1Votes||1),
+  // Art. 138(7): most votes wins the run-off; no county-spread test in round two. An exact
+  // tie is not resolved by the Constitution, so it is reported (winner null), not assigned.
+  const fw=A138.freshElectionWinner(Math.round(aV),Math.round(bV),a,b),winner=fw.winner;
+  return{a,b,e,r2cty,shareA,shareB:1-shareA,winner,tie:fw.status==='tie_out_of_model',dir,votesA:aV,votesB:bV,turnoutRatio:(aV+bV)/(r1Votes||1),
     r2iN:a==='inc'?shareA:b==='inc'?1-shareA:null};
 }
 
@@ -1024,18 +1027,17 @@ function rScen(){
     const r=sim(p,false,false,false);
     const i25=r.ctyRes.filter(c=>c.i>=0.25).length;
     const o25=r.ctyRes.filter(c=>c.o>=0.25).length;
-    let iW=0,oW=0;
+    let iW=0,oW=0,xW=0;
     const prev=RNG_SOURCE;
     RNG_SOURCE=mulberry32(seedHash(`${S.seed}|${sc.id}`));
     try{
       for(let i=0;i<N_SC;i++){
         const mr=sim(p,true,false,false);
-        const mi25=mr.ctyRes.filter(c=>c.i>=0.25).length;
-        const mo25=mr.ctyRes.filter(c=>c.o>=0.25).length;
-        if(mr.nat.i>0.5&&mi25>=CTY_N)iW++;else if(mr.nat.o>0.5&&mo25>=CTY_N)oW++;
+        const el=A138.fromSim(mr.ctyRes,mr.nat).elected[0];
+        if(el==='inc')iW++;else if(el==='opp')oW++;else if(el)xW++;
       }
     }finally{RNG_SOURCE=prev;}
-    const ro=1-(iW+oW)/N_SC;
+    const ro=1-(iW+oW+xW)/N_SC;
     // outcome chip: the winner's team hue, or amber (watch) for a run-off
     const outcome=iW/N_SC>=0.5?['b-ta',`${sc.cfg.teams[0]} wins outright`]:oW/N_SC>=0.5?['b-tb',`${sc.cfg.teams[1]} wins outright`]:['b-a','Run-off'];
     return{...sc,r,i25,o25,n:r.nat,iW:iW/N_SC,oW:oW/N_SC,ro,outcome};
