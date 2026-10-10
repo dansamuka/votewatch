@@ -100,7 +100,7 @@ function outcomes(el,mc){
     <p class="hint">Out of 100 simulations of this line-up and these assumptions. Not the chance that this line-up forms.</p>`;
 }
 
-/* ── County margin strip (A minus B), petition zone ±5 points ── */
+/* ── County margin strip (A minus B), close-margin zone ±5 points ── */
 function margins(el,ctyRes,opts={}){
   if(!el)return;
   const W=opts.w||600,H=opts.h||76,R=opts.r||4,pad=12,span=0.8;
@@ -115,7 +115,7 @@ function margins(el,ctyRes,opts={}){
     <line class="axis" x1="${pad}" x2="${W-pad}" y1="${mid}" y2="${mid}"/><line class="zero" x1="${X(0)}" x2="${X(0)}" y1="4" y2="${H-22}"/>
     ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${yOf(p.lvl).toFixed(1)}" r="${R}" style="fill:${p.m>=0?'var(--team-a)':'var(--team-b)'}"><title>${esc(p.n)}: ${p.m>=0?'A':'B'} ahead by ${p1(Math.abs(p.m))}</title></circle>`).join('')}
     <text x="${pad}" y="${H-6}" class="ax-l">B +80</text><text x="${X(0)}" y="${H-6}" class="ax-l" text-anchor="middle">level</text><text x="${W-pad}" y="${H-6}" class="ax-l" text-anchor="end">A +80</text>
-  </svg><p class="mstrip-cap"><b>${close}</b> ${close===1?'county is':'counties are'} within 5 points (shaded): the likeliest to be contested.</p>`;
+  </svg><p class="mstrip-cap"><b>${close}</b> ${close===1?'county is':'counties are'} within 5 points (shaded): the closest results.</p>`;
 }
 
 /* ── Article 138: two gates ── */

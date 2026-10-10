@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="description" content="VOTEWATCH 2027: scenario intelligence for Kenya&#39;s 2027 election, with county-level run-off, tipping-point and dispute-risk analysis.">
+<meta name="description" content="VOTEWATCH 2027: scenario intelligence for Kenya&#39;s 2027 election, with county-level run-off, tipping-point and margin-exposure analysis.">
 <meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VoteWatch 2027</title>
@@ -57,7 +57,7 @@
   <button class="tbtn" data-t="mat" role="tab" id="tab-mat" aria-controls="t-mat" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>Scenarios</button>
   <button class="tbtn" data-t="con" role="tab" id="tab-con" aria-controls="t-con" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3H2zM3.5 6v6M8 6v6M12.5 6v6M2 14h12"/></svg>Article 138</button>
   <button class="tbtn" data-t="map" role="tab" id="tab-map" aria-controls="t-map" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v9l-4 1.5-5-2-4 1.5zM5.5 2v9.5M10.5 4v9.5"/></svg>Map</button>
-  <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Dispute risk</button>
+  <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Margin exposure</button>
   <button class="tbtn" data-t="int" role="tab" id="tab-int" aria-controls="t-int" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>Signals</button>
   <button class="tbtn" data-t="report" role="tab" id="tab-report" aria-controls="t-report" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3M5.5 8h5M5.5 11h5"/></svg>Report</button>
 </div></nav>
@@ -360,10 +360,10 @@
   </div>
 </div>
 
-<!-- ═══ TAB: DISPUTE ═══ -->
+<!-- ═══ TAB: MARGIN EXPOSURE ═══ -->
 <div class="tpane" id="t-dis" role="tabpanel" aria-labelledby="tab-dis">
-  <h2 class="sr-only">Dispute risk</h2>
-  <p class="pane-intro"><strong>Could the result end up in court?</strong> Based on close margins and where they cluster.</p>
+  <h2 class="sr-only">Margin exposure</h2>
+  <p class="pane-intro"><strong>How close is it, and where?</strong> County margins between the two main sides and where close results cluster. A close margin is not evidence of irregularities and does not predict a court petition.</p>
   <div class="g3 mb12" id="disKpis"></div>
   <div class="g2 mb12">
     <div class="pan">
@@ -378,7 +378,7 @@
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><h3 class="pan-t">All counties: dispute risk</h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
+    <div class="pan-hdr"><h3 class="pan-t">All counties: margin exposure</h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
     <div class="tscroll"><table class="tbl" id="disTbl"></table></div>
   </div>
 </div>
@@ -429,27 +429,23 @@
     </div>
   </div>
 
-  <div class="g2 mb12">
+  </div></details>
+  <details class="pan fold tech analyst-only mt12"><summary class="pan-t">Experimental: synthetic indicators <span class="pan-s">not evidence · not used in any result</span></summary><div class="mt12">
+  <p class="note u-fs12 u-lh-relaxed mb12"><strong>These scores are invented formulas, not measurements.</strong> Each combines model outputs (margins, turnout, third-force share) with fixed regional terms chosen by the authors; no survey, price series or incident data enters them. They are shown for method discussion only, are hidden in Public view, and never feed the headline, the simulations or the exports.</p>
+  <div class="g3 mb12">
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Political-Economy Overlays <span class="pan-s">proxy / synthetic explanatory signals</span></h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Political-economy stress <span class="pan-s">synthetic</span></h3></div>
       <div id="politicalEconomyPanel"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">NGO / Civic-Risk Lens</h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Civic-process risk <span class="pan-s">synthetic</span></h3></div>
       <div id="civicRiskPanel"></div>
     </div>
-  </div>
-  <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Security Early-Warning Lens <span class="pan-s">non-operational civic monitoring</span></h3></div>
-      <div id="securityRiskPanel"></div>
-    </div>
-    <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Frontier-Market Election Risk Monitor</h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Market-continuity risk <span class="pan-s">synthetic</span></h3></div>
       <div id="marketRiskPanel"></div>
     </div>
   </div>
-  </div></details>
 </div>
 
 
