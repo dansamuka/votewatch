@@ -31,7 +31,7 @@ for(const p of polls){
  if(!supported.has(p.poll_type))continue;
  if(String(p.geography||'').toLowerCase()!=='kenya')continue;
  if(p.compatible_group&&!String(p.compatible_group).startsWith('presidential_horse_race'))continue;
- if(!/^\d{4}-\d\d-\d\d$/.test(p.date))continue;
+ if(!/^\d{4}-\d\d-\d\d$/.test(p.date)||p.date<'2026-10-03')continue;
  const votes=perId.get(p.poll_id);
  if(!votes||Object.keys(votes).length<2)continue;
  const count=existing.filter(x=>x.date===p.date&&x.pollster===p.pollster);
