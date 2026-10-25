@@ -1,0 +1,35 @@
+name: Synchronize election polls
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: votewatch-poll-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Import upstream national polls
+        run: node scripts/sync-polls.mjs
+      - name: Validate before publishing
+        run: node scripts/validate-model.mjs
+      - name: Commit any polling changes
+        run: |
+          if git diff --quiet -- data/context.js; then
+            echo "No changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/context.js
+          git commit -m "data: synchronize verified and held upstream national polls"
+          git push
