@@ -1,13 +1,20 @@
-// Political context and national presidential-preference polls, as of 3 Oct 2026.
+// Political context and national presidential-preference polls, as of 25 Oct 2026.
 // Polls are taken from the kenya-election-intelligence-engine repo
 // (data/foundation/poll_results_long.json + polls_normalized.json). `eligible`
 // mirrors that repo's model_eligible flag: Mizani and Politrack are shown but
 // held out of averages until their methodology is verified.
 // Regional-only polls (e.g. Infotrak "Mulembe Nation", Western only) are excluded.
 
-const CTX_AS_OF='2026-10-03';
+const CTX_AS_OF='2026-10-25';
 
 const POLLS=[
+  // Research 8020 (24 Oct): secondary reporting only; fieldwork, sample and
+  // original methodology unverified. Publicly visible for sensitivity, NOT eligible
+  // for the model baseline. Undecided 5% is metadata, not a candidate vote.
+  {date:'2026-10-24',field:'not disclosed',pollster:'Research 8020',n:null,eligible:false,
+   url:'https://dansamuka.github.io/kenya-election-intelligence-engine/data/manual_sources/research_8020_2026-10-24_presidential_preference.json',
+   r:{'William Ruto':26,'Edwin Sifuna':25,'Kalonzo Musyoka':11,"Fred Matiang'i":9,'Rigathi Gachagua':7},
+   undecided:5,review:'Pending primary report, fieldwork and methodology verification'},
   {date:'2026-10-01',field:'15–25 Sep 2026',pollster:'Politrack Africa',n:20419,eligible:false,
    url:'https://capitalfm.africa/ruto-leads-2027-presidential-race-with-45-1-politrack-africa-poll/',
    r:{'William Ruto':45.1,'Edwin Sifuna':19.6,'Kalonzo Musyoka':10.3,"Fred Matiang'i":7.2,'Rigathi Gachagua':6,'George Wajackoyah':1.1,'David Maraga':0.8,'Martha Karua':0.8,'James Orengo':0.4,'Jimi Wanjigi':0.3}},
@@ -114,7 +121,8 @@ const CANDIDATES=[
 // Poll weighting (from vote2watch v8)
 const POLLSTER_QUALITY={
   'TIFA Research':1.00,'Infotrak Research':1.00,'Swiss Poll International':0.82,
-  'Stats Kenya':0.55,'Politrack Africa':0.35,'Mizani Africa':0.30
+  'Stats Kenya':0.55,'Politrack Africa':0.35,'Mizani Africa':0.30,
+  'Research 8020':0.25
 };
 function _pollWeight(p,includeHeld=false){
   if(!p.eligible&&!includeHeld)return 0;
