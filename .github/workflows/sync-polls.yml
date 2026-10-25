@@ -1,8 +1,8 @@
 name: Synchronize election polls
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 5 * * *'
+  repository_dispatch:
+    types: [election-engine-polls-updated]
 permissions:
   contents: write
 concurrency:
