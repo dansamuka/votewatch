@@ -1,4 +1,4 @@
-// Political context and national presidential-preference polls, as of 25 Oct 2026.
+// Political context and national presidential-preference polls (date is tracked in CTX_AS_OF).
 // Polls are taken from the kenya-election-intelligence-engine repo
 // (data/foundation/poll_results_long.json + polls_normalized.json). `eligible`
 // mirrors that repo's model_eligible flag: Mizani and Politrack are shown but
