@@ -1,6 +1,11 @@
 name: Synchronize election polls
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/sync-polls.mjs'
+      - '.github/workflows/sync-polls.yml'
   repository_dispatch:
     types: [election-engine-polls-updated]
 permissions:

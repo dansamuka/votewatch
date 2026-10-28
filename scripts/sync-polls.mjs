@@ -25,7 +25,7 @@ const currentBlock=src.slice(begin,end+3);
 const sandbox={};
 const evaluate=new Function(currentBlock+';return POLLS;');
 const existing=evaluate();
-const supported=new Set(['preferred_presidential_aspirant','presidential_preference','presidential_preference_reported']);
+const supported=new Set(['preferred_presidential_aspirant','preferred_presidential_candidate','presidential_preference','presidential_preference_reported']);
 let added=0,held=0;
 for(const p of polls){
  if(!supported.has(p.poll_type))continue;
@@ -41,9 +41,14 @@ for(const p of polls){
    n:Number.isFinite(Number(p.sample_size))&&Number(p.sample_size)>0?Number(p.sample_size):null,
    eligible,url:p.source_url||'',r:votes};
  if(!eligible){row.review=p.methodology_status||'Not approved for central estimate';held++;}
+ // Keep non-candidate responses as metadata, never as candidate vote shares.
+ const undecided=Number(p.response_categories?.Undecided);
+ if(p.response_categories?.Undecided!=null&&Number.isFinite(undecided))row.undecided=undecided;
+ const other=Number(p.response_categories?.['Other candidates']);
+ if(p.response_categories?.['Other candidates']!=null&&Number.isFinite(other))row.other=other;
  existing.push(row);added++;
 }
-if(added===0){console.log('Poll sync: no new eligible-format records');process.exit(0);}
+if(added===0){console.log('Poll sync: no new supported national presidential polls');process.exit(0);}
 existing.sort((a,b)=>b.date.localeCompare(a.date));
 const latest=existing[0].date;
 const body='const POLLS=[\n'+existing.map(x=>'  '+JSON.stringify(x)).join(',\n')+'\n];';
