@@ -5,40 +5,19 @@
 // held out of averages until their methodology is verified.
 // Regional-only polls (e.g. Infotrak "Mulembe Nation", Western only) are excluded.
 
-const CTX_AS_OF='2026-10-25';
+const CTX_AS_OF='2026-10-28';
 
 const POLLS=[
-  // Research 8020 (24 Oct): secondary reporting only; fieldwork, sample and
-  // original methodology unverified. Publicly visible for sensitivity, NOT eligible
-  // for the model baseline. Undecided 5% is metadata, not a candidate vote.
-  {date:'2026-10-24',field:'not disclosed',pollster:'Research 8020',n:null,eligible:false,
-   url:'https://dansamuka.github.io/kenya-election-intelligence-engine/data/manual_sources/research_8020_2026-10-24_presidential_preference.json',
-   r:{'William Ruto':26,'Edwin Sifuna':25,'Kalonzo Musyoka':11,"Fred Matiang'i":9,'Rigathi Gachagua':7},
-   undecided:5,review:'Pending primary report, fieldwork and methodology verification'},
-  {date:'2026-10-01',field:'15–25 Sep 2026',pollster:'Politrack Africa',n:20419,eligible:false,
-   url:'https://capitalfm.africa/ruto-leads-2027-presidential-race-with-45-1-politrack-africa-poll/',
-   r:{'William Ruto':45.1,'Edwin Sifuna':19.6,'Kalonzo Musyoka':10.3,"Fred Matiang'i":7.2,'Rigathi Gachagua':6,'George Wajackoyah':1.1,'David Maraga':0.8,'Martha Karua':0.8,'James Orengo':0.4,'Jimi Wanjigi':0.3}},
-  {date:'2026-09-25',field:'not disclosed',pollster:'Mizani Africa',n:null,eligible:false,
-   url:'https://capitalfm.africa/mizani-poll-ruto-leads-kalonzo-sifuna-in-presidential-preference-survey/',
-   r:{'William Ruto':38.7,'Kalonzo Musyoka':27.5,'Edwin Sifuna':13.2,"Fred Matiang'i":7.7,'Rigathi Gachagua':4.4,'Ndindi Nyoro':3.1,'Martha Karua':0.3,'David Maraga':0.1}},
-  {date:'2026-08-20',field:'25 Jul–6 Aug 2026',pollster:'Swiss Poll International',n:4037,eligible:true,
-   url:'https://capitalfm.africa/kalonzo-emerges-as-leading-opposition-choice-in-2027-race-swiss-poll-shows/',
-   r:{'William Ruto':31,'Kalonzo Musyoka':22,'Edwin Sifuna':13,"Fred Matiang'i":11,'Rigathi Gachagua':6}},
-  {date:'2026-07-03',field:'Jun–Jul 2026',pollster:'Infotrak Research',n:3000,eligible:true,
-   url:'https://www.infotrakresearch.com/2743-2/',
-   r:{'William Ruto':32,'Edwin Sifuna':12,"Fred Matiang'i":12,'Kalonzo Musyoka':4,'Rigathi Gachagua':4}},
-  {date:'2026-05-14',field:'May 2026',pollster:'TIFA Research',n:2013,eligible:true,
-   url:'https://www.tifaresearch.com/wp-content/uploads/2023/03/TIFA-Research_Political-Alignments-and-2027-Election-Prospects_14-May-2026.pdf',
-   r:{'William Ruto':24,'Kalonzo Musyoka':19,"Fred Matiang'i":16,'Edwin Sifuna':9,'Rigathi Gachagua':6}},
-  {date:'2026-03-01',field:'Mar 2026',pollster:'Stats Kenya',n:null,eligible:true,
-   url:'https://thekenyatimes.com/politics/ruto-in-early-lead-in-new-poll-as-opposition-split-emerges/',
-   r:{'William Ruto':23.41,"Fred Matiang'i":12.25,'Kalonzo Musyoka':8.17,'Edwin Sifuna':7.44,'Rigathi Gachagua':3.99,'David Maraga':1.45,'Oburu Odinga':1,'Okiya Omtata':0.36}},
-  {date:'2025-12-28',field:'19–20 Dec 2025',pollster:'Infotrak Research',n:1000,eligible:true,
-   url:'https://nation.africa/kenya/news/politics/ruto-leads-in-popularity-poll-babu-owino-tipped-for-luo-kingpin-after-raila-death-infotrak-5310226',
-   r:{'William Ruto':28,"Fred Matiang'i":13,'Kalonzo Musyoka':12,'Babu Owino':7,'Rigathi Gachagua':5,'David Maraga':2,'Martha Karua':2,'Edwin Sifuna':0.2}},
-  {date:'2025-11-01',field:'10–17 Nov 2025',pollster:'TIFA Research',n:2053,eligible:true,
-   url:'https://www.tifaresearch.com/wp-content/uploads/2023/03/TIFA-Research_Political-Alignments-and-2027-Election-Prospects_14-May-2026.pdf',
-   r:{'William Ruto':25,'Kalonzo Musyoka':18,"Fred Matiang'i":16,'Edwin Sifuna':10,'Rigathi Gachagua':8}},
+  {"date":"2026-10-28","field":"19–22 October 2026 (as reported)","pollster":"Swiss Poll International","n":6146,"eligible":false,"url":"https://touchlinenews.com/ruto-leads-2027-presidential-race-at-40-2-as-kalonzo-and-sifuna-trail-swisspoll-survey-shows/","r":{"Edwin Sifuna":17.6,"Fred Matiang'i":6,"Kalonzo Musyoka":19.7,"Ndindi Nyoro":4.5,"Rigathi Gachagua":7.5,"William Ruto":40.2},"review":"PARTIAL_SECONDARY_DISCLOSURE_PRIMARY_METHODOLOGY_UNVERIFIED","undecided":3.3,"other":1.2},
+  {"date":"2026-10-24","field":"not disclosed","pollster":"Research 8020","n":null,"eligible":false,"url":"https://dansamuka.github.io/kenya-election-intelligence-engine/data/manual_sources/research_8020_2026-10-24_presidential_preference.json","r":{"William Ruto":26,"Edwin Sifuna":25,"Kalonzo Musyoka":11,"Fred Matiang'i":9,"Rigathi Gachagua":7},"undecided":5,"review":"Pending primary report, fieldwork and methodology verification"},
+  {"date":"2026-10-01","field":"15–25 Sep 2026","pollster":"Politrack Africa","n":20419,"eligible":false,"url":"https://capitalfm.africa/ruto-leads-2027-presidential-race-with-45-1-politrack-africa-poll/","r":{"William Ruto":45.1,"Edwin Sifuna":19.6,"Kalonzo Musyoka":10.3,"Fred Matiang'i":7.2,"Rigathi Gachagua":6,"George Wajackoyah":1.1,"David Maraga":0.8,"Martha Karua":0.8,"James Orengo":0.4,"Jimi Wanjigi":0.3}},
+  {"date":"2026-09-25","field":"not disclosed","pollster":"Mizani Africa","n":null,"eligible":false,"url":"https://capitalfm.africa/mizani-poll-ruto-leads-kalonzo-sifuna-in-presidential-preference-survey/","r":{"William Ruto":38.7,"Kalonzo Musyoka":27.5,"Edwin Sifuna":13.2,"Fred Matiang'i":7.7,"Rigathi Gachagua":4.4,"Ndindi Nyoro":3.1,"Martha Karua":0.3,"David Maraga":0.1}},
+  {"date":"2026-08-20","field":"25 Jul–6 Aug 2026","pollster":"Swiss Poll International","n":4037,"eligible":true,"url":"https://capitalfm.africa/kalonzo-emerges-as-leading-opposition-choice-in-2027-race-swiss-poll-shows/","r":{"William Ruto":31,"Kalonzo Musyoka":22,"Edwin Sifuna":13,"Fred Matiang'i":11,"Rigathi Gachagua":6}},
+  {"date":"2026-07-03","field":"Jun–Jul 2026","pollster":"Infotrak Research","n":3000,"eligible":true,"url":"https://www.infotrakresearch.com/2743-2/","r":{"William Ruto":32,"Edwin Sifuna":12,"Fred Matiang'i":12,"Kalonzo Musyoka":4,"Rigathi Gachagua":4}},
+  {"date":"2026-05-14","field":"May 2026","pollster":"TIFA Research","n":2013,"eligible":true,"url":"https://www.tifaresearch.com/wp-content/uploads/2023/03/TIFA-Research_Political-Alignments-and-2027-Election-Prospects_14-May-2026.pdf","r":{"William Ruto":24,"Kalonzo Musyoka":19,"Fred Matiang'i":16,"Edwin Sifuna":9,"Rigathi Gachagua":6}},
+  {"date":"2026-03-01","field":"Mar 2026","pollster":"Stats Kenya","n":null,"eligible":true,"url":"https://thekenyatimes.com/politics/ruto-in-early-lead-in-new-poll-as-opposition-split-emerges/","r":{"William Ruto":23.41,"Fred Matiang'i":12.25,"Kalonzo Musyoka":8.17,"Edwin Sifuna":7.44,"Rigathi Gachagua":3.99,"David Maraga":1.45,"Oburu Odinga":1,"Okiya Omtata":0.36}},
+  {"date":"2025-12-28","field":"19–20 Dec 2025","pollster":"Infotrak Research","n":1000,"eligible":true,"url":"https://nation.africa/kenya/news/politics/ruto-leads-in-popularity-poll-babu-owino-tipped-for-luo-kingpin-after-raila-death-infotrak-5310226","r":{"William Ruto":28,"Fred Matiang'i":13,"Kalonzo Musyoka":12,"Babu Owino":7,"Rigathi Gachagua":5,"David Maraga":2,"Martha Karua":2,"Edwin Sifuna":0.2}},
+  {"date":"2025-11-01","field":"10–17 Nov 2025","pollster":"TIFA Research","n":2053,"eligible":true,"url":"https://www.tifaresearch.com/wp-content/uploads/2023/03/TIFA-Research_Political-Alignments-and-2027-Election-Prospects_14-May-2026.pdf","r":{"William Ruto":25,"Kalonzo Musyoka":18,"Fred Matiang'i":16,"Edwin Sifuna":10,"Rigathi Gachagua":8}}
 ];
 
 // A poll regrouped by the current teams (decided voters, undecided dropped):
