@@ -7,7 +7,7 @@ const GEO_NAME={'Elgeyo-Marakwet':'Elgeyo/Marakwet','Tharaka':'Tharaka - Nithi',
 const MX=lon=>+((lon-33.6)*56).toFixed(1), MY=lat=>+((5.2-lat)*56).toFixed(1);
 const VM={measure:'lead',built:false};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const p1=v=>(v*100).toFixed(1)+'%';
+const p1=v=>A138.safePct(v,1);
 const TEAMC=['var(--team-a)','var(--team-b)','var(--team-c)','var(--team-d)'];
 const RAMP=['a','b','c','d'];
 // five-step OKLCH ramps (tokens.css): weak → strong, never mixed toward the dark surface
@@ -100,11 +100,11 @@ function outlineSVG(name){
   return `<svg class="cty-map" viewBox="${(x0-pad).toFixed(1)} ${(y0-pad).toFixed(1)} ${(x1-x0+2*pad).toFixed(1)} ${(y1-y0+2*pad).toFixed(1)}" role="img" aria-label="Outline of ${esc(name)}"><path class="cty-out" d="${g.d}"/></svg>`;
 }
 
-// Margin gauge: A minus B on a diverging track centred on "level"; ±5 points (the petition zone) shaded
+// Margin gauge: A minus B on a diverging track centred on "level"; ±5 points (the close-margin zone) shaded
 function marginGauge(c){
   const W=300,pad=8,span=0.8,m=c.i-c.o,X=v=>pad+(Math.max(-span,Math.min(span,v))+span)/(2*span)*(W-2*pad);
   const A=S.cfg.teams[0],B=S.cfg.teams[1];
-  return `<div class="mgauge"><svg viewBox="0 0 ${W} 40" role="img" aria-label="${esc(m>=0?A:B)} ahead by ${p1(Math.abs(m))}${Math.abs(m)<0.05?', inside the 5-point petition zone':''}">
+  return `<div class="mgauge"><svg viewBox="0 0 ${W} 40" role="img" aria-label="${esc(m>=0?A:B)} ahead by ${p1(Math.abs(m))}${Math.abs(m)<0.05?', inside the 5-point close-margin zone':''}">
     <rect class="z" x="${X(-0.05)}" y="4" width="${X(0.05)-X(-0.05)}" height="16" rx="2"/>
     <line class="tk" x1="${pad}" x2="${W-pad}" y1="12" y2="12"/><line class="mid" x1="${X(0)}" x2="${X(0)}" y1="2" y2="22"/>
     <circle class="pin" cx="${X(m).toFixed(1)}" cy="12" r="7" style="fill:${m>=0?'var(--team-a)':'var(--team-b)'}"/>

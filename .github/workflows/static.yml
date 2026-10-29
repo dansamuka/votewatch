@@ -39,6 +39,8 @@ jobs:
           node-version: 22
       - name: Validate model and data (blocks deploy on failure)
         run: node scripts/validate-model.mjs
+      - name: Golden-master regression check (blocks deploy on failure)
+        run: node scripts/golden-master.mjs
       - name: Build (bundle + minify CSS/JS into _site)
         run: node scripts/build.mjs
       - name: Upload artifact

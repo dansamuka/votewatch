@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="description" content="VOTEWATCH 2027: scenario intelligence for Kenya&#39;s 2027 election, with county-level run-off, tipping-point and dispute-risk analysis.">
+<meta name="description" content="VOTEWATCH 2027: scenario intelligence for Kenya&#39;s 2027 election, with county-level run-off, tipping-point and margin-exposure analysis.">
 <meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VoteWatch 2027</title>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap">
@@ -57,7 +56,7 @@
   <button class="tbtn" data-t="mat" role="tab" id="tab-mat" aria-controls="t-mat" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>Scenarios</button>
   <button class="tbtn" data-t="con" role="tab" id="tab-con" aria-controls="t-con" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3H2zM3.5 6v6M8 6v6M12.5 6v6M2 14h12"/></svg>Article 138</button>
   <button class="tbtn" data-t="map" role="tab" id="tab-map" aria-controls="t-map" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3.5l4-1.5 5 2 4-1.5v9l-4 1.5-5-2-4 1.5zM5.5 2v9.5M10.5 4v9.5"/></svg>Map</button>
-  <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Dispute risk</button>
+  <button class="tbtn" data-t="dis" role="tab" id="tab-dis" aria-controls="t-dis" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6.5 11.5h-13zM8 6.5v3.2M8 11.5v.1"/></svg>Margin exposure</button>
   <button class="tbtn" data-t="int" role="tab" id="tab-int" aria-controls="t-int" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>Signals</button>
   <button class="tbtn" data-t="report" role="tab" id="tab-report" aria-controls="t-report" aria-selected="false" tabindex="-1"><svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3M5.5 8h5M5.5 11h5"/></svg>Report</button>
 </div></nav>
@@ -72,13 +71,14 @@
       <div class="tm-chips" id="teamChips"></div>
       <p class="side-h tm-sub">Who joins which team</p>
       <div class="tm-grid" id="teamGrid" role="group" aria-label="Assign each candidate to a team"></div>
+      <p class="hint">Team A is the incumbent's team, and the incumbent stays on it: the model's assumptions about where voters go are written relative to the incumbent's side. The letters are positions, not a ranking or an endorsement.</p>
       <p class="hint">Weighted average of validated polls (recency, sample, pollster). <sup>*</sup> one poll, pulled toward a small prior. <sup>†</sup> no validated poll yet. Hover a figure for the detail.</p>
       <p class="side-h tm-sub">Tickets</p>
       <div class="tk" id="ticketBox"></div>
       <div class="sl">
         <label class="sl-top" for="sl-follow"><span>Running mate's supporters who follow</span><output id="lv-follow">65%</output></label>
         <input type="range" id="sl-follow" list="vwFollow" title="Double-click to reset" min="50" max="100" step="1" value="65">
-        <p class="hint">Real coalitions leak; 80–90% is typical. The default is 65%: bases of former rivals transfer poorly. The presidential candidate keeps all their supporters.</p>
+        <p class="hint"><strong>Assumed, not measured:</strong> no published Kenyan study measures how many of a running mate's supporters follow them. The default is 65%, on the judgement that bases of former rivals transfer poorly; try 50–90% to see how much it matters. The model also assumes the presidential candidate keeps all of their own supporters.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-off"><span>Supporters of candidates left off the ticket who follow</span><output id="lv-off">55%</output></label>
@@ -96,7 +96,7 @@
       <div class="sl">
         <label class="sl-top" for="sl-lc"><span>Cross to the other main side</span><output id="lv-lc">40%</output></label>
         <input type="range" id="sl-lc" list="vwLc" title="Double-click to reset" min="0" max="100" step="1" value="40">
-        <p class="hint">Opposition voters go to team A; team A's voters go to team B.</p>
+        <p class="hint">Voters leaving an opposition candidate cross to team A; voters leaving a team A candidate cross to team B.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="sl-le"><span>Vote for someone else</span><output id="lv-le">30%</output></label>
@@ -110,11 +110,11 @@
       <div class="sl">
         <label class="sl-top" for="registerModeSelect"><span>Voter register</span></label>
         <select class="gov-select w100" id="registerModeSelect">
-          <option value="current" selected>Current proxy · 25.04m (Aug 2026)</option>
-          <option value="target">IEBC 2027 target scenario · 28.5m</option>
+          <option value="current" selected>Gross-additions proxy · 25.04m (Aug 2026)</option>
+          <option value="target">IEBC 2027 planning target · 28.5m (not a register)</option>
           <option value="base">2022 certified register · 22.10m</option>
         </select>
-        <p class="hint">2022 register plus IEBC's 2.94m new registrations by 20 Aug 2026, shared out by its April 2026 county figures. Not a gazetted 2027 register.</p>
+        <p class="hint">2022 certified register plus IEBC's 2.94m gross new registrations by 20 Aug 2026, shared out by its April 2026 county figures. Removals since 2022 (deaths, transfers) are not netted out, so this overstates the register. Not a gazetted 2027 register.</p>
       </div>
       <div class="sl">
         <label class="sl-top" for="pollModeSelect"><span>Polls</span></label>
@@ -184,16 +184,16 @@
     <details class="side-adv">
       <summary>Advanced</summary>
       <div class="side-sec">
-        <label class="sl-top" for="mcModeSelect"><span>Simulation depth</span><output id="mcModeLabel">Research · 5,000 seeded</output></label>
+        <label class="sl-top" for="mcModeSelect"><span>Simulation depth</span><output id="mcModeLabel">Research · 5,000</output></label>
         <select class="gov-select w100" id="mcModeSelect">
           <option value="preview">Preview (fast, 400 runs)</option>
           <option value="standard">Standard (1,000 runs)</option>
-          <option value="research" selected>Research (5,000 seeded runs)</option>
+          <option value="research" selected>Research (5,000 runs)</option>
         </select>
         <p class="hint" id="mcCredibilityNote">Preview is for exploring. Switch to Standard or Research before briefing.</p>
         <label class="sl-top" for="seedInput"><span>Random seed</span><output id="seedLabel">2027-baseline-001</output></label>
         <input class="srch w100" id="seedInput" value="2027-baseline-001" spellcheck="false">
-        <p class="hint">Research mode with the same seed gives the same result every time.</p>
+        <p class="hint">The same seed gives the same result every time, at every depth. Scenarios run with the same seed share their random draws, so differences between them are not simulation noise.</p>
       </div>
     </details>
     </div>
@@ -275,7 +275,7 @@
 <!-- ═══ TAB: TIPPING ═══ -->
 <div class="tpane" id="t-tip" role="tabpanel" aria-labelledby="tab-tip">
   <h2 class="sr-only">Swing counties</h2>
-  <p class="pane-intro"><strong>Counties near the 25% line.</strong> Team A needs 25% in 24 counties; these could go either way.</p>
+  <p class="pane-intro"><strong>Counties near the 25% line.</strong> Every candidate needs 25% in at least 24 counties to win outright. This tab tracks team A's counties; both main teams' county counts are on the Article 138 tab.</p>
   <section class="pan mb16" aria-labelledby="tipStripT"><div class="pan-hdr"><h3 class="pan-t" id="tipStripT">Every county against the 25% line <span class="pan-s">team A share</span></h3></div><div id="tipStrip"></div></section>
   <section class="pan mb12" aria-labelledby="p24T">
     <div class="pan-hdr"><h3 class="pan-t" id="p24T">The 24-county test</h3></div>
@@ -360,10 +360,10 @@
   </div>
 </div>
 
-<!-- ═══ TAB: DISPUTE ═══ -->
+<!-- ═══ TAB: MARGIN EXPOSURE ═══ -->
 <div class="tpane" id="t-dis" role="tabpanel" aria-labelledby="tab-dis">
-  <h2 class="sr-only">Dispute risk</h2>
-  <p class="pane-intro"><strong>Could the result end up in court?</strong> Based on close margins and where they cluster.</p>
+  <h2 class="sr-only">Margin exposure</h2>
+  <p class="pane-intro"><strong>How close is it, and where?</strong> County margins between the two main sides and where close results cluster. A close margin is not evidence of irregularities and does not predict a court petition.</p>
   <div class="g3 mb12" id="disKpis"></div>
   <div class="g2 mb12">
     <div class="pan">
@@ -378,7 +378,7 @@
     </div>
   </div>
   <div class="pan">
-    <div class="pan-hdr"><h3 class="pan-t">All counties: dispute risk</h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
+    <div class="pan-hdr"><h3 class="pan-t">All counties: margin exposure</h3><button type="button" class="btn btn-ghost more-cols" data-more aria-pressed="false">More columns</button></div>
     <div class="tscroll"><table class="tbl" id="disTbl"></table></div>
   </div>
 </div>
@@ -429,27 +429,23 @@
     </div>
   </div>
 
-  <div class="g2 mb12">
+  </div></details>
+  <details class="pan fold tech analyst-only mt12"><summary class="pan-t">Experimental: synthetic indicators <span class="pan-s">not evidence · not used in any result</span></summary><div class="mt12">
+  <p class="note u-fs12 u-lh-relaxed mb12"><strong>These scores are invented formulas, not measurements.</strong> Each combines model outputs (margins, turnout, third-force share) with fixed regional terms chosen by the authors; no survey, price series or incident data enters them. They are shown for method discussion only, are hidden in Public view, and never feed the headline, the simulations or the exports.</p>
+  <div class="g3 mb12">
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Political-Economy Overlays <span class="pan-s">proxy / synthetic explanatory signals</span></h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Political-economy stress <span class="pan-s">synthetic</span></h3></div>
       <div id="politicalEconomyPanel"></div>
     </div>
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">NGO / Civic-Risk Lens</h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Civic-process risk <span class="pan-s">synthetic</span></h3></div>
       <div id="civicRiskPanel"></div>
     </div>
-  </div>
-  <div class="g2 mb12">
     <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Security Early-Warning Lens <span class="pan-s">non-operational civic monitoring</span></h3></div>
-      <div id="securityRiskPanel"></div>
-    </div>
-    <div class="pan">
-      <div class="pan-hdr"><h3 class="pan-t">Frontier-Market Election Risk Monitor</h3></div>
+      <div class="pan-hdr"><h3 class="pan-t">Market-continuity risk <span class="pan-s">synthetic</span></h3></div>
       <div id="marketRiskPanel"></div>
     </div>
   </div>
-  </div></details>
 </div>
 
 
@@ -483,6 +479,7 @@
 <script defer src="data/history.js?v=11.1"></script>
 <script defer src="data/backtest2022.js?v=11.1"></script>
 <script defer src="data/kenya-geo.js?v=11.1"></script>
+<script defer src="js/article138.js?v=11.1"></script>
 <script defer src="js/viz.js?v=11.1"></script>
 <script defer src="js/app.js?v=11.1"></script>
 <script defer src="js/enhance.js?v=11.1"></script>

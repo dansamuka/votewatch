@@ -1,0 +1,24 @@
+# Model checks on every pull request and on pushes to non-main branches.
+# The deploy workflow (static.yml) runs the same checks before publishing main.
+name: Model checks
+
+on:
+  pull_request:
+  push:
+    branches-ignore: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate model and data
+        run: node scripts/validate-model.mjs
+      - name: Golden-master regression check
+        run: node scripts/golden-master.mjs
